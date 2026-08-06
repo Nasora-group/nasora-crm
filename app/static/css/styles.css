@@ -1,0 +1,484 @@
+/* Reset des styles par défaut */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Styles généraux */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #e0f7fa, #c8e6c9);
+    color: #2e7d32;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem; /* Taille de police de base */
+}
+
+/* En-tête */
+header {
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+header h1 {
+    font-size: 2rem;
+    animation: fadeInDown 1s ease-in-out;
+}
+
+/* Styles pour le logo */
+header img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation */
+nav {
+    background: linear-gradient(135deg, #66bb6a, #81c784);
+    padding: 15px 0;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+nav a {
+    color: white;
+    margin: 5px 10px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+nav a:hover {
+    color: #c8e6c9;
+    transform: translateY(-3px);
+}
+
+/* Conteneur principal */
+.container {
+    flex: 1;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeInUp 1s ease-in-out;
+}
+
+/* Styles pour les formulaires */
+.form-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+    border-color: #66bb6a;
+    outline: none;
+}
+
+.btn-submit {
+    display: inline-block;
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #66bb6a, #81c784);
+    transform: translateY(-2px);
+}
+
+/* Styles pour les tableaux */
+.responsive-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    animation: fadeIn 1s ease-in-out;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.responsive-table th, .responsive-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.responsive-table th {
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    color: white;
+    font-weight: bold;
+}
+
+.responsive-table tr:hover {
+    background-color: #f1f8e9;
+}
+
+.responsive-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Cartes (pour les tableaux de bord, etc.) */
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Boutons */
+.btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.btn:hover {
+    background: linear-gradient(135deg, #66bb6a, #81c784);
+    transform: translateY(-3px);
+}
+
+/* Conteneur pour centrer le bouton */
+.center-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Défilement vivant */
+.scroll-animation {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animation.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Pied de page */
+footer {
+    background: linear-gradient(135deg, #388e3c, #66bb6a);
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+    margin-top: auto;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+}
+
+footer p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    nav a {
+        font-size: 0.9rem;
+        margin: 5px 0;
+    }
+
+    .form-container {
+        padding: 10px;
+    }
+
+    .responsive-table th, .responsive-table td {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .form-input, .btn-submit {
+        width: 100%;
+    }
+
+    .responsive-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    header h1 {
+        font-size: 1.75rem;
+    }
+
+    nav a {
+        font-size: 1rem;
+    }
+
+    .form-container {
+        padding: 15px;
+    }
+
+    .responsive-table th, .responsive-table td {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    header h1 {
+        font-size: 2rem;
+    }
+
+    nav a {
+        font-size: 1.1rem;
+    }
+
+    .form-container {
+        padding: 20px;
+    }
+
+    .responsive-table th, .responsive-table td {
+        padding: 12px;
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 1025px) {
+    header h1 {
+        font-size: 2.5rem;
+    }
+
+    nav a {
+        font-size: 1.2rem;
+    }
+
+    .form-container {
+        padding: 25px;
+    }
+
+    .responsive-table th, .responsive-table td {
+        padding: 15px;
+        font-size: 1.1rem;
+    }
+}
+/* ---- Ajouts : messages flash ---- */
+.flash-messages {
+    margin: 15px 0;
+}
+
+.flash {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.flash-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flash-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* ---- Ajouts : nav utilisateur connecté ---- */
+.nav-user {
+    color: white;
+    margin: 5px 10px;
+    font-size: 1rem;
+    opacity: 0.85;
+}
+
+/* ---- Ajouts : pagination ---- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.pagination a, .pagination span {
+    padding: 6px 12px;
+    border-radius: 5px;
+    text-decoration: none;
+    background: white;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.pagination .active {
+    background: #388e3c;
+    color: white;
+    border-color: #388e3c;
+}
+
+.pagination .disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* ---- Ajouts : champs en lecture seule (consultation admin) ---- */
+input[readonly], input:disabled {
+    background-color: #f1f1f1;
+    cursor: not-allowed;
+}
+
+.read-only-banner {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+/* ---- Ajouts : filtres admin ---- */
+.filter-form {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.filter-form label {
+    font-weight: bold;
+    color: #2e7d32;
+    margin-right: 4px;
+}
+
+.dashboard-links, .sales-links {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+/* ---- Ajouts : détails de structure dans le planning ---- */
+.structure-details {
+    margin-top: 8px;
+}
+
+.structure-detail-item {
+    background: #f1f8e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+}
+
+.structure-detail-item .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+}
+
+.planning-slot {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}

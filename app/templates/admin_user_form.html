@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ 'Nouveau compte' if mode == 'create' else 'Modifier ' ~ user.username }}</h1>
+
+<div class="form-container">
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.role.label(class="form-label") }}
+            {{ form.role(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.project.label(class="form-label") }}
+            {{ form.project(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.zone.label(class="form-label") }}
+            {{ form.zone(class="form-input", placeholder="ex : CENTRE VILLE") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-input", placeholder="8 caractères minimum" if mode == 'create' else "Laisser vide pour ne pas changer") }}
+            {% if mode == 'create' %}
+                <small>Obligatoire à la création.</small>
+            {% else %}
+                <small>Laisse ce champ vide si tu ne veux pas changer le mot de passe.</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                {{ form.is_active_account() }} {{ form.is_active_account.label.text }}
+            </label>
+        </div>
+
+        {% if form.errors %}
+            <div class="flash flash-error">
+                <ul style="margin:0; padding-left:18px;">
+                    {% for field, errors in form.errors.items() %}
+                        {% for error in errors %}
+                            <li>{{ form[field].label.text }} : {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            {{ form.submit(class="btn-submit") }}
+            <a href="{{ url_for('users.list_users') }}" class="btn">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

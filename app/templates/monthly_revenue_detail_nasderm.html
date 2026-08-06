@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Détail du Chiffre d'Affaire pour {{ month }}</h1>
+
+<h2>Nova Pharma</h2>
+<table class="responsive-table">
+    <thead>
+        <tr><th>Produit</th><th>Quantité Vendue</th><th>Chiffre d'Affaire</th></tr>
+    </thead>
+    <tbody>
+        {% for sale in nova_pharma_sales %}
+        <tr>
+            <td>{{ sale.name }}</td>
+            <td>{{ sale.total_quantity }}</td>
+            <td>{{ sale.total_revenue | round(2) }} €</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">Aucune vente ce mois-ci.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Gilbert</h2>
+<table class="responsive-table">
+    <thead>
+        <tr><th>Produit</th><th>Quantité Vendue</th><th>Chiffre d'Affaire</th></tr>
+    </thead>
+    <tbody>
+        {% for sale in gilbert_sales %}
+        <tr>
+            <td>{{ sale.name }}</td>
+            <td>{{ sale.total_quantity }}</td>
+            <td>{{ sale.total_revenue | round(2) }} €</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">Aucune vente ce mois-ci.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn">Retour au chiffre d'affaire mensuel</a>
+{% endblock %}

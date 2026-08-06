@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Gestion des utilisateurs</h1>
+
+<div class="dashboard-links">
+    <a href="{{ url_for('users.create_user') }}" class="btn">+ Nouveau compte</a>
+</div>
+
+<form method="GET" class="filter-form">
+    <div>
+        <label for="role">Rôle</label>
+        <select id="role" name="role">
+            <option value="">Tous</option>
+            <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Administrateur</option>
+            <option value="commercial" {% if request.args.get('role') == 'commercial' %}selected{% endif %}>Commercial</option>
+        </select>
+    </div>
+    <div>
+        <label for="project">Division</label>
+        <select id="project" name="project">
+            <option value="">Toutes</option>
+            <option value="nasderm" {% if request.args.get('project') == 'nasderm' %}selected{% endif %}>NASDERM</option>
+            <option value="nasmedic" {% if request.args.get('project') == 'nasmedic' %}selected{% endif %}>NASMEDIC</option>
+        </select>
+    </div>
+    <div>
+        <button type="submit" class="btn">Filtrer</button>
+        <a href="{{ url_for('users.list_users') }}" class="btn">Réinitialiser</a>
+    </div>
+</form>
+
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Nom d'utilisateur</th>
+            <th>Rôle</th>
+            <th>Division</th>
+            <th>Zone</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.username }}{% if user.id == current_user.id %} <em>(toi)</em>{% endif %}</td>
+            <td>{{ 'Administrateur' if user.role == 'admin' else 'Commercial' }}</td>
+            <td>{{ user.project|upper }}</td>
+            <td>{{ user.zone or '—' }}</td>
+            <td>
+                {% if user.is_active_account %}
+                    <span class="flash flash-success" style="padding:4px 10px; margin:0; display:inline-block;">Actif</span>
+                {% else %}
+                    <span class="flash flash-error" style="padding:4px 10px; margin:0; display:inline-block;">Désactivé</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="btn">Modifier</a>
+                {% if user.id != current_user.id %}
+                <form method="POST" action="{{ url_for('users.toggle_active', user_id=user.id) }}" style="display:inline;">
+                    {{ toggle_form.hidden_tag() }}
+                    <button type="submit" class="btn" onclick="return confirm('{{ 'Désactiver' if user.is_active_account else 'Réactiver' }} le compte {{ user.username }} ?');">
+                        {{ 'Désactiver' if user.is_active_account else 'Réactiver' }}
+                    </button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">Aucun utilisateur trouvé.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Ventes {{ supplier.label }} - CRM NASORA-GROUP{% endblock %}
+
+{% block content %}
+<h1>Ventes {{ supplier.label }}</h1>
+
+{% if read_only %}
+    <p class="read-only-banner">Mode consultation : seuls les commerciaux de la division {{ supplier.division|upper }} peuvent saisir des ventes ici.</p>
+{% endif %}
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+        {{ form.sale_date.label(class="form-label") }}
+        {{ form.sale_date(class="form-input", **{"required": true, "disabled": read_only}) }}
+    </div>
+
+    <table class="responsive-table">
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Prix HT (€)</th>
+                <th>Quantité vendue</th>
+                <th>Stock DUOPHARM</th>
+                <th>Stock UBIPHARM</th>
+                <th>Stock LABOREX</th>
+                <th>Stock SODIPHARM</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>
+                    <input type="number" name="price_{{ product.id }}" value="{{ product.default_price }}" step="0.01" min="0" {% if read_only %}disabled{% endif %}>
+                </td>
+                <td>
+                    <input type="number" name="quantity_{{ product.id }}" min="0" value="0" {% if read_only %}disabled{% endif %}>
+                </td>
+                <td>
+                    <input type="number" name="stock_duopharm_{{ product.id }}" min="0" value="{{ product.stock_duopharm }}" {% if read_only %}disabled{% endif %}>
+                </td>
+                <td>
+                    <input type="number" name="stock_ubipharm_{{ product.id }}" min="0" value="{{ product.stock_ubipharm }}" {% if read_only %}disabled{% endif %}>
+                </td>
+                <td>
+                    <input type="number" name="stock_laborex_{{ product.id }}" min="0" value="{{ product.stock_laborex }}" {% if read_only %}disabled{% endif %}>
+                </td>
+                <td>
+                    <input type="number" name="stock_sodipharm_{{ product.id }}" min="0" value="{{ product.stock_sodipharm }}" {% if read_only %}disabled{% endif %}>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if not read_only %}
+        <button type="submit" class="btn-submit">Enregistrer les ventes</button>
+    {% endif %}
+</form>
+{% endblock %}

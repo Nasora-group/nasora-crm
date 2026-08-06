@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Bienvenue sur le CRM NASORA-GROUP</h1>
+<p>Connectez-vous pour accéder à votre tableau de bord.</p>
+{% if not current_user.is_authenticated %}
+    <div class="center-container">
+        <a href="{{ url_for('auth.login') }}" class="btn">Se connecter</a>
+    </div>
+{% endif %}
+{% endblock %}

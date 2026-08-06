@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Tableau de Bord NASMEDIC</h1>
+
+<div class="sales-links">
+    <a href="{{ url_for('sales.eric_favre') }}" class="btn">Saisir les ventes Eric Favre</a>
+    <a href="{{ url_for('sales.trois_chene') }}" class="btn">Saisir les ventes 3 Chênes Pharma</a>
+</div>
+
+<h2>Évolution du Chiffre d'Affaire Mensuel Total</h2>
+{% if monthly_revenue_labels and monthly_revenue_data %}
+    <canvas id="salesChart" width="400" height="200"></canvas>
+    <script>
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ monthly_revenue_labels | tojson }},
+                datasets: [{
+                    label: "Chiffre d'affaire mensuel total (Eric Favre + 3 Chênes Pharma)",
+                    data: {{ monthly_revenue_data | tojson }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: "Chiffre d'affaire (€)" } },
+                    x: { title: { display: true, text: 'Mois' } }
+                },
+                plugins: { title: { display: true, text: "Évolution du Chiffre d'Affaire Mensuel Total" } }
+            }
+        });
+    </script>
+{% else %}
+    <p>Aucune donnée disponible pour afficher le graphique.</p>
+{% endif %}
+
+<h2>Classement des Commerciaux (Top 5)</h2>
+{% if top_5_commerciaux %}
+    <table class="responsive-table">
+        <thead><tr><th>Rang</th><th>Nom</th><th>Zone</th><th>Nombre de Visites</th></tr></thead>
+        <tbody>
+            {% for commercial in top_5_commerciaux %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ commercial.username }}</td>
+                <td>{{ commercial.zone }}</td>
+                <td>{{ commercial.nombre_visites }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun commercial trouvé.</p>
+{% endif %}
+
+<h2>Liste des Commerciaux (NASMEDIC)</h2>
+<table class="responsive-table">
+    <thead><tr><th>Nom</th><th>Zone</th></tr></thead>
+    <tbody>
+        {% for commercial in commerciaux %}
+        <tr>
+            <td><a href="{{ url_for('admin.commercial_detail', username=commercial.username) }}">{{ commercial.username }}</a></td>
+            <td>{{ commercial.zone }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Tableau Récapitulatif</h2>
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Date</th><th>Nom Client</th><th>Spécialité</th><th>Structure</th>
+            <th>Téléphone</th><th>Profils Prospect</th><th>Produits Présentés</th><th>Produits Prescrits</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for prospection in prospections %}
+        <tr>
+            <td>{{ prospection.date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ prospection.nom_client }}</td>
+            <td>{{ prospection.specialite }}</td>
+            <td>{{ prospection.structure }}</td>
+            <td>{{ prospection.telephone }}</td>
+            <td>{{ prospection.profils_prospect }}</td>
+            <td>{{ prospection.produits_presentes }}</td>
+            <td>{{ prospection.produits_prescrits }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Saisie du planning hebdomadaire</h1>
+<p>Sélectionne les structures prévues sur chaque créneau, puis précise le nom exact de chacune (ex : sélectionner « HOPITAL » puis indiquer « Hôpital Principal de Dakar »).</p>
+
+<form method="POST" id="planning-form">
+    {{ formulaire.hidden_tag() }}
+    <div class="form-group">
+        {{ formulaire.date.label(class="form-label") }}
+        {{ formulaire.date(class="form-input") }}
+    </div>
+
+    {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
+    <h3>{{ jour_label }}</h3>
+    {% for moment, moment_label in [('matin','Matin'), ('soir','Soir')] %}
+    <div class="form-group planning-slot">
+        {{ formulaire[jour ~ '_' ~ moment].label(class="form-label") }}
+        <select name="{{ jour }}_{{ moment }}" class="form-control select2 planning-select" multiple="multiple" data-slot="{{ jour }}_{{ moment }}">
+            {% for value, label in formulaire[jour ~ '_' ~ moment].choices %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div class="structure-details" id="details_{{ jour }}_{{ moment }}"></div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+
+    <div class="form-group">
+        {{ formulaire.submit(class="btn-submit") }}
+    </div>
+</form>
+<a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
+
+<script>
+$(document).ready(function() {
+    $('.select2').select2({ placeholder: 'Choisir une ou plusieurs structures' });
+
+    function slugify(value) {
+        return value.replace(/ /g, '_');
+    }
+
+    function renderDetailInputs(selectEl) {
+        var $select = $(selectEl);
+        var slot = $select.data('slot');
+        var $container = $('#details_' + slot);
+        var selected = $select.val() || [];
+
+        // Retire les champs correspondant aux structures désélectionnées
+        $container.children('[data-structure]').each(function() {
+            if (selected.indexOf($(this).data('structure')) === -1) {
+                $(this).remove();
+            }
+        });
+
+        // Ajoute un champ pour chaque structure nouvellement sélectionnée
+        selected.forEach(function(value) {
+            if ($container.children('[data-structure="' + value + '"]').length > 0) {
+                return; // déjà présent, on ne touche pas à ce que l'utilisateur a tapé
+            }
+            var slug = slugify(value);
+            var fieldName = slot + '_nom__' + slug;
+
+            var $wrapper = $('<div class="structure-detail-item"></div>').attr('data-structure', value);
+            var $label = $('<label class="form-label"></label>').text('Nom précis (' + value + ')');
+            var $input = $('<input type="text" class="form-input">')
+                .attr('name', fieldName)
+                .attr('placeholder', 'ex : ' + (value === 'PHARMACIES' ? 'Pharmacie Zenith' : 'Hôpital Principal de Dakar'));
+
+            $wrapper.append($label).append($input);
+            $container.append($wrapper);
+        });
+    }
+
+    $('.planning-select').each(function() {
+        renderDetailInputs(this);
+        $(this).on('change', function() { renderDetailInputs(this); });
+    });
+});
+</script>
+{% endblock %}

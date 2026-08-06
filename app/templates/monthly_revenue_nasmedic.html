@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Chiffre d'Affaire Mensuel (NASMEDIC)</h1>
+
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Mois</th>
+            <th>Chiffre d'Affaire Eric Favre (€)</th>
+            <th>Chiffre d'Affaire 3 Chênes Pharma (€)</th>
+            <th>Total (€)</th>
+            <th>Détails</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for month, eric_favre, trois_chene, total in monthly_revenue %}
+        <tr>
+            <td>{{ month }}</td>
+            <td>{{ eric_favre | round(2) }}</td>
+            <td>{{ trois_chene | round(2) }}</td>
+            <td>{{ total | round(2) }}</td>
+            <td><a href="{{ url_for('revenue.monthly_revenue_detail_nasmedic', month=month) }}">Voir les détails</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Aucune vente enregistrée pour le moment.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
