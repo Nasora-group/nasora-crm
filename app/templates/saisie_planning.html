@@ -46,17 +46,15 @@ $(document).ready(function() {
         var $container = $('#details_' + slot);
         var selected = $select.val() || [];
 
-        // Retire les champs correspondant aux structures désélectionnées
         $container.children('[data-structure]').each(function() {
             if (selected.indexOf($(this).data('structure')) === -1) {
                 $(this).remove();
             }
         });
 
-        // Ajoute un champ pour chaque structure nouvellement sélectionnée
         selected.forEach(function(value) {
             if ($container.children('[data-structure="' + value + '"]').length > 0) {
-                return; // déjà présent, on ne touche pas à ce que l'utilisateur a tapé
+                return;
             }
             var slug = slugify(value);
             var fieldName = slot + '_nom__' + slug;

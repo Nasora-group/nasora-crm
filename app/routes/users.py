@@ -75,7 +75,7 @@ def edit_user(user_id):
     form = UserForm(obj=user)
 
     if request.method == "GET":
-        form.password.data = ""  # ne jamais préremplir le mot de passe
+        form.password.data = ""
 
     if form.validate_on_submit():
         new_username = form.username.data.strip()

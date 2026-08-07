@@ -1,13 +1,19 @@
 """
-Script de seed (à exécuter une seule fois après le premier déploiement) :
-    python seed.py
+Script de seed : crée les comptes utilisateurs et le catalogue produit initial.
 
-Crée les comptes utilisateurs et le catalogue produit initial.
-Contrairement à l'ancienne version, les mots de passe des commerciaux ne sont
-plus codés en dur : ils sont soit lus depuis les variables d'environnement,
-soit générés aléatoirement et écrits dans instance/seed_credentials.txt
-(fichier IGNORÉ par git - à supprimer/sécuriser après avoir distribué les
-identifiants).
+Ce script est SANS DANGER à relancer plusieurs fois (idempotent) : il ne
+recrée jamais un compte ou un produit qui existe déjà. C'est pourquoi il est
+appelé automatiquement à chaque déploiement (voir Procfile, phase "release").
+
+Les mots de passe des commerciaux ne sont pas codés en dur : ils sont soit
+lus depuis les variables d'environnement, soit générés aléatoirement puis :
+  1) écrits dans instance/seed_credentials.txt (accessible via le Shell Render)
+  2) ET affichés directement dans les LOGS de déploiement (onglet "Logs" sur
+     Render), pour rester accessibles même sans les Shell.
+
+IMPORTANT : ces identifiants ne sont affichés/écrits qu'UNE SEULE FOIS, lors
+de la création des comptes. Les déploiements suivants ne les réafficheront
+pas (les comptes existent déjà). Copie-les dès la première fois.
 """
 import os
 import secrets
@@ -157,5 +163,11 @@ if __name__ == "__main__":
             print(f"[seed] {len(credentials_log)} compte(s) créé(s).")
             print(f"[seed] Identifiants écrits dans : {CREDENTIALS_FILE}")
             print("[seed] Distribue-les puis SUPPRIME ce fichier du serveur.")
+            print("[seed] ---- IDENTIFIANTS (visibles ici dans les logs si tu n'as pas accès au Shell) ----")
+            for username, password in credentials_log:
+                print(f"[seed-credentials] {username} : {password}")
+            print("[seed] ---- FIN DES IDENTIFIANTS ----")
+            print("[seed] IMPORTANT : copie-les MAINTENANT, ils ne seront plus jamais réaffichés "
+                  "(les prochains déploiements ne recréent pas les comptes déjà existants).")
         else:
             print("[seed] Rien à faire : les comptes existent déjà.")

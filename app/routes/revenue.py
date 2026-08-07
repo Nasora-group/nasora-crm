@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from flask import Blueprint, render_template, flash, request
 from flask_login import login_required, current_user
 from sqlalchemy import func
@@ -17,23 +19,25 @@ DIVISION_SALE_MODELS = {
     "nasmedic": [("eric_favre", EricFavreSale, EricFavreProduct), ("trois_chene", TroisCheneSale, TroisCheneProduct)],
 }
 
+ProductSaleRow = namedtuple("ProductSaleRow", ["name", "total_quantity", "total_revenue"])
+
 
 def _monthly_revenue_for_division(division):
-    """Combine le CA mensuel des deux fournisseurs d'une division (corrige le bug
-    où seul un des deux fournisseurs était pris en compte)."""
+    """Combine le CA mensuel des deux fournisseurs d'une division.
+    Le regroupement par mois se fait en Python (et non via une fonction SQL
+    comme strftime) pour rester compatible avec SQLite (dev) ET PostgreSQL
+    (production), qui n'a pas de fonction strftime()."""
     combined = {}
     for slug, sale_model, _ in DIVISION_SALE_MODELS[division]:
         rows = (
-            db.session.query(
-                func.strftime("%Y-%m", sale_model.date).label("month"),
-                func.sum(sale_model.quantity * sale_model.price).label("revenue"),
-            )
+            db.session.query(sale_model.date, sale_model.quantity, sale_model.price)
             .filter(sale_model.project == division)
-            .group_by("month")
             .all()
         )
-        for month, revenue in rows:
-            combined.setdefault(month, {})[slug] = revenue or 0
+        for sale_date, quantity, price in rows:
+            month = sale_date.strftime("%Y-%m")
+            combined.setdefault(month, {}).setdefault(slug, 0)
+            combined[month][slug] += (quantity or 0) * (price or 0)
 
     labels = sorted(combined.keys())
     totals = [sum(combined[m].values()) for m in labels]
@@ -112,17 +116,25 @@ def monthly_revenue_nasmedic():
 
 
 def _product_sales_detail(sale_model, product_model, month):
-    return (
-        db.session.query(
-            product_model.name,
-            func.sum(sale_model.quantity).label("total_quantity"),
-            func.sum(sale_model.quantity * sale_model.price).label("total_revenue"),
-        )
+    """Regroupement par produit pour un mois donné, calculé en Python pour
+    rester compatible SQLite/PostgreSQL (voir _monthly_revenue_for_division)."""
+    rows = (
+        db.session.query(product_model.name, sale_model.quantity, sale_model.price, sale_model.date)
         .join(sale_model, sale_model.product_id == product_model.id)
-        .filter(func.strftime("%Y-%m", sale_model.date) == month)
-        .group_by(product_model.name)
         .all()
     )
+    aggregated = {}
+    for name, quantity, price, sale_date in rows:
+        if sale_date.strftime("%Y-%m") != month:
+            continue
+        agg = aggregated.setdefault(name, {"total_quantity": 0, "total_revenue": 0})
+        agg["total_quantity"] += quantity or 0
+        agg["total_revenue"] += (quantity or 0) * (price or 0)
+
+    return [
+        ProductSaleRow(name=name, total_quantity=values["total_quantity"], total_revenue=values["total_revenue"])
+        for name, values in aggregated.items()
+    ]
 
 
 @revenue_bp.route("/monthly_revenue_detail_nasderm/<month>")

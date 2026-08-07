@@ -29,17 +29,11 @@ SALE_MODELS = [NovaPharmaSale, GilbertSale, EricFavreSale, TroisCheneSale]
 def dashboard():
     revenue_dict = {}
     for sale_model in SALE_MODELS:
-        rows = (
-            db.session.query(
-                func.strftime("%Y-%m", sale_model.date).label("month"),
-                func.sum(sale_model.quantity * sale_model.price).label("revenue"),
-            )
-            .group_by("month")
-            .all()
-        )
-        for month, revenue in rows:
+        rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).all()
+        for sale_date, quantity, price in rows:
+            month = sale_date.strftime("%Y-%m")
             revenue_dict.setdefault(month, 0)
-            revenue_dict[month] += revenue or 0
+            revenue_dict[month] += (quantity or 0) * (price or 0)
 
     monthly_revenue_labels = sorted(revenue_dict.keys())
     monthly_revenue_data = [revenue_dict[m] for m in monthly_revenue_labels]
@@ -90,7 +84,6 @@ def dashboard():
 @login_required
 @roles_required("admin", "commercial")
 def commercial_detail(username):
-    # Un commercial ne peut consulter que sa propre fiche.
     if current_user.role == "commercial" and current_user.username != username:
         flash("Accès non autorisé.", "error")
         return render_template("403.html"), 403

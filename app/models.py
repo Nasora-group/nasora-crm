@@ -143,7 +143,6 @@ class TroisCheneSale(SaleMixin, db.Model):
     commercial = db.relationship("User")
 
 
-# Regroupe, pour chaque division, les fournisseurs (slug -> modèles + libellé)
 SUPPLIERS = {
     "nova_pharma": {
         "label": "Nova Pharma",

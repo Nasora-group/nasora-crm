@@ -1,2 +1,2 @@
-web: gunicorn wsgi:app --workers 3 --bind 0.0.0.0:$PORT --timeout 120
-release: flask db upgrade
+web: gunicorn wsgi:app --workers 2 --threads 4 --timeout 60
+release: flask db upgrade && python seed.py

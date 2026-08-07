@@ -20,7 +20,6 @@ def _handle_supplier_sales(slug, template_name):
     sale_model = supplier["sale_model"]
     division = supplier["division"]
 
-    # Un commercial ne peut saisir que les ventes de sa propre division.
     if current_user.role == "commercial" and current_user.project != division:
         flash("Accès non autorisé : cette rubrique ne concerne pas votre division.", "error")
         return redirect(url_for("dashboard.index"))
@@ -58,7 +57,6 @@ def _handle_supplier_sales(slug, template_name):
                     db.session.add(sale)
                     nb_ventes += 1
 
-                # Mise à jour manuelle des niveaux de stock par grossiste (saisie inventaire)
                 for wholesaler in ("duopharm", "ubipharm", "laborex", "sodipharm"):
                     field = f"stock_{wholesaler}_{product.id}"
                     value = request.form.get(field, type=int)
