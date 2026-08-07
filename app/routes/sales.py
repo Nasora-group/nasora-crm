@@ -20,17 +20,13 @@ def _handle_supplier_sales(slug, template_name):
     sale_model = supplier["sale_model"]
     division = supplier["division"]
 
-    if current_user.role == "commercial" and current_user.project != division:
-        flash("Accès non autorisé : cette rubrique ne concerne pas votre division.", "error")
-        return redirect(url_for("dashboard.index"))
-
     form = SupplierSalesForm()
     products = product_model.query.order_by(product_model.name).all()
-    read_only = current_user.role != "commercial"
+    read_only = current_user.role != "admin"
 
     if request.method == "POST":
         if read_only:
-            flash("Seuls les commerciaux peuvent saisir des ventes.", "error")
+            flash("Seul l'administrateur peut saisir des ventes.", "error")
             return redirect(url_for(f"sales.{slug}"))
 
         if not form.validate_on_submit():

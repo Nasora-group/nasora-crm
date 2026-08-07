@@ -4,8 +4,8 @@
 <h1>Tableau de Bord NASDERM</h1>
 
 <div class="sales-links">
-    <a href="{{ url_for('sales.nova_pharma') }}" class="btn">Saisir les ventes Nova Pharma</a>
-    <a href="{{ url_for('sales.gilbert') }}" class="btn">Saisir les ventes Gilbert</a>
+    <a href="{{ url_for('sales.nova_pharma') }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes Nova Pharma</a>
+    <a href="{{ url_for('sales.gilbert') }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes Gilbert</a>
 </div>
 
 <h2>Évolution du Chiffre d'Affaire Mensuel Total</h2>

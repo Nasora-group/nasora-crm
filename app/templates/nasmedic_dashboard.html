@@ -4,8 +4,8 @@
 <h1>Tableau de Bord NASMEDIC</h1>
 
 <div class="sales-links">
-    <a href="{{ url_for('sales.eric_favre') }}" class="btn">Saisir les ventes Eric Favre</a>
-    <a href="{{ url_for('sales.trois_chene') }}" class="btn">Saisir les ventes 3 Chênes Pharma</a>
+    <a href="{{ url_for('sales.eric_favre') }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes Eric Favre</a>
+    <a href="{{ url_for('sales.trois_chene') }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes 3 Chênes Pharma</a>
 </div>
 
 <h2>Évolution du Chiffre d'Affaire Mensuel Total</h2>

@@ -6,7 +6,7 @@
 <h1>Ventes {{ supplier.label }}</h1>
 
 {% if read_only %}
-    <p class="read-only-banner">Mode consultation : seuls les commerciaux de la division {{ supplier.division|upper }} peuvent saisir des ventes ici.</p>
+    <p class="read-only-banner">Mode consultation : seul l'administrateur peut saisir des ventes.</p>
 {% endif %}
 
 <form method="POST">
