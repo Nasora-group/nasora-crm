@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, DateField, TextAreaField, SubmitField, PasswordField,
-    SelectMultipleField, SelectField, BooleanField,
+    SelectMultipleField, SelectField, BooleanField, FloatField,
 )
 from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
@@ -82,4 +82,12 @@ class UserForm(FlaskForm):
         validators=[Optional(), Length(min=8, message="8 caractères minimum.")],
     )
     is_active_account = BooleanField("Compte actif", default=True)
+    submit = SubmitField("Enregistrer")
+
+
+class ProductForm(FlaskForm):
+    name = StringField("Nom du produit", validators=[DataRequired(), Length(max=200)])
+    reference = StringField("Référence / code produit", validators=[Optional(), Length(max=100)])
+    default_price = FloatField("Prix HT par défaut (€)", validators=[DataRequired()])
+    is_active = BooleanField("Référence active", default=True)
     submit = SubmitField("Enregistrer")

@@ -66,6 +66,7 @@ def _register_blueprints(app):
     from app.routes.revenue import revenue_bp
     from app.routes.admin import admin_bp
     from app.routes.users import users_bp
+    from app.routes.products import products_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -74,6 +75,7 @@ def _register_blueprints(app):
     app.register_blueprint(revenue_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(products_bp)
 
 
 def _register_error_handlers(app):

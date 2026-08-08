@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CRM NASORA-GROUP{% endblock %}</title>
+    <title>{% block title %}NASORA HEALTH & SKINCARE — CRM{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,27 +14,42 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo NASORA-GROUP">
-        <h1>CRM NASORA-GROUP</h1>
-    </header>
-    <nav>
-        <a href="{{ url_for('auth.home') }}">Accueil</a>
-        {% if current_user.is_authenticated %}
-            {% if current_user.role == 'admin' %}
-                <a href="{{ url_for('admin.dashboard') }}">Tableau de Bord Admin</a>
-                <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}">CA Mensuel (NASMEDIC)</a>
-                <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}">CA Mensuel (NASDERM)</a>
-                <a href="{{ url_for('planning.admin_plannings') }}">Plannings des commerciaux</a>
-                <a href="{{ url_for('users.list_users') }}">Gestion des utilisateurs</a>
-            {% else %}
-                <a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a>
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="{{ url_for('auth.home') }}" class="brand">
+                <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo">
+                <div class="brand-text">
+                    <span class="brand-name">NASORA HEALTH &amp; SKINCARE</span>
+                    <span class="brand-tagline">Plateforme de gestion commerciale</span>
+                </div>
+            </a>
+            {% if current_user.is_authenticated %}
+            <div class="header-user">
+                <span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else 'Commercial' }}</span>
+                <span class="header-user-name">{{ current_user.username }}</span>
+            </div>
             {% endif %}
-            <span class="nav-user">{{ current_user.username }}</span>
-            <a href="{{ url_for('auth.logout') }}">Déconnexion</a>
-        {% else %}
-            <a href="{{ url_for('auth.login') }}">Connexion</a>
-        {% endif %}
+        </div>
+    </header>
+    <nav class="site-nav">
+        <div class="nav-inner">
+            <a href="{{ url_for('auth.home') }}">Accueil</a>
+            {% if current_user.is_authenticated %}
+                {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('admin.dashboard') }}">Tableau de Bord</a>
+                    <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}">CA NASMEDIC</a>
+                    <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}">CA NASDERM</a>
+                    <a href="{{ url_for('planning.admin_plannings') }}">Plannings</a>
+                    <a href="{{ url_for('users.list_users') }}">Utilisateurs</a>
+                    <a href="{{ url_for('products.list_products', slug='nova_pharma') }}">Fiches produits</a>
+                {% else %}
+                    <a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}" class="nav-logout">Déconnexion</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}">Connexion</a>
+            {% endif %}
+        </div>
     </nav>
 
     <div class="container">
@@ -49,7 +67,7 @@
     </div>
 
     <footer>
-        <p>&copy; {{ current_year }} NASORA-GROUP — CRM interne</p>
+        <p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p>
     </footer>
 </body>
 </html>

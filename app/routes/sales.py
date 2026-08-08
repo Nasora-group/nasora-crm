@@ -21,7 +21,7 @@ def _handle_supplier_sales(slug, template_name):
     division = supplier["division"]
 
     form = SupplierSalesForm()
-    products = product_model.query.order_by(product_model.name).all()
+    products = product_model.query.filter_by(is_active=True).order_by(product_model.name).all()
     read_only = current_user.role != "admin"
 
     if request.method == "POST":

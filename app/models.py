@@ -79,7 +79,9 @@ class ProductMixin:
     """Colonnes communes à tous les produits fournisseurs."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
+    reference = db.Column(db.String(100), nullable=True)
     default_price = db.Column(db.Float, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     stock_duopharm = db.Column(db.Integer, default=0, nullable=False)
     stock_ubipharm = db.Column(db.Integer, default=0, nullable=False)
     stock_laborex = db.Column(db.Integer, default=0, nullable=False)

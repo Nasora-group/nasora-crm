@@ -8,36 +8,39 @@
     <a href="{{ url_for('sales.gilbert') }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes Gilbert</a>
 </div>
 
-<h2>Évolution du Chiffre d'Affaire Mensuel Total</h2>
+<div class="chart-grid">
+    <div class="chart-card">
+        <h3>Évolution du CA mensuel total</h3>
+        {% if monthly_revenue_labels and monthly_revenue_data %}
+            <canvas id="salesChart"></canvas>
+        {% else %}
+            <p>Aucune donnée disponible pour afficher le graphique.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#5b6b5e';
 {% if monthly_revenue_labels and monthly_revenue_data %}
-    <canvas id="salesChart" width="400" height="200"></canvas>
-    <script>
-        var ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: {{ monthly_revenue_labels | tojson }},
-                datasets: [{
-                    label: "Chiffre d'affaire mensuel total (Nova Pharma + Gilbert)",
-                    data: {{ monthly_revenue_data | tojson }},
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 2,
-                    fill: true
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true, title: { display: true, text: "Chiffre d'affaire (€)" } },
-                    x: { title: { display: true, text: 'Mois' } }
-                },
-                plugins: { title: { display: true, text: "Évolution du Chiffre d'Affaire Mensuel Total" } }
-            }
-        });
-    </script>
-{% else %}
-    <p>Aucune donnée disponible pour afficher le graphique.</p>
+new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+        labels: {{ monthly_revenue_labels | tojson }},
+        datasets: [{
+            label: "CA mensuel total (Nova Pharma + Gilbert)",
+            data: {{ monthly_revenue_data | tojson }},
+            backgroundColor: 'rgba(107, 142, 78, 0.15)',
+            borderColor: '#4a6741',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
 {% endif %}
+</script>
 
 <h2>Classement des Commerciaux (Top 5)</h2>
 {% if top_5_commerciaux %}

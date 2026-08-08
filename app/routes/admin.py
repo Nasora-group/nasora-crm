@@ -27,18 +27,67 @@ SALE_MODELS = [NovaPharmaSale, GilbertSale, EricFavreSale, TroisCheneSale]
 @login_required
 @roles_required("admin")
 def dashboard():
-    revenue_dict = {}
-    for sale_model in SALE_MODELS:
-        rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).all()
-        for sale_date, quantity, price in rows:
-            month = sale_date.strftime("%Y-%m")
-            revenue_dict.setdefault(month, 0)
-            revenue_dict[month] += (quantity or 0) * (price or 0)
+    from datetime import date
 
-    monthly_revenue_labels = sorted(revenue_dict.keys())
-    monthly_revenue_data = [revenue_dict[m] for m in monthly_revenue_labels]
+    today = date.today()
+    current_month_key = today.strftime("%Y-%m")
+
+    revenue_by_month = {}
+    revenue_by_division = {"nasderm": 0.0, "nasmedic": 0.0}
+    revenue_by_commercial = {}
+    total_revenue = 0.0
+    total_sales_count = 0
+    current_month_revenue = 0.0
+
+    for sale_model in SALE_MODELS:
+        rows = db.session.query(
+            sale_model.date, sale_model.quantity, sale_model.price,
+            sale_model.project, sale_model.commercial_id,
+        ).all()
+        for sale_date, quantity, price, project, commercial_id in rows:
+            amount = (quantity or 0) * (price or 0)
+            month = sale_date.strftime("%Y-%m")
+            revenue_by_month.setdefault(month, 0)
+            revenue_by_month[month] += amount
+            revenue_by_division[project] = revenue_by_division.get(project, 0) + amount
+            revenue_by_commercial.setdefault(commercial_id, 0)
+            revenue_by_commercial[commercial_id] += amount
+            total_revenue += amount
+            total_sales_count += 1
+            if month == current_month_key:
+                current_month_revenue += amount
+
+    monthly_revenue_labels = sorted(revenue_by_month.keys())
+    monthly_revenue_data = [revenue_by_month[m] for m in monthly_revenue_labels]
 
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
+    active_commercials_count = User.query.filter_by(role="commercial", is_active_account=True).count()
+    total_visits = Prospection.query.count()
+
+    visits_by_commercial_rows = (
+        db.session.query(User.id, User.username, func.count(Prospection.id).label("nombre_visites"))
+        .join(Prospection, Prospection.commercial_id == User.id)
+        .group_by(User.id)
+        .all()
+    )
+    visits_by_commercial = {row.id: row.nombre_visites for row in visits_by_commercial_rows}
+
+    commercial_names = {u.id: u.username for u in commerciaux}
+
+    performance = []
+    for commercial_id in set(list(revenue_by_commercial.keys()) + list(visits_by_commercial.keys())):
+        name = commercial_names.get(commercial_id)
+        if not name:
+            continue
+        performance.append({
+            "username": name,
+            "revenue": revenue_by_commercial.get(commercial_id, 0),
+            "visits": visits_by_commercial.get(commercial_id, 0),
+        })
+
+    top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
+    top_visits = sorted(performance, key=lambda p: p["visits"], reverse=True)[:10]
+
     top_5_commerciaux = (
         db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites"))
         .join(Prospection)
@@ -51,7 +100,7 @@ def dashboard():
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start = request.args.get("date_start")
     date_end = request.args.get("date_end")
-    commercial_id = request.args.get("commercial")
+    commercial_id_filter = request.args.get("commercial")
     zone = request.args.get("zone")
     specialite = request.args.get("specialite")
 
@@ -59,8 +108,8 @@ def dashboard():
         query = query.filter(Prospection.date >= date_start)
     if date_end:
         query = query.filter(Prospection.date <= date_end)
-    if commercial_id:
-        query = query.filter(Prospection.commercial_id == commercial_id)
+    if commercial_id_filter:
+        query = query.filter(Prospection.commercial_id == commercial_id_filter)
     if zone:
         query = query.filter(User.zone == zone)
     if specialite:
@@ -68,6 +117,15 @@ def dashboard():
 
     page = request.args.get("page", 1, type=int)
     pagination = query.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
+
+    kpis = {
+        "total_revenue": total_revenue,
+        "current_month_revenue": current_month_revenue,
+        "total_visits": total_visits,
+        "active_commercials": active_commercials_count,
+        "avg_sale": (total_revenue / total_sales_count) if total_sales_count else 0,
+        "total_sales_count": total_sales_count,
+    }
 
     return render_template(
         "admin_dashboard.html",
@@ -77,6 +135,10 @@ def dashboard():
         top_5_commerciaux=top_5_commerciaux,
         monthly_revenue_labels=monthly_revenue_labels,
         monthly_revenue_data=monthly_revenue_data,
+        kpis=kpis,
+        revenue_by_division=revenue_by_division,
+        top_revenue=top_revenue,
+        top_visits=top_visits,
     )
 
 
