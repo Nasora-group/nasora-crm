@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="center-container">
+    <h1>403 - Accès refusé</h1>
+    <p>Vous n'avez pas les droits nécessaires pour accéder à cette page.</p>
+    <a href="{{ url_for('auth.home') }}" class="btn">Retour à l'accueil</a>
+</div>
+{% endblock %}

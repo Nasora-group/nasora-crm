@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Tableau de bord</h1>
+<p style="color:var(--ink-soft); margin-bottom: 8px;">Vue d'ensemble des performances commerciales — toutes divisions confondues.</p>
+
+<div class="dashboard-links">
+    <a href="{{ url_for('revenue.nasmedic_dashboard') }}" class="btn btn-outline">NASMEDIC</a>
+    <a href="{{ url_for('revenue.nasderm_dashboard') }}" class="btn btn-outline">NASDERM</a>
+</div>
+
+<h2>Saisie des ventes</h2>
+<div class="dashboard-links">
+    {% for slug, s in active_suppliers.items() %}
+    <a href="{{ url_for('sales.' ~ slug) }}" class="btn">{{ s.label }}</a>
+    {% endfor %}
+    <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}" class="btn btn-outline">Gérer les fiches produits</a>
+    <a href="{{ url_for('sales.sales_history', slug=first_active_supplier_slug) }}" class="btn btn-outline">Historique &amp; correction des ventes</a>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="kpi-body">
+            <span class="kpi-label">Chiffre d'affaire total</span>
+            <span class="kpi-value">{{ "%.2f"|format(kpis.total_revenue) }} €</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <div class="kpi-body">
+            <span class="kpi-label">CA ce mois-ci</span>
+            <span class="kpi-value">{{ "%.2f"|format(kpis.current_month_revenue) }} €</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <div class="kpi-body">
+            <span class="kpi-label">Visites totales</span>
+            <span class="kpi-value">{{ kpis.total_visits }}</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="kpi-body">
+            <span class="kpi-label">Commerciaux actifs</span>
+            <span class="kpi-value">{{ kpis.active_commercials }}</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg></div>
+        <div class="kpi-body">
+            <span class="kpi-label">Vente moyenne</span>
+            <span class="kpi-value">{{ "%.2f"|format(kpis.avg_sale) }} €</span>
+            <span class="kpi-sub">{{ kpis.total_sales_count }} vente(s) au total</span>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <h3>Évolution du CA mensuel global</h3>
+        {% if monthly_revenue_labels and monthly_revenue_data %}
+            <canvas id="globalSalesChart"></canvas>
+        {% else %}
+            <p>Aucune donnée disponible pour afficher le graphique.</p>
+        {% endif %}
+    </div>
+    <div class="chart-card">
+        <h3>Répartition du CA par division</h3>
+        {% if revenue_by_division.nasderm or revenue_by_division.nasmedic %}
+            <canvas id="divisionChart"></canvas>
+        {% else %}
+            <p>Aucune donnée disponible pour afficher le graphique.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <h3>CA par commercial (Top 10)</h3>
+        {% if top_revenue %}
+            <canvas id="revenueByCommercialChart"></canvas>
+        {% else %}
+            <p>Aucune vente enregistrée pour le moment.</p>
+        {% endif %}
+    </div>
+    <div class="chart-card">
+        <h3>Visites par commercial (Top 10)</h3>
+        {% if top_visits %}
+            <canvas id="visitsByCommercialChart"></canvas>
+        {% else %}
+            <p>Aucune visite enregistrée pour le moment.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#5b6b5e';
+
+{% if monthly_revenue_labels and monthly_revenue_data %}
+new Chart(document.getElementById('globalSalesChart'), {
+    type: 'line',
+    data: {
+        labels: {{ monthly_revenue_labels | tojson }},
+        datasets: [{
+            label: "CA mensuel (€)",
+            data: {{ monthly_revenue_data | tojson }},
+            backgroundColor: 'rgba(107, 142, 78, 0.15)',
+            borderColor: '#4a6741',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: '#4a6741',
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+{% endif %}
+
+{% if revenue_by_division.nasderm or revenue_by_division.nasmedic %}
+new Chart(document.getElementById('divisionChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['NASDERM', 'NASMEDIC'],
+        datasets: [{
+            data: [{{ revenue_by_division.get('nasderm', 0) }}, {{ revenue_by_division.get('nasmedic', 0) }}],
+            backgroundColor: ['#6b8e4e', '#a9c88a'],
+            borderWidth: 0,
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+{% endif %}
+
+{% if top_revenue %}
+new Chart(document.getElementById('revenueByCommercialChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ top_revenue | map(attribute='username') | list | tojson }},
+        datasets: [{
+            label: 'CA (€)',
+            data: {{ top_revenue | map(attribute='revenue') | list | tojson }},
+            backgroundColor: '#6b8e4e',
+            borderRadius: 6,
+        }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+});
+{% endif %}
+
+{% if top_visits %}
+new Chart(document.getElementById('visitsByCommercialChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ top_visits | map(attribute='username') | list | tojson }},
+        datasets: [{
+            label: 'Visites',
+            data: {{ top_visits | map(attribute='visits') | list | tojson }},
+            backgroundColor: '#4a6741',
+            borderRadius: 6,
+        }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+});
+{% endif %}
+</script>
+
+<h2>Classement des Commerciaux (Top 5 visites)</h2>
+{% if top_5_commerciaux %}
+    <table class="responsive-table">
+        <thead>
+            <tr><th>Rang</th><th>Nom</th><th>Zone</th><th>Nombre de Visites</th></tr>
+        </thead>
+        <tbody>
+            {% for commercial in top_5_commerciaux %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ commercial.username }}</td>
+                <td>{{ commercial.zone }}</td>
+                <td>{{ commercial.nombre_visites }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun commercial trouvé.</p>
+{% endif %}
+
+<h2>Liste des Commerciaux</h2>
+<table class="responsive-table">
+    <thead>
+        <tr><th>Nom</th><th>Division</th><th>Zone</th><th>Fiche</th></tr>
+    </thead>
+    <tbody>
+        {% for commercial in commerciaux %}
+        <tr>
+            <td>{{ commercial.username }}</td>
+            <td>{{ commercial.project|upper }}</td>
+            <td>{{ commercial.zone }}</td>
+            <td><a href="{{ url_for('admin.commercial_detail', username=commercial.username) }}">Voir la fiche</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Filtrer les prospections</h2>
+<form method="GET" class="filter-form">
+    <div>
+        <label for="date_start">Date de Début</label>
+        <input type="date" id="date_start" name="date_start" class="form-input" value="{{ request.args.get('date_start', '') }}">
+    </div>
+    <div>
+        <label for="date_end">Date de Fin</label>
+        <input type="date" id="date_end" name="date_end" class="form-input" value="{{ request.args.get('date_end', '') }}">
+    </div>
+    <div>
+        <label for="commercial">Commercial</label>
+        <select id="commercial" name="commercial" class="form-input">
+            <option value="">Tous</option>
+            {% for commercial in commerciaux %}
+            <option value="{{ commercial.id }}" {% if request.args.get('commercial')|string == commercial.id|string %}selected{% endif %}>{{ commercial.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="zone">Zone</label>
+        <select id="zone" name="zone" class="form-input">
+            <option value="">Toutes</option>
+            {% for zone_value in commerciaux|map(attribute='zone')|unique %}
+                {% if zone_value %}<option value="{{ zone_value }}" {% if request.args.get('zone') == zone_value %}selected{% endif %}>{{ zone_value }}</option>{% endif %}
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <button type="submit" class="btn">Filtrer</button>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">Réinitialiser</a>
+    </div>
+</form>
+
+<h2>Tableau Récapitulatif des Prospections</h2>
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Commercial</th><th>Date</th><th>Nom Client</th><th>Spécialité</th>
+            <th>Structure</th><th>Téléphone</th><th>Profils Prospect</th>
+            <th>Produits Présentés</th><th>Produits Prescrits</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for prospection in prospections %}
+        <tr>
+            <td>{{ prospection.commercial.username }}</td>
+            <td>{{ prospection.date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ prospection.nom_client }}</td>
+            <td>{{ prospection.specialite }}</td>
+            <td>{{ prospection.structure }}</td>
+            <td>{{ prospection.telephone }}</td>
+            <td>{{ prospection.profils_prospect }}</td>
+            <td>{{ prospection.produits_presentes }}</td>
+            <td>{{ prospection.produits_prescrits }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9">Aucune prospection ne correspond aux filtres.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% set filter_args = {'date_start': request.args.get('date_start', ''), 'date_end': request.args.get('date_end', ''), 'commercial': request.args.get('commercial', ''), 'zone': request.args.get('zone', '')} %}
+{% if pagination %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('admin.dashboard', page=pagination.prev_num, **filter_args) }}">&laquo; Précédent</a>
+    {% else %}
+        <span class="disabled">&laquo; Précédent</span>
+    {% endif %}
+    <span class="active">Page {{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+    {% if pagination.has_next %}
+        <a href="{{ url_for('admin.dashboard', page=pagination.next_num, **filter_args) }}">Suivant &raquo;</a>
+    {% else %}
+        <span class="disabled">Suivant &raquo;</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

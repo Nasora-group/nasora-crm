@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Mon planning hebdomadaire</h1>
+
+<a href="{{ url_for('planning.saisie') }}" class="btn">Saisir un nouveau planning</a>
+
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Date de début</th>
+            <th>Lundi Matin</th><th>Lundi Soir</th>
+            <th>Mardi Matin</th><th>Mardi Soir</th>
+            <th>Mercredi Matin</th><th>Mercredi Soir</th>
+            <th>Jeudi Matin</th><th>Jeudi Soir</th>
+            <th>Vendredi Matin</th><th>Vendredi Soir</th>
+            <th>Samedi Matin</th><th>Samedi Soir</th>
+            <th>Dimanche Matin</th><th>Dimanche Soir</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for planning in plannings %}
+        <tr>
+            <td>{{ planning.date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ planning.lundi_matin | planning_slot }}</td>
+            <td>{{ planning.lundi_soir | planning_slot }}</td>
+            <td>{{ planning.mardi_matin | planning_slot }}</td>
+            <td>{{ planning.mardi_soir | planning_slot }}</td>
+            <td>{{ planning.mercredi_matin | planning_slot }}</td>
+            <td>{{ planning.mercredi_soir | planning_slot }}</td>
+            <td>{{ planning.jeudi_matin | planning_slot }}</td>
+            <td>{{ planning.jeudi_soir | planning_slot }}</td>
+            <td>{{ planning.vendredi_matin | planning_slot }}</td>
+            <td>{{ planning.vendredi_soir | planning_slot }}</td>
+            <td>{{ planning.samedi_matin | planning_slot }}</td>
+            <td>{{ planning.samedi_soir | planning_slot }}</td>
+            <td>{{ planning.dimanche_matin | planning_slot }}</td>
+            <td>{{ planning.dimanche_soir | planning_slot }}</td>
+            <td>
+                <a href="{{ url_for('planning.edit_planning', planning_id=planning.id) }}" class="btn btn-outline">Modifier</a>
+                <form method="POST" action="{{ url_for('planning.delete_planning', planning_id=planning.id) }}" style="display:inline;">
+                    {{ delete_form.hidden_tag() }}
+                    <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer ce planning (semaine du {{ planning.date.strftime('%Y-%m-%d') }}) ?');">Supprimer</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="16">Aucun planning saisi pour le moment.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Historique des ventes — {{ supplier.label }}</h1>
+<p style="color:var(--ink-soft);">Consulte et corrige les ventes déjà saisies, mois par mois.</p>
+
+<div class="supplier-tabs">
+    {% for s_slug, s in suppliers.items() %}
+        {% if not s.get('archived') %}
+        <a href="{{ url_for('sales.sales_history', slug=s_slug) }}" class="{{ 'active' if s_slug == slug else '' }}">{{ s.label }}</a>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<form method="GET" class="filter-form">
+    <div>
+        <label for="month">Filtrer par mois</label>
+        <select id="month" name="month" class="form-input" onchange="this.form.submit()">
+            <option value="">Tous les mois</option>
+            {% for m in available_months %}
+                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if selected_month %}
+    <div>
+        <a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Réinitialiser</a>
+    </div>
+    {% endif %}
+</form>
+
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="kpi-card">
+        <div class="kpi-body">
+            <span class="kpi-label">Ventes affichées</span>
+            <span class="kpi-value">{{ total_count }}</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-body">
+            <span class="kpi-label">Montant total {{ 'du mois' if selected_month else '(toutes périodes)' }}</span>
+            <span class="kpi-value">{{ "%.2f"|format(total_amount) }} €</span>
+        </div>
+    </div>
+</div>
+
+<table class="responsive-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Produit</th>
+            <th>Quantité</th>
+            <th>Prix HT unitaire</th>
+            <th>Total</th>
+            <th>Saisi par</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sale in sales %}
+        <tr>
+            <td>{{ sale.date.strftime('%d/%m/%Y') }}</td>
+            <td>{{ sale.product.name }}</td>
+            <td>{{ sale.quantity }}</td>
+            <td>{{ "%.2f"|format(sale.price) }} €</td>
+            <td>{{ "%.2f"|format(sale.quantity * sale.price) }} €</td>
+            <td>{{ sale.commercial.username if sale.commercial else '—' }}</td>
+            <td>
+                <a href="{{ url_for('sales.edit_sale', slug=slug, sale_id=sale.id) }}" class="btn btn-outline">Modifier</a>
+                <form method="POST" action="{{ url_for('sales.delete_sale', slug=slug, sale_id=sale.id) }}" style="display:inline;">
+                    {{ delete_form.hidden_tag() }}
+                    <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer définitivement cette vente ({{ sale.product.name }}, {{ sale.date.strftime('%d/%m/%Y') }}) ?');">
+                        Supprimer
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">Aucune vente {{ 'pour ce mois' if selected_month else 'enregistrée pour le moment' }}.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page-1) }}">&laquo; Précédent</a>
+    {% else %}
+        <span class="disabled">&laquo; Précédent</span>
+    {% endif %}
+    <span class="active">Page {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+        <a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page+1) }}">Suivant &raquo;</a>
+    {% else %}
+        <span class="disabled">Suivant &raquo;</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Modifier la prospection — {{ prospection.nom_client }}</h1>
+
+<div class="form-container">
+    <form method="POST" class="prospection-form">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.date.label(class="form-label") }}
+            {{ form.date(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.nom_client.label(class="form-label") }}
+            {{ form.nom_client(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.specialite.label(class="form-label") }}
+            {{ form.specialite(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.structure.label(class="form-label") }}
+            {{ form.structure(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.telephone.label(class="form-label") }}
+            {{ form.telephone(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.profils_prospect.label(class="form-label") }}
+            {{ form.profils_prospect(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.produits_presentes.label(class="form-label") }}
+            {{ form.produits_presentes(class="form-input") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.produits_prescrits.label(class="form-label") }}
+            {{ form.produits_prescrits(class="form-input") }}
+        </div>
+
+        {% if form.errors %}
+            <div class="flash flash-error">
+                <ul style="margin:0; padding-left:18px;">
+                    {% for field, errors in form.errors.items() %}
+                        {% for error in errors %}
+                            <li>{{ form[field].label.text }} : {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            {{ form.submit(class="btn-submit") }}
+            <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}" class="btn btn-outline">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

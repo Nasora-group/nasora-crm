@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Détail du Chiffre d'Affaire pour {{ month }}</h1>
+
+{% for slug, label, sale_model, product_model in suppliers %}
+<h2>{{ label }}</h2>
+<table class="responsive-table">
+    <thead>
+        <tr><th>Produit</th><th>Quantité Vendue</th><th>Chiffre d'Affaire</th></tr>
+    </thead>
+    <tbody>
+        {% for sale in details[slug] %}
+        <tr>
+            <td>{{ sale.name }}</td>
+            <td>{{ sale.total_quantity }}</td>
+            <td>{{ "%.2f"|format(sale.total_revenue) }} €</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">Aucune vente ce mois-ci.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endfor %}
+
+<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn">Retour au chiffre d'affaire mensuel</a>
+{% endblock %}
