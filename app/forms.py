@@ -25,8 +25,10 @@ class ProspectionForm(FlaskForm):
     structure = StringField("Structure", validators=[DataRequired(), Length(max=150)])
     telephone = StringField("Téléphone", validators=[DataRequired(), Length(max=30)])
     profils_prospect = TextAreaField("Profils prospect")
-    produits_presentes = TextAreaField("Produits présentés")
-    produits_prescrits = TextAreaField("Produits prescrits")
+    # Choix renseignés dynamiquement dans la route selon la division du commercial
+    # (catalogue produits NASDERM ou NASMEDIC) — voir app/routes/dashboard.py.
+    produits_presentes = SelectMultipleField("Produits présentés", choices=[], validators=[Optional()])
+    produits_prescrits = SelectMultipleField("Produits prescrits", choices=[], validators=[Optional()])
     submit = SubmitField("Enregistrer")
 
 
@@ -98,3 +100,20 @@ class SaleEditForm(FlaskForm):
     quantity = IntegerField("Quantité vendue", validators=[DataRequired(), NumberRange(min=1, message="La quantité doit être supérieure à 0.")])
     price = FloatField("Prix HT unitaire (€)", validators=[DataRequired(), NumberRange(min=0, message="Le prix ne peut pas être négatif.")])
     submit = SubmitField("Enregistrer")
+
+
+class ObjectiveForm(FlaskForm):
+    annual_target = FloatField("Objectif annuel (€)", validators=[Optional(), NumberRange(min=0)])
+    jan = FloatField("Janvier (€)", validators=[Optional(), NumberRange(min=0)])
+    feb = FloatField("Février (€)", validators=[Optional(), NumberRange(min=0)])
+    mar = FloatField("Mars (€)", validators=[Optional(), NumberRange(min=0)])
+    apr = FloatField("Avril (€)", validators=[Optional(), NumberRange(min=0)])
+    may = FloatField("Mai (€)", validators=[Optional(), NumberRange(min=0)])
+    jun = FloatField("Juin (€)", validators=[Optional(), NumberRange(min=0)])
+    jul = FloatField("Juillet (€)", validators=[Optional(), NumberRange(min=0)])
+    aug = FloatField("Août (€)", validators=[Optional(), NumberRange(min=0)])
+    sep = FloatField("Septembre (€)", validators=[Optional(), NumberRange(min=0)])
+    oct = FloatField("Octobre (€)", validators=[Optional(), NumberRange(min=0)])
+    nov = FloatField("Novembre (€)", validators=[Optional(), NumberRange(min=0)])
+    dec = FloatField("Décembre (€)", validators=[Optional(), NumberRange(min=0)])
+    submit = SubmitField("Enregistrer les objectifs")

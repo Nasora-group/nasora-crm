@@ -122,7 +122,8 @@ def dashboard():
         "current_month_revenue": current_month_revenue,
         "total_visits": total_visits,
         "active_commercials": active_commercials_count,
-        "avg_sale": (total_revenue / total_sales_count) if total_sales_count else 0,
+        "monthly_avg": (total_revenue / len(monthly_revenue_labels)) if monthly_revenue_labels else 0,
+        "months_with_sales": len(monthly_revenue_labels),
         "total_sales_count": total_sales_count,
     }
 

@@ -185,3 +185,29 @@ DIVISION_SUPPLIERS = {
     "nasderm": [slug for slug, s in SUPPLIERS.items() if s["division"] == "nasderm" and not s["archived"]],
     "nasmedic": [slug for slug, s in SUPPLIERS.items() if s["division"] == "nasmedic" and not s["archived"]],
 }
+
+
+class SalesObjective(db.Model):
+    """Objectif de chiffre d'affaire pour une division.
+    month=None => objectif annuel pour cette année. month=1..12 => objectif de ce mois-là."""
+    __tablename__ = "sales_objective"
+    id = db.Column(db.Integer, primary_key=True)
+    division = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer, nullable=True)
+    target_amount = db.Column(db.Float, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("division", "year", "month", name="uq_objective_division_year_month"),
+    )
+
+
+def get_active_products_for_division(division):
+    """Liste triée des noms de produits actifs, tous fournisseurs actifs de la
+    division confondus (utilisé pour les listes déroulantes de prospection)."""
+    names = set()
+    for slug in DIVISION_SUPPLIERS.get(division, []):
+        product_model = SUPPLIERS[slug]["product_model"]
+        for (name,) in product_model.query.filter_by(is_active=True).with_entities(product_model.name).all():
+            names.add(name)
+    return sorted(names)

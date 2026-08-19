@@ -1,12 +1,16 @@
+import logging
 from collections import namedtuple
+from datetime import date
 
 from flask import Blueprint, render_template, flash, request
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
 from app.extensions import db, cache
-from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS
+from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
 from app.utils import roles_required
+
+logger = logging.getLogger(__name__)
 
 revenue_bp = Blueprint("revenue", __name__)
 
@@ -45,6 +49,60 @@ def _monthly_revenue_for_division(division):
     return labels, totals, combined
 
 
+def _objectives_kpis(division, labels, totals):
+    """Calcule le CA mensuel moyen et l'avancement par rapport aux objectifs
+    (mensuel et annuel) définis par l'admin pour cette division.
+
+    Robuste : si la table des objectifs a un problème (ex : migration pas
+    encore appliquée), le tableau de bord continue de s'afficher normalement,
+    simplement sans les KPI d'objectif (plutôt qu'un écran d'erreur 500)."""
+    today = date.today()
+    current_month_key = today.strftime("%Y-%m")
+    current_year = today.year
+
+    total_revenue = sum(totals)
+    monthly_avg = (total_revenue / len(labels)) if labels else 0
+
+    current_month_revenue = 0
+    for month, amount in zip(labels, totals):
+        if month == current_month_key:
+            current_month_revenue = amount
+
+    current_year_revenue = sum(
+        amount for month, amount in zip(labels, totals) if month.startswith(str(current_year))
+    )
+
+    monthly_target = None
+    annual_target = None
+    objectives_available = True
+    try:
+        monthly_objective = (
+            SalesObjective.query.filter_by(division=division, year=current_year, month=today.month).first()
+        )
+        annual_objective = (
+            SalesObjective.query.filter_by(division=division, year=current_year, month=None).first()
+        )
+        monthly_target = monthly_objective.target_amount if monthly_objective else None
+        annual_target = annual_objective.target_amount if annual_objective else None
+    except Exception:
+        db.session.rollback()
+        logger.warning("Impossible de lire les objectifs (%s) — table absente ou en cours de migration ?", division, exc_info=True)
+        objectives_available = False
+
+    return {
+        "monthly_avg": monthly_avg,
+        "current_month_revenue": current_month_revenue,
+        "current_year_revenue": current_year_revenue,
+        "monthly_target": monthly_target,
+        "annual_target": annual_target,
+        "monthly_pct": (current_month_revenue / monthly_target * 100) if monthly_target else None,
+        "annual_pct": (current_year_revenue / annual_target * 100) if annual_target else None,
+        "current_year": current_year,
+        "current_month_label": current_month_key,
+        "objectives_available": objectives_available,
+    }
+
+
 def _division_dashboard(division, template_name):
     prospections = (
         Prospection.query.join(User).filter(User.project == division).order_by(Prospection.date.desc()).all()
@@ -53,6 +111,7 @@ def _division_dashboard(division, template_name):
         flash(f"Aucune donnée trouvée pour {division.upper()}.", "info")
 
     labels, totals, _ = _monthly_revenue_for_division(division)
+    objectives_kpis = _objectives_kpis(division, labels, totals)
 
     top_5_commerciaux = (
         db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites"))
@@ -75,6 +134,8 @@ def _division_dashboard(division, template_name):
         commerciaux=commerciaux,
         prospections=prospections,
         suppliers=suppliers,
+        division=division,
+        kpis=objectives_kpis,
     )
 
 

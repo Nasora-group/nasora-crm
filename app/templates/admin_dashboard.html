@@ -50,9 +50,9 @@
     <div class="kpi-card">
         <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg></div>
         <div class="kpi-body">
-            <span class="kpi-label">Vente moyenne</span>
-            <span class="kpi-value">{{ "%.2f"|format(kpis.avg_sale) }} €</span>
-            <span class="kpi-sub">{{ kpis.total_sales_count }} vente(s) au total</span>
+            <span class="kpi-label">Vente moyenne mensuelle</span>
+            <span class="kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</span>
+            <span class="kpi-sub">calculée sur {{ kpis.months_with_sales }} mois avec ventes ({{ kpis.total_sales_count }} vente(s) au total)</span>
         </div>
     </div>
 </div>

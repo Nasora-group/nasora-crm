@@ -39,12 +39,12 @@
 
         <div class="form-group">
             {{ form.produits_presentes.label(class="form-label") }}
-            {{ form.produits_presentes(class="form-input") }}
+            {{ form.produits_presentes(class="form-input select2-products", multiple=true) }}
         </div>
 
         <div class="form-group">
             {{ form.produits_prescrits.label(class="form-label") }}
-            {{ form.produits_prescrits(class="form-input") }}
+            {{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}
         </div>
 
         {% if form.errors %}
@@ -65,4 +65,10 @@
         </div>
     </form>
 </div>
+
+<script>
+$(document).ready(function() {
+    $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' });
+});
+</script>
 {% endblock %}

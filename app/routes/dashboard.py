@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection
+from app.models import Prospection, get_active_products_for_division
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -13,11 +13,39 @@ logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
+def _parse_products(raw):
+    """Chaîne stockée en base ('A, B, C') -> liste, pour pré-remplir un SelectMultipleField."""
+    if not raw:
+        return []
+    return [p.strip() for p in raw.split(",") if p.strip()]
+
+
+def _set_product_choices(form, division, existing_values=None):
+    """Renseigne les choix des deux listes déroulantes produits à partir du
+    catalogue actif de la division du commercial. Les valeurs déjà enregistrées
+    sur une ancienne prospection (produit depuis désactivé/archivé) restent
+    proposées, marquées comme telles, pour ne jamais bloquer une modification."""
+    active_products = get_active_products_for_division(division)
+    choices = [(name, name) for name in active_products]
+
+    if existing_values:
+        active_set = set(active_products)
+        for value in existing_values:
+            if value and value not in active_set:
+                choices.append((value, f"{value} (non disponible)"))
+                active_set.add(value)
+
+    form.produits_presentes.choices = choices
+    form.produits_prescrits.choices = choices
+
+
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
 @login_required
 @roles_required("commercial")
 def index():
     form = ProspectionForm()
+    _set_product_choices(form, current_user.project)
+
     if form.validate_on_submit():
         try:
             prospection = Prospection(
@@ -28,8 +56,8 @@ def index():
                 structure=form.structure.data,
                 telephone=form.telephone.data,
                 profils_prospect=form.profils_prospect.data,
-                produits_presentes=form.produits_presentes.data,
-                produits_prescrits=form.produits_prescrits.data,
+                produits_presentes=", ".join(form.produits_presentes.data),
+                produits_prescrits=", ".join(form.produits_prescrits.data),
             )
             db.session.add(prospection)
             db.session.commit()
@@ -53,7 +81,15 @@ def edit_prospection(prospection_id):
         flash("Accès non autorisé : cette prospection ne t'appartient pas.", "error")
         return render_template("403.html"), 403
 
+    existing_presentes = _parse_products(prospection.produits_presentes)
+    existing_prescrits = _parse_products(prospection.produits_prescrits)
+
     form = ProspectionForm(obj=prospection)
+    _set_product_choices(form, current_user.project, existing_values=set(existing_presentes) | set(existing_prescrits))
+
+    if not form.is_submitted():
+        form.produits_presentes.data = existing_presentes
+        form.produits_prescrits.data = existing_prescrits
 
     if form.validate_on_submit():
         try:
@@ -63,8 +99,8 @@ def edit_prospection(prospection_id):
             prospection.structure = form.structure.data
             prospection.telephone = form.telephone.data
             prospection.profils_prospect = form.profils_prospect.data
-            prospection.produits_presentes = form.produits_presentes.data
-            prospection.produits_prescrits = form.produits_prescrits.data
+            prospection.produits_presentes = ", ".join(form.produits_presentes.data)
+            prospection.produits_prescrits = ", ".join(form.produits_prescrits.data)
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             logger.info("Prospection #%s modifiée par %s", prospection_id, current_user.username)

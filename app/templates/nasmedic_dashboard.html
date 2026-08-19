@@ -3,6 +3,8 @@
 {% block content %}
 <h1>Tableau de Bord NASMEDIC</h1>
 
+{% include "_division_kpis.html" %}
+
 <div class="sales-links">
     {% for slug, label, sale_model, product_model in suppliers %}
     <a href="{{ url_for('sales.' ~ slug) }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes {{ label }}</a>
