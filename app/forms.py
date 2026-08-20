@@ -35,20 +35,13 @@ class ProspectionForm(FlaskForm):
 class PlanningForm(FlaskForm):
     date = DateField("Date de début de la semaine", validators=[DataRequired()])
 
-    lundi_matin = SelectMultipleField("Lundi Matin", choices=STRUCTURES)
-    lundi_soir = SelectMultipleField("Lundi Soir", choices=STRUCTURES)
-    mardi_matin = SelectMultipleField("Mardi Matin", choices=STRUCTURES)
-    mardi_soir = SelectMultipleField("Mardi Soir", choices=STRUCTURES)
-    mercredi_matin = SelectMultipleField("Mercredi Matin", choices=STRUCTURES)
-    mercredi_soir = SelectMultipleField("Mercredi Soir", choices=STRUCTURES)
-    jeudi_matin = SelectMultipleField("Jeudi Matin", choices=STRUCTURES)
-    jeudi_soir = SelectMultipleField("Jeudi Soir", choices=STRUCTURES)
-    vendredi_matin = SelectMultipleField("Vendredi Matin", choices=STRUCTURES)
-    vendredi_soir = SelectMultipleField("Vendredi Soir", choices=STRUCTURES)
-    samedi_matin = SelectMultipleField("Samedi Matin", choices=STRUCTURES)
-    samedi_soir = SelectMultipleField("Samedi Soir", choices=STRUCTURES)
-    dimanche_matin = SelectMultipleField("Dimanche Matin", choices=STRUCTURES)
-    dimanche_soir = SelectMultipleField("Dimanche Soir", choices=STRUCTURES)
+    lundi = SelectMultipleField("Lundi", choices=STRUCTURES)
+    mardi = SelectMultipleField("Mardi", choices=STRUCTURES)
+    mercredi = SelectMultipleField("Mercredi", choices=STRUCTURES)
+    jeudi = SelectMultipleField("Jeudi", choices=STRUCTURES)
+    vendredi = SelectMultipleField("Vendredi", choices=STRUCTURES)
+    samedi = SelectMultipleField("Samedi", choices=STRUCTURES)
+    dimanche = SelectMultipleField("Dimanche", choices=STRUCTURES)
 
     submit = SubmitField("Valider le planning")
 

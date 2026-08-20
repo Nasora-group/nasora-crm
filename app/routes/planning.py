@@ -11,18 +11,16 @@ planning_bp = Blueprint("planning", __name__)
 
 def _build_creneaux_from_form():
     """Lit les structures sélectionnées + noms précis postés dans le
-    formulaire et les encode en JSON, un champ par créneau jour/moment."""
+    formulaire et les encode en JSON, un champ par jour."""
     creneaux = {}
     for jour in JOURS:
-        for moment in ("matin", "soir"):
-            champ = f"{jour}_{moment}"
-            structures_selectionnees = request.form.getlist(champ)
-            entries = []
-            for structure in structures_selectionnees:
-                slug = STRUCTURE_SLUGS.get(structure, structure.replace(" ", "_"))
-                nom = request.form.get(f"{champ}_nom__{slug}", "")
-                entries.append((structure, nom))
-            creneaux[champ] = encode_planning_slot(entries)
+        structures_selectionnees = request.form.getlist(jour)
+        entries = []
+        for structure in structures_selectionnees:
+            slug = STRUCTURE_SLUGS.get(structure, structure.replace(" ", "_"))
+            nom = request.form.get(f"{jour}_nom__{slug}", "")
+            entries.append((structure, nom))
+        creneaux[jour] = encode_planning_slot(entries)
     return creneaux
 
 
@@ -81,11 +79,9 @@ def edit_planning(planning_id):
     existing_types = {}
     existing_details = {}
     for jour in JOURS:
-        for moment in ("matin", "soir"):
-            champ = f"{jour}_{moment}"
-            entries = decode_planning_slot(getattr(planning, champ))
-            existing_types[champ] = [t for t, _n in entries]
-            existing_details[champ] = {t: n for t, n in entries}
+        entries = decode_planning_slot(getattr(planning, jour))
+        existing_types[jour] = [t for t, _n in entries]
+        existing_details[jour] = {t: n for t, n in entries}
 
     return render_template(
         "saisie_planning.html",

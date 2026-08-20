@@ -58,3 +58,9 @@ def format_planning_slot(raw):
     for structure_type, nom in entries:
         parts.append(f"{structure_type} ({nom})" if nom else structure_type)
     return ", ".join(parts)
+
+
+def planning_entries(raw):
+    """Comme decode_planning_slot, mais exposé en filtre Jinja pour construire
+    un affichage riche (badges colorés) plutôt qu'une simple chaîne de texte."""
+    return decode_planning_slot(raw)

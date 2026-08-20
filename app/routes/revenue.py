@@ -155,12 +155,20 @@ def nasmedic_dashboard():
 
 def _monthly_revenue_route(division, template_name):
     suppliers = _division_suppliers(division)
-    _, _, combined = _monthly_revenue_for_division(division)
+    labels, totals, combined = _monthly_revenue_for_division(division)
     rows = []
     for month in sorted(combined.keys()):
         values = {slug: combined[month].get(slug, 0) for slug, *_ in suppliers}
         rows.append({"month": month, "amounts": values, "total": sum(values.values())})
-    return render_template(template_name, rows=rows, suppliers=suppliers)
+    kpis = _objectives_kpis(division, labels, totals)
+    return render_template(
+        template_name,
+        rows=rows,
+        suppliers=suppliers,
+        kpis=kpis,
+        division=division,
+        monthly_revenue_labels=labels,
+    )
 
 
 @revenue_bp.route("/monthly_revenue_nasderm")

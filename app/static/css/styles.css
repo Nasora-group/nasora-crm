@@ -411,3 +411,112 @@ footer p { font-size: 0.82rem; }
     border-radius: 4px;
     transition: width 0.4s ease;
 }
+
+/* ---- Planning : grille de saisie (7 jours, une carte par jour) ---- */
+.planning-week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.planning-day-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.planning-day-title {
+    margin: 0 0 10px;
+    color: var(--sage-dark);
+    font-size: 1rem;
+}
+
+/* ---- Planning : affichage en carte hebdomadaire colorée ---- */
+.planning-week-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.planning-week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.planning-week-header h3 {
+    margin: 0;
+    color: var(--ink);
+}
+
+.planning-week-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.planning-days-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+.planning-day-col-label {
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.planning-day-empty {
+    text-align: center;
+    color: var(--border);
+    font-size: 1.2rem;
+    padding: 10px 0;
+}
+
+.planning-badge {
+    color: white;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+
+.planning-badge-type {
+    display: block;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.planning-badge-nom {
+    display: block;
+    font-weight: 400;
+    opacity: 0.92;
+}
+
+@media (max-width: 900px) {
+    .planning-days-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .planning-days-row {
+        grid-template-columns: 1fr;
+    }
+}

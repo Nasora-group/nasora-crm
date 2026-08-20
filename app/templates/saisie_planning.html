@@ -1,33 +1,32 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>{{ 'Modifier le planning du ' ~ planning.date.strftime('%Y-%m-%d') if mode == 'edit' else 'Saisie du planning hebdomadaire' }}</h1>
-<p>Sélectionne les structures prévues sur chaque créneau, puis précise le nom exact de chacune (ex : sélectionner « HOPITAL » puis indiquer « Hôpital Principal de Dakar »).</p>
+<h1>{{ 'Modifier le planning du ' ~ planning.date.strftime('%d/%m/%Y') if mode == 'edit' else 'Saisie du planning hebdomadaire' }}</h1>
+<p style="color:var(--ink-soft);">Sélectionne les structures prévues pour chaque jour, puis précise le nom exact de chacune (ex : sélectionner « HOPITAL » puis indiquer « Hôpital Principal de Dakar »).</p>
 
 <form method="POST" id="planning-form">
     {{ formulaire.hidden_tag() }}
-    <div class="form-group">
+    <div class="form-group" style="max-width:280px;">
         {{ formulaire.date.label(class="form-label") }}
         {{ formulaire.date(class="form-input") }}
     </div>
 
-    {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
-    <h3>{{ jour_label }}</h3>
-    {% for moment, moment_label in [('matin','Matin'), ('soir','Soir')] %}
-    {% set champ = jour ~ '_' ~ moment %}
-    <div class="form-group planning-slot">
-        {{ formulaire[champ].label(class="form-label") }}
-        <select name="{{ champ }}" class="form-control select2 planning-select" multiple="multiple"
-                data-slot="{{ champ }}"
-                data-existing='{{ (existing_details[champ] if existing_details else {}) | tojson }}'>
-            {% for value, label in formulaire[champ].choices %}
-                <option value="{{ value }}" {% if existing_types and value in existing_types.get(champ, []) %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <div class="structure-details" id="details_{{ champ }}"></div>
+    <div class="planning-week-grid">
+        {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
+        <div class="planning-day-card">
+            <h3 class="planning-day-title">{{ jour_label }}</h3>
+            {{ formulaire[jour].label(class="form-label", style="display:none;") }}
+            <select name="{{ jour }}" class="form-control select2 planning-select" multiple="multiple"
+                    data-slot="{{ jour }}"
+                    data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
+                {% for value, label in formulaire[jour].choices %}
+                    <option value="{{ value }}" {% if existing_types and value in existing_types.get(jour, []) %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <div class="structure-details" id="details_{{ jour }}"></div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-    {% endfor %}
 
     <div class="form-group">
         {{ formulaire.submit(class="btn-submit") }}
@@ -39,6 +38,8 @@
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
 <script>
+var STRUCTURE_COLORS = {{ structure_colors | tojson }};
+
 $(document).ready(function() {
     $('.select2').select2({ placeholder: 'Choisir une ou plusieurs structures' });
 
@@ -53,22 +54,23 @@ $(document).ready(function() {
         var selected = $select.val() || [];
         var existing = $select.data('existing') || {};
 
-        // Retire les champs correspondant aux structures désélectionnées
         $container.children('[data-structure]').each(function() {
             if (selected.indexOf($(this).data('structure')) === -1) {
                 $(this).remove();
             }
         });
 
-        // Ajoute un champ pour chaque structure nouvellement sélectionnée
         selected.forEach(function(value) {
             if ($container.children('[data-structure="' + value + '"]').length > 0) {
-                return; // déjà présent, on ne touche pas à ce que l'utilisateur a tapé
+                return;
             }
             var slug = slugify(value);
             var fieldName = slot + '_nom__' + slug;
+            var color = STRUCTURE_COLORS[value] || '#6b8e4e';
 
-            var $wrapper = $('<div class="structure-detail-item"></div>').attr('data-structure', value);
+            var $wrapper = $('<div class="structure-detail-item"></div>')
+                .attr('data-structure', value)
+                .css('border-left', '4px solid ' + color);
             var $label = $('<label class="form-label"></label>').text('Nom précis (' + value + ')');
             var $input = $('<input type="text" class="form-input">')
                 .attr('name', fieldName)

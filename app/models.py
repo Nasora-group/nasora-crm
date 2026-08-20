@@ -19,9 +19,24 @@ STRUCTURES = [
 STRUCTURE_SLUGS = {value: value.replace(" ", "_") for value, _ in STRUCTURES}
 STRUCTURE_BY_SLUG = {slug: value for value, slug in STRUCTURE_SLUGS.items()}
 
+# Couleur distincte par type de structure, pour l'affichage du planning
+STRUCTURE_COLORS = {
+    "HOPITAL": "#4a6741",
+    "POSTE DE SANTE": "#8faf6d",
+    "CENTRE DE SANTE": "#2b6cb0",
+    "CLINIQUE": "#8e5fd1",
+    "SAPEUR POMPIER": "#c0392b",
+    "GENDARMERIE": "#5b6b5e",
+    "PHARMACIES": "#c98a2c",
+}
+
 JOURS = [
     "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche",
 ]
+JOURS_LABELS = {
+    "lundi": "Lundi", "mardi": "Mardi", "mercredi": "Mercredi", "jeudi": "Jeudi",
+    "vendredi": "Vendredi", "samedi": "Samedi", "dimanche": "Dimanche",
+}
 
 
 class User(UserMixin, db.Model):
@@ -57,20 +72,13 @@ class Planning(db.Model):
     commercial_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     date = db.Column(db.Date, nullable=False)  # Date de début de la semaine
 
-    lundi_matin = db.Column(db.Text, nullable=True)
-    lundi_soir = db.Column(db.Text, nullable=True)
-    mardi_matin = db.Column(db.Text, nullable=True)
-    mardi_soir = db.Column(db.Text, nullable=True)
-    mercredi_matin = db.Column(db.Text, nullable=True)
-    mercredi_soir = db.Column(db.Text, nullable=True)
-    jeudi_matin = db.Column(db.Text, nullable=True)
-    jeudi_soir = db.Column(db.Text, nullable=True)
-    vendredi_matin = db.Column(db.Text, nullable=True)
-    vendredi_soir = db.Column(db.Text, nullable=True)
-    samedi_matin = db.Column(db.Text, nullable=True)
-    samedi_soir = db.Column(db.Text, nullable=True)
-    dimanche_matin = db.Column(db.Text, nullable=True)
-    dimanche_soir = db.Column(db.Text, nullable=True)
+    lundi = db.Column(db.Text, nullable=True)
+    mardi = db.Column(db.Text, nullable=True)
+    mercredi = db.Column(db.Text, nullable=True)
+    jeudi = db.Column(db.Text, nullable=True)
+    vendredi = db.Column(db.Text, nullable=True)
+    samedi = db.Column(db.Text, nullable=True)
+    dimanche = db.Column(db.Text, nullable=True)
 
     commercial = db.relationship("User", backref=db.backref("plannings", lazy="dynamic"))
 
