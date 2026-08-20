@@ -1,2 +1,2 @@
-web: flask db upgrade && python seed.py && gunicorn wsgi:app --workers 2 --threads 4 --timeout 60
+web: bash start.sh
 release: flask db upgrade && python seed.py
