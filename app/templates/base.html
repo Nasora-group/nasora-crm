@@ -42,8 +42,11 @@
                     <a href="{{ url_for('planning.admin_plannings') }}">Plannings</a>
                     <a href="{{ url_for('users.list_users') }}">Utilisateurs</a>
                     <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}">Fiches produits</a>
+                    <a href="{{ url_for('evaluations.list_commercials') }}">Évaluations</a>
+                    <a href="{{ url_for('evaluations.classement') }}">Classement</a>
                 {% else %}
                     <a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a>
+                    <a href="{{ url_for('evaluations.my_evaluations') }}">Mes évaluations</a>
                 {% endif %}
                 <a href="{{ url_for('auth.logout') }}" class="nav-logout">Déconnexion</a>
             {% else %}

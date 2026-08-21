@@ -110,3 +110,29 @@ class ObjectiveForm(FlaskForm):
     nov = FloatField("Novembre (€)", validators=[Optional(), NumberRange(min=0)])
     dec = FloatField("Décembre (€)", validators=[Optional(), NumberRange(min=0)])
     submit = SubmitField("Enregistrer les objectifs")
+
+
+class EvaluationForm(FlaskForm):
+    score_ca = FloatField("Atteinte de l'objectif de CA", validators=[Optional(), NumberRange(min=0, max=20)])
+    score_gamme_asthe = FloatField("Gamme — Asthe 1000", validators=[Optional(), NumberRange(min=0, max=2)])
+    score_gamme_myocalm = FloatField("Gamme — Myocalm", validators=[Optional(), NumberRange(min=0, max=2)])
+    score_gamme_bumbum = FloatField("Gamme — Bum Bum", validators=[Optional(), NumberRange(min=0, max=1)])
+    score_gamme_flatupklexin = FloatField("Gamme — Flatupklexin", validators=[Optional(), NumberRange(min=0, max=2)])
+    score_gamme_somniplex = FloatField("Gamme — Somniplex", validators=[Optional(), NumberRange(min=0, max=1)])
+    score_gamme_ostheophytum = FloatField("Gamme — Ostheophytum", validators=[Optional(), NumberRange(min=0, max=1)])
+    score_gamme_specialkid = FloatField("Gamme — Spécial Kid", validators=[Optional(), NumberRange(min=0, max=1)])
+    score_reporting = FloatField("Qualité du reporting & nombre de visites", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_plan_visite = FloatField("Respect du plan de visite & ciblage", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_argumentaire = FloatField("Qualité de l'argumentaire scientifique", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_prescriptions = FloatField("Capacité à générer des prescriptions", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_organisation = FloatField("Organisation, discipline & gestion matériel", validators=[Optional(), NumberRange(min=0, max=5)])
+    score_ponctualite = FloatField("Ponctualité, assiduité et présence", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_consignes = FloatField("Respect des consignes & directives", validators=[Optional(), NumberRange(min=0, max=10)])
+    score_esprit_equipe = FloatField("Esprit d'équipe, proactivité & attitude", validators=[Optional(), NumberRange(min=0, max=5)])
+
+    points_forts = TextAreaField("Points forts", validators=[Optional()])
+    axes_amelioration = TextAreaField("Axes d'amélioration", validators=[Optional()])
+    objectifs_quantitatifs = TextAreaField("Objectifs quantitatifs (mois suivant)", validators=[Optional()])
+    objectifs_qualitatifs = TextAreaField("Objectifs qualitatifs (mois suivant)", validators=[Optional()])
+
+    submit = SubmitField("Enregistrer l'évaluation")

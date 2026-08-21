@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Mes évaluations KPI</h1>
+<p style="color:var(--ink-soft);">Historique de tes évaluations mensuelles, renseignées par l'administrateur.</p>
+
+<table class="responsive-table">
+    <thead>
+        <tr><th>Mois</th><th>Score</th><th>Niveau</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for e in evaluations %}
+        <tr>
+            <td>{{ mois_labels[e.month] }} {{ e.year }}</td>
+            <td>{{ "%.1f"|format(e.total_score) }} / 100</td>
+            <td><span class="badge {{ 'badge-active' if e.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ e.niveau }}</span></td>
+            <td><a href="{{ url_for('evaluations.my_evaluation_detail', year=e.year, month=e.month) }}" class="btn btn-outline">Voir le détail</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">Aucune évaluation disponible pour le moment.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

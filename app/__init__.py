@@ -75,6 +75,7 @@ def _register_blueprints(app):
     from app.routes.users import users_bp
     from app.routes.products import products_bp
     from app.routes.objectives import objectives_bp
+    from app.routes.evaluations import evaluations_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -85,6 +86,7 @@ def _register_blueprints(app):
     app.register_blueprint(users_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(objectives_bp)
+    app.register_blueprint(evaluations_bp)
 
 
 def _register_error_handlers(app):

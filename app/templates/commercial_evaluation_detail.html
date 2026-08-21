@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Mon évaluation — {{ mois_label }} {{ year }}</h1>
+<a href="{{ url_for('evaluations.my_evaluations') }}" class="btn btn-outline">&laquo; Retour à mes évaluations</a>
+
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="kpi-card">
+        <div class="kpi-body">
+            <span class="kpi-label">Visites effectuées ce mois</span>
+            <span class="kpi-value">{{ visits }}</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-body">
+            <span class="kpi-label">Score total</span>
+            <span class="kpi-value">{{ "%.1f"|format(evaluation.total_score) }} / {{ max_total }}</span>
+            <span class="kpi-sub">Niveau : {{ evaluation.niveau }}</span>
+        </div>
+    </div>
+</div>
+
+{% for section_title, section_max, items in sections %}
+<h2>{{ section_title }} <span style="color:var(--ink-soft); font-weight:400;">({{ section_max }} pts)</span></h2>
+<table class="responsive-table">
+    <thead><tr><th>Critère</th><th>Note obtenue</th></tr></thead>
+    <tbody>
+        {% for field_name, label, max_pts, level_labels in items %}
+        <tr>
+            <td>{{ label }}</td>
+            <td>{{ "%.2f"|format(evaluation[field_name]) }} / {{ max_pts }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endfor %}
+
+<h2>Synthèse & plan d'action</h2>
+<div class="panel">
+    <p><strong>Points forts :</strong><br>{{ evaluation.points_forts or "—" }}</p>
+    <p style="margin-top:12px;"><strong>Axes d'amélioration :</strong><br>{{ evaluation.axes_amelioration or "—" }}</p>
+    <p style="margin-top:12px;"><strong>Objectifs quantitatifs (mois suivant) :</strong><br>{{ evaluation.objectifs_quantitatifs or "—" }}</p>
+    <p style="margin-top:12px;"><strong>Objectifs qualitatifs (mois suivant) :</strong><br>{{ evaluation.objectifs_qualitatifs or "—" }}</p>
+</div>
+{% endblock %}

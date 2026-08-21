@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Classement des commerciaux</h1>
+<p style="color:var(--ink-soft);">Classement basé en priorité sur la note d'évaluation KPI, le nombre de visites servant de critère secondaire.</p>
+
+<form method="GET" class="filter-form">
+    <div>
+        <label for="month">Mois</label>
+        <select id="month" name="month" class="form-input">
+            {% for m, label in mois_labels.items() %}
+                <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="year">Année</label>
+        <input type="number" id="year" name="year" class="form-input" value="{{ year }}" style="width:100px;">
+    </div>
+    <div>
+        <button type="submit" class="btn">Afficher</button>
+    </div>
+</form>
+
+<h2>{{ mois_label }} {{ year }}</h2>
+
+{% if evalues %}
+<table class="responsive-table">
+    <thead>
+        <tr><th>Rang</th><th>Commercial</th><th>Division</th><th>Score</th><th>Niveau</th><th>Visites</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in evalues %}
+        <tr {% if loop.index == 1 %}style="background: var(--sage-pale);"{% endif %}>
+            <td>{{ loop.index }}{% if loop.index == 1 %} 🏆{% endif %}</td>
+            <td>{{ row.commercial.username }}</td>
+            <td>{{ row.commercial.project|upper }}</td>
+            <td>{{ "%.1f"|format(row.score) }} / 100</td>
+            <td><span class="badge {{ 'badge-active' if row.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ row.niveau }}</span></td>
+            <td>{{ row.visits }}</td>
+            <td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn btn-outline">Détail</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if evalues %}
+<p class="read-only-banner">🏆 Commercial du mois : <strong>{{ evalues[0].commercial.username }}</strong> avec {{ "%.1f"|format(evalues[0].score) }}/100 ({{ evalues[0].visits }} visite(s)).</p>
+{% endif %}
+{% else %}
+<p>Aucune évaluation enregistrée pour {{ mois_label }} {{ year }}.</p>
+{% endif %}
+
+{% if non_evalues %}
+<h2>Non évalués ce mois-ci</h2>
+<table class="responsive-table">
+    <thead>
+        <tr><th>Commercial</th><th>Division</th><th>Visites</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in non_evalues %}
+        <tr>
+            <td>{{ row.commercial.username }}</td>
+            <td>{{ row.commercial.project|upper }}</td>
+            <td>{{ row.visits }}</td>
+            <td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn">Évaluer</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

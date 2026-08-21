@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Évaluations des commerciaux</h1>
+<p style="color:var(--ink-soft);">Sélectionne un commercial pour consulter son historique ou saisir une nouvelle évaluation mensuelle.</p>
+
+<div class="dashboard-links">
+    <a href="{{ url_for('evaluations.classement') }}" class="btn btn-outline">Voir le classement du mois</a>
+</div>
+
+<table class="responsive-table">
+    <thead>
+        <tr><th>Nom</th><th>Division</th><th>Zone</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        {% for commercial in commerciaux %}
+        <tr>
+            <td>{{ commercial.username }}</td>
+            <td>{{ commercial.project|upper }}</td>
+            <td>{{ commercial.zone or '—' }}</td>
+            <td><a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline">Voir les évaluations</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">Aucun commercial trouvé.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

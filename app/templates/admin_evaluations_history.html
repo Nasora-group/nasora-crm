@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Évaluations — {{ commercial.username }}</h1>
+<p style="color:var(--ink-soft);">Division {{ commercial.project|upper }} — Zone {{ commercial.zone or 'N/A' }}</p>
+
+<div class="dashboard-links">
+    <a href="{{ url_for('evaluations.list_commercials') }}" class="btn btn-outline">&laquo; Retour à la liste</a>
+    <a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=current_year, month=current_month) }}" class="btn">Évaluer le mois en cours ({{ mois_labels[current_month] }} {{ current_year }})</a>
+</div>
+
+<table class="responsive-table">
+    <thead>
+        <tr><th>Mois</th><th>Score</th><th>Niveau</th><th>Évalué par</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        {% for e in evaluations %}
+        <tr>
+            <td>{{ mois_labels[e.month] }} {{ e.year }}</td>
+            <td>{{ "%.1f"|format(e.total_score) }} / 100</td>
+            <td><span class="badge {{ 'badge-active' if e.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ e.niveau }}</span></td>
+            <td>{{ e.evaluator.username if e.evaluator else '—' }}</td>
+            <td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=e.year, month=e.month) }}" class="btn btn-outline">Modifier</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Aucune évaluation enregistrée pour le moment.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
