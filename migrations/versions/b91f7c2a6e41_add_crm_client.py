@@ -9,7 +9,7 @@ import sqlalchemy as sa
 revision = "b91f7c2a6e41"
 down_revision = "7d33a2945cc2"
 branch_labels = None
- depends_on = None
+depends_on = None
 
 def upgrade():
     op.create_table(
