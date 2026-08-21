@@ -1,30 +1,115 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Évaluations — {{ commercial.username }}</h1>
-<p style="color:var(--ink-soft);">Division {{ commercial.project|upper }} — Zone {{ commercial.zone or 'N/A' }}</p>
-
-<div class="dashboard-links">
-    <a href="{{ url_for('evaluations.list_commercials') }}" class="btn btn-outline">&laquo; Retour à la liste</a>
-    <a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=current_year, month=current_month) }}" class="btn">Évaluer le mois en cours ({{ mois_labels[current_month] }} {{ current_year }})</a>
+<div class="page-header-row">
+    <div>
+        <h1>Évaluations — {{ commercial.username }}</h1>
+        <p style="color:var(--ink-soft);">Division {{ commercial.project|upper }} — Zone {{ commercial.zone or 'N/A' }}</p>
+    </div>
+    <div class="dashboard-links">
+        <a href="{{ url_for('evaluations.list_commercials') }}" class="btn btn-outline">&laquo; Retour</a>
+        <a href="{{ url_for('evaluations.export_evaluations_excel', commercial_id=commercial.id) }}" class="btn btn-outline">📊 Excel</a>
+        <a href="{{ url_for('evaluations.export_evaluations_pdf', commercial_id=commercial.id) }}" class="btn btn-outline">📄 PDF</a>
+    </div>
 </div>
 
+<form method="GET" class="filter-form">
+    <div>
+        <label for="month">Mois analysé</label>
+        <select id="month" name="month" class="form-input">
+            {% for m, label in mois_labels.items() %}
+                <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="year">Année</label>
+        <input type="number" id="year" name="year" class="form-input" value="{{ current_year }}" style="width:110px;">
+    </div>
+    <div>
+        <button type="submit" class="btn">Analyser</button>
+    </div>
+</form>
+
+{% if current_evaluation %}
+<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Score global</span><span class="kpi-value">{{ "%.1f"|format(current_evaluation.total_score) }} / {{ max_total }}</span><span class="kpi-sub">{{ current_evaluation.niveau }}</span></div></div>
+    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Visites du mois</span><span class="kpi-value">{{ visits }}</span><span class="kpi-sub">activité terrain</span></div></div>
+    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Évolution</span><span class="kpi-value">{% if score_delta is not none %}{{ '+' if score_delta > 0 else '' }}{{ "%.1f"|format(score_delta) }}{% else %}—{% endif %}</span><span class="kpi-sub">vs évaluation précédente</span></div></div>
+    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Évalué par</span><span class="kpi-value" style="font-size:1.1rem;">{{ current_evaluation.evaluator.username if current_evaluation.evaluator else '—' }}</span><span class="kpi-sub">{{ current_evaluation.updated_at.strftime('%d/%m/%Y') }}</span></div></div>
+</div>
+{% else %}
+<div class="flash flash-error">Aucune évaluation enregistrée pour {{ mois_labels[current_month] }} {{ current_year }}.</div>
+{% endif %}
+
+<div class="panel" style="margin-top:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;">
+        <div>
+            <h2 style="margin-top:0;">📈 Évolution du score</h2>
+            <p style="color:var(--ink-soft);margin-bottom:0;">12 derniers mois — objectif de référence : 75/100.</p>
+        </div>
+        {% if current_evaluation %}
+        <a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=current_year, month=current_month) }}" class="btn">Modifier l'évaluation</a>
+        {% endif %}
+    </div>
+    <div style="height:320px;margin-top:15px;"><canvas id="evaluationEvolutionChart"></canvas></div>
+</div>
+
+<div class="panel" style="margin-top:20px;">
+    <h2 style="margin-top:0;">🎯 Lecture de la performance</h2>
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+        <div><strong>Insuffisant</strong><br><span style="color:var(--ink-soft);">&lt; 60/100</span></div>
+        <div><strong>Moyen</strong><br><span style="color:var(--ink-soft);">60 à 74,9/100</span></div>
+        <div><strong>Bon</strong><br><span style="color:var(--ink-soft);">75 à 89,9/100</span></div>
+        <div><strong>Excellent</strong><br><span style="color:var(--ink-soft);">90 à 100/100</span></div>
+    </div>
+    {% if current_evaluation %}
+    <p style="margin-bottom:0;"><strong>Objectif de management :</strong> atteindre au minimum 75/100, puis viser 90/100 pour le niveau Excellent.</p>
+    {% endif %}
+</div>
+
+<h2>📝 Historique détaillé</h2>
 <table class="responsive-table">
-    <thead>
-        <tr><th>Mois</th><th>Score</th><th>Niveau</th><th>Évalué par</th><th>Action</th></tr>
-    </thead>
+    <thead><tr><th>Mois</th><th>Score</th><th>Niveau</th><th>Visites</th><th>Évalué par</th><th>Dernière modification</th><th>Action</th></tr></thead>
     <tbody>
         {% for e in evaluations %}
         <tr>
             <td>{{ mois_labels[e.month] }} {{ e.year }}</td>
-            <td>{{ "%.1f"|format(e.total_score) }} / 100</td>
+            <td><strong>{{ "%.1f"|format(e.total_score) }}</strong> / 100</td>
             <td><span class="badge {{ 'badge-active' if e.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ e.niveau }}</span></td>
+            <td>{{ visits if e.year == current_year and e.month == current_month else '—' }}</td>
             <td>{{ e.evaluator.username if e.evaluator else '—' }}</td>
+            <td>{{ e.updated_at.strftime('%d/%m/%Y') }}</td>
             <td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=e.year, month=e.month) }}" class="btn btn-outline">Modifier</a></td>
         </tr>
         {% else %}
-        <tr><td colspan="5">Aucune évaluation enregistrée pour le moment.</td></tr>
+        <tr><td colspan="7">Aucune évaluation enregistrée pour le moment.</td></tr>
         {% endfor %}
     </tbody>
 </table>
+
+<script>
+const evaluationPoints = {{ chart_points|tojson }};
+const chartCtx = document.getElementById('evaluationEvolutionChart');
+if (chartCtx) {
+    const labels = evaluationPoints.map(p => p.label);
+    const scores = evaluationPoints.map(p => p.score);
+    new Chart(chartCtx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Score /100', data: scores, spanGaps: false, tension: 0.25, borderWidth: 3, pointRadius: 4 },
+                { label: 'Seuil Bon (75)', data: labels.map(() => 75), borderDash: [6, 6], pointRadius: 0, borderWidth: 1.5 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { min: 0, max: 100, ticks: { stepSize: 20 } } },
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+</script>
 {% endblock %}
