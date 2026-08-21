@@ -1,9 +1,8 @@
-from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from app.extensions import db
-from app.models import User, STRUCTURES
+from app.models import User, Prospection, STRUCTURES
 from app.models_clients import Client
 from app.utils import roles_required
 
@@ -58,4 +57,30 @@ def client_detail(client_id):
     client = Client.query.get_or_404(client_id)
     if current_user.role == "commercial" and client.owner_id not in (None, current_user.id):
         return render_template("403.html"), 403
-    return render_template("client_detail.html", client=client)
+
+    # Les anciennes prospections ne possèdent pas encore de client_id. On les
+    # rattache temporairement par nom ou téléphone afin d'afficher l'historique
+    # sans modifier les données existantes ni ajouter de migration.
+    if client.phone:
+        visit_query = Prospection.query.filter(
+            or_(Prospection.nom_client.ilike(client.name), Prospection.telephone == client.phone)
+        )
+    else:
+        visit_query = Prospection.query.filter(Prospection.nom_client.ilike(client.name))
+    if current_user.role == "commercial":
+        visit_query = visit_query.filter(Prospection.commercial_id == current_user.id)
+    history = visit_query.order_by(Prospection.date.desc()).all()
+
+    if history and not client.last_visit:
+        client.last_visit = history[0].date
+        db.session.commit()
+
+    presented_count = sum(1 for v in history if (v.produits_presentes or "").strip())
+    prescribed_count = sum(1 for v in history if (v.produits_prescrits or "").strip())
+    return render_template(
+        "client_detail.html",
+        client=client,
+        history=history,
+        presented_count=presented_count,
+        prescribed_count=prescribed_count,
+    )
