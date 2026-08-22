@@ -6,6 +6,7 @@ from app.models_clients import Client, ClientVisit
 from app.models import SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
 from app.utils import roles_required
 from app.extensions import db
+from app.visit_metrics import unique_visit_count_for_commercial
 
 vm_cockpit_bp = Blueprint("vm_cockpit", __name__)
 
@@ -22,7 +23,6 @@ def _commercial_revenue_kpis(commercial):
     monthly_revenue = 0
     annual_revenue = 0
 
-    # Même logique que le tableau de CA admin : toutes les ventes de la division.
     for slug in DIVISION_SUPPLIERS.get(division, []):
         sale_model = SUPPLIERS[slug]["sale_model"]
         rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).filter(
@@ -63,10 +63,10 @@ def _commercial_revenue_kpis(commercial):
 def index():
     today = date.today()
     week_end = today + timedelta(days=7)
-    visits_today = ClientVisit.query.filter_by(commercial_id=current_user.id, date=today).order_by(ClientVisit.id.desc()).all()
+    visits_today = ClientVisit.query.filter_by(commercial_id=current_user.id, date=today, is_duplicate=False).order_by(ClientVisit.id.desc()).all()
     upcoming = Client.query.filter(Client.owner_id == current_user.id, Client.next_visit.isnot(None), Client.next_visit >= today, Client.next_visit <= week_end).order_by(Client.next_visit.asc()).all()
     overdue = Client.query.filter(Client.owner_id == current_user.id, Client.next_visit.isnot(None), Client.next_visit < today).order_by(Client.next_visit.asc()).all()
-    recent = ClientVisit.query.filter_by(commercial_id=current_user.id).order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).limit(10).all()
+    recent = ClientVisit.query.filter_by(commercial_id=current_user.id, is_duplicate=False).order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).limit(10).all()
     presented = Counter(); prescribed = Counter()
     for visit in recent:
         for product in (visit.products_presented or "").split(","):
@@ -75,4 +75,5 @@ def index():
             if product.strip(): prescribed[product.strip()] += 1
 
     revenue_kpis = _commercial_revenue_kpis(current_user)
-    return render_template("vm_cockpit.html", today=today, visits_today=visits_today, visits_week=upcoming, upcoming=upcoming, overdue=overdue, recent=recent, presented=presented.most_common(5), prescribed=prescribed.most_common(5), revenue_kpis=revenue_kpis)
+    visit_kpi = unique_visit_count_for_commercial(current_user.id)
+    return render_template("vm_cockpit.html", today=today, visits_today=visits_today, visits_week=upcoming, upcoming=upcoming, overdue=overdue, recent=recent, presented=presented.most_common(5), prescribed=prescribed.most_common(5), revenue_kpis=revenue_kpis, visit_kpi=visit_kpi)
