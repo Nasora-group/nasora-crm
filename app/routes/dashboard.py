@@ -2,7 +2,7 @@ import logging
 import re
 import unicodedata
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app.extensions import db
@@ -54,13 +54,7 @@ def _invalid_phone(value):
 
 
 def _find_client_for_prospection(prospection):
-    """Trouve le professionnel existant sans créer de doublon.
-
-    - Un téléphone réellement renseigné est le meilleur identifiant.
-    - Les valeurs NA/0/vides ne servent jamais d'identifiant.
-    - Sans téléphone valide, le nom normalisé est utilisé, en privilégiant
-      le professionnel déjà rattaché au commercial courant.
-    """
+    """Trouve le professionnel existant sans créer de doublon."""
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
     normalized_phone = _normalize_phone(phone)
@@ -123,7 +117,6 @@ def _sync_professional_from_prospection(prospection):
         if not client.last_visit or prospection.date > client.last_visit:
             client.last_visit = prospection.date
 
-    # Une saisie de prospection crée toujours une visite CRM liée.
     visit = ClientVisit(
         client_id=client.id,
         commercial_id=current_user.id,
@@ -228,6 +221,20 @@ def index():
     return _render_dashboard(form)
 
 
+@dashboard_bp.route("/dashboard/prospections", methods=["GET"])
+@login_required
+@roles_required("commercial")
+def prospections():
+    page = request.args.get("page", 1, type=int)
+    pagination = (
+        Prospection.query
+        .filter_by(commercial_id=current_user.id)
+        .order_by(Prospection.date.desc(), Prospection.id.desc())
+        .paginate(page=page, per_page=20, error_out=False)
+    )
+    return render_template("dashboard_prospections.html", prospections=pagination.items, pagination=pagination)
+
+
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
 @login_required
 @roles_required("commercial")
@@ -257,7 +264,7 @@ def edit_prospection(prospection_id):
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             logger.info("Prospection #%s modifiée et synchronisée par %s", prospection_id, current_user.username)
-            return redirect(url_for("admin.commercial_detail", username=current_user.username))
+            return redirect(url_for("dashboard.prospections"))
         except Exception:
             db.session.rollback()
             logger.exception("Erreur lors de la modification de la prospection #%s", prospection_id)
@@ -273,10 +280,10 @@ def delete_prospection(prospection_id):
     prospection = Prospection.query.get_or_404(prospection_id)
     if prospection.commercial_id != current_user.id:
         flash("Accès non autorisé : cette prospection ne t'appartient pas.", "error")
-        return redirect(url_for("admin.commercial_detail", username=current_user.username))
+        return redirect(url_for("dashboard.prospections"))
     if form.validate_on_submit():
         db.session.delete(prospection)
         db.session.commit()
         flash("Prospection supprimée.", "success")
         logger.info("Prospection #%s supprimée par %s", prospection_id, current_user.username)
-    return redirect(url_for("admin.commercial_detail", username=current_user.username))
+    return redirect(url_for("dashboard.prospections"))
