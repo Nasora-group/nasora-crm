@@ -123,6 +123,42 @@ def _sync_professional_from_existing_prospection(prospection):
         db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None))
 
 
+def _delete_linked_records_for_prospection(prospection):
+    """Supprime la visite créée pour cette prospection puis le professionnel
+    uniquement s'il ne possède plus aucune autre visite.
+
+    Une Prospection n'a pas de FK directe vers ClientVisit : on retrouve donc
+    la visite par commercial/date/contenu. On ne supprime jamais un Client
+    tant qu'une autre visite lui est encore rattachée.
+    """
+    client = _find_client_for_prospection(prospection)
+    if client is None:
+        return None, None
+
+    matching_visits = ClientVisit.query.filter_by(
+        client_id=client.id,
+        commercial_id=prospection.commercial_id,
+        date=prospection.date,
+        products_presented=prospection.produits_presentes or None,
+        products_prescribed=prospection.produits_prescrits or None,
+        report=prospection.profils_prospect or None,
+    ).order_by(ClientVisit.id.desc()).all()
+
+    visit = matching_visits[0] if matching_visits else None
+    if visit is not None:
+        db.session.delete(visit)
+        db.session.flush()
+
+    remaining_visits = ClientVisit.query.filter_by(client_id=client.id).count()
+    deleted_client = False
+    if remaining_visits == 0:
+        db.session.delete(client)
+        db.session.flush()
+        deleted_client = True
+
+    return client.id, deleted_client
+
+
 def _render_dashboard(form):
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
@@ -161,8 +197,6 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    # Liste simple volontairement sans pagination : évite toute dépendance à l'API
-    # de pagination de Flask-SQLAlchemy et garantit un affichage fiable du commercial.
     prospections = (
         Prospection.query
         .filter_by(commercial_id=current_user.id)
@@ -218,7 +252,19 @@ def delete_prospection(prospection_id):
         flash("Accès non autorisé : cette prospection ne t'appartient pas.", "error")
         return redirect(url_for("dashboard.prospections"))
     if form.validate_on_submit():
-        db.session.delete(prospection)
-        db.session.commit()
-        flash("Prospection supprimée.", "success")
+        try:
+            client_id, deleted_client = _delete_linked_records_for_prospection(prospection)
+            db.session.delete(prospection)
+            db.session.commit()
+            if deleted_client and client_id:
+                logger.info("Prospection #%s supprimée avec Professionnel #%s et sa visite liée", prospection_id, client_id)
+            elif client_id:
+                logger.info("Prospection #%s et sa visite liée supprimées; Professionnel #%s conservé car d'autres visites existent", prospection_id, client_id)
+            else:
+                logger.info("Prospection #%s supprimée sans professionnel/visite liée retrouvée", prospection_id)
+            flash("Prospection supprimée avec succès.", "success")
+        except Exception:
+            db.session.rollback()
+            logger.exception("Erreur lors de la suppression de la prospection #%s", prospection_id)
+            flash("Impossible de supprimer la prospection. Aucun changement n'a été appliqué.", "error")
     return redirect(url_for("dashboard.prospections"))
