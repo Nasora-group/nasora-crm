@@ -1,6 +1,7 @@
 import pytest
 
 from app import create_app
+from app.config import TestingConfig
 from app.extensions import db
 from app.models import User
 from werkzeug.security import generate_password_hash
@@ -8,8 +9,8 @@ from werkzeug.security import generate_password_hash
 
 @pytest.fixture()
 def app():
-    app = create_app("testing") if False else create_app()
-    app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI="sqlite:///:memory:", WTF_CSRF_ENABLED=False, SECRET_KEY="test")
+    app = create_app(TestingConfig)
+    app.config.update(TESTING=True, WTF_CSRF_ENABLED=False, SECRET_KEY="test")
     with app.app_context():
         db.create_all()
         admin = User(username="admin_test", password=generate_password_hash("password"), role="admin", project="nasmedic", is_active_account=True)
