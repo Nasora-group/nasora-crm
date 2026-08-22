@@ -12,7 +12,6 @@ from reportlab.pdfgen import canvas
 from app.extensions import db
 from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
-from app.models_clients import ClientVisit
 from app.utils import roles_required
 from app.visit_metrics import unique_visit_count, unique_visits_by_commercial
 
@@ -86,6 +85,7 @@ def dashboard():
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     active_commercials_count = User.query.filter_by(role="commercial", is_active_account=True).count()
 
+    # Visites réelles = Prospections. ClientVisit est désormais le miroir CRM.
     total_visits = unique_visit_count()
     visits_by_commercial = unique_visits_by_commercial()
     commercial_names = {u.id: u.username for u in commerciaux}
@@ -100,9 +100,8 @@ def dashboard():
 
     top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
 
-    # The "Top commerciaux — prospections" chart must use the Prospection table,
-    # not ClientVisit. Apply exactly the same date/commercial/zone/speciality
-    # filters as the prospection list below so the chart and table stay coherent.
+    # Source unique du graphique et du tableau de prospections.
+    # Les mêmes filtres sont appliqués aux deux pour garantir leur cohérence.
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start = request.args.get("date_start")
     date_end = request.args.get("date_end")
@@ -129,17 +128,16 @@ def dashboard():
         .all()
     )
     top_prospections = [
-        {
-            "username": commercial_names[cid],
-            "prospections": count,
-        }
+        {"username": commercial_names[cid], "prospections": count}
         for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:10]
         if cid in commercial_names
     ]
 
+    # Le classement des visites utilise exactement la même source Prospection
+    # et les mêmes filtres que le graphique.
     top_5_commerciaux = [
         {"username": commercial_names[cid], "zone": commercial_zones.get(cid), "nombre_visites": count}
-        for cid, count in sorted(visits_by_commercial.items(), key=lambda item: item[1], reverse=True)[:5]
+        for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:5]
         if cid in commercial_names
     ]
 
