@@ -15,64 +15,34 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 <body>
-<header class="site-header">
-    <div class="header-inner">
-        <a href="{{ url_for('auth.home') }}" class="brand">
-            <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo">
-            <div class="brand-text">
-                <span class="brand-name">NASORA HEALTH &amp; SKINCARE</span>
-                <span class="brand-tagline">Plateforme de gestion commerciale</span>
-            </div>
-        </a>
-        {% if current_user.is_authenticated %}
-        <div class="header-user">
-            <span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else 'Commercial' }}</span>
-            <span class="header-user-name">{{ current_user.username }}</span>
-        </div>
-        {% endif %}
-    </div>
-</header>
-<nav class="site-nav">
-    <div class="nav-inner">
-        <a href="{{ url_for('auth.home') }}">Accueil</a>
-        {% if current_user.is_authenticated %}
-            {% if current_user.role == 'admin' %}
-                <a href="{{ url_for('admin.dashboard') }}">Tableau de Bord</a>
-                <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}">CA NASMEDIC</a>
-                <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}">CA NASDERM</a>
-                <a href="{{ url_for('planning.admin_plannings') }}">Plannings</a>
-                <a href="{{ url_for('clients.list_clients') }}">👥 Professionnels</a>
-                <a href="{{ url_for('users.list_users') }}">Utilisateurs</a>
-                <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}">Fiches produits</a>
-                <a href="{{ url_for('evaluations.list_commercials') }}">Évaluations</a>
-                <a href="{{ url_for('evaluations.classement') }}">Classement</a>
-            {% else %}
-                <a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a>
-                <a href="{{ url_for('vm_cockpit.index') }}">🎯 Mon Cockpit</a>
-                <a href="{{ url_for('clients.list_clients') }}">👥 Mes professionnels</a>
-                <a href="{{ url_for('evaluations.my_evaluations') }}">Mes évaluations</a>
-            {% endif %}
-            <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline; margin:0;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="nav-logout" style="border:0; background:none; cursor:pointer; font:inherit;">Déconnexion</button>
-            </form>
+<header class="site-header"><div class="header-inner">
+    <a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>
+    {% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div>{% endif %}
+</div></header>
+<nav class="site-nav"><div class="nav-inner">
+    <a href="{{ url_for('auth.home') }}">Accueil</a>
+    {% if current_user.is_authenticated %}
+        {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}">Tableau de Bord</a>
+            <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}">CA NASMEDIC</a>
+            <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}">CA NASDERM</a>
+            <a href="{{ url_for('planning.admin_plannings') }}">Plannings</a>
+            <a href="{{ url_for('clients.list_clients') }}">👥 Professionnels</a>
+            <a href="{{ url_for('users.list_users') }}">Utilisateurs</a>
+            <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}">Fiches produits</a>
+            <a href="{{ url_for('evaluations.list_commercials') }}">Mes évaluations</a>
+            <a href="{{ url_for('evaluations.classement') }}">Classement</a>
         {% else %}
-            <a href="{{ url_for('auth.login') }}">Connexion</a>
+            <a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a>
+            <a href="{{ url_for('clients.list_clients') }}">👥 Mes professionnels</a>
+            <a href="{{ url_for('evaluations.my_evaluations') }}">⭐ Mes évaluations</a>
         {% endif %}
-    </div>
-</nav>
+        <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline;margin:0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-logout">Déconnexion</button></form>
+    {% else %}<a href="{{ url_for('auth.login') }}">Connexion</a>{% endif %}
+</div></nav>
 <div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash flash-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    {% block content %}{% endblock %}
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-messages">{% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
+{% block content %}{% endblock %}
 </div>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p></footer>
-</body>
-</html>
+</body></html>
