@@ -2,59 +2,21 @@
 
 {% block content %}
 <h1>Objectifs de vente — {{ division_label }}</h1>
-<p style="color:var(--ink-soft);">Définis l'objectif annuel et les objectifs mensuels de chiffre d'affaire pour {{ division_label }}.</p>
-
 <div class="supplier-tabs">
     <a href="{{ url_for('objectives.edit_objectives', division='nasderm', year=year) }}" class="{{ 'active' if division == 'nasderm' else '' }}">NASDERM</a>
     <a href="{{ url_for('objectives.edit_objectives', division='nasmedic', year=year) }}" class="{{ 'active' if division == 'nasmedic' else '' }}">NASMEDIC</a>
 </div>
-
 <div class="filter-form">
-    <div>
-        <label for="year-select">Année</label>
-        <select id="year-select" class="form-input" onchange="window.location.href='{{ url_for('objectives.edit_objectives', division=division) }}?year=' + this.value">
-            {% for y in range(year - 2, year + 3) %}
-                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-            {% endfor %}
-        </select>
-    </div>
+    <div><label for="year-select">Année</label><select id="year-select" class="form-input" onchange="window.location.href='{{ url_for('objectives.edit_objectives', division=division) }}?year=' + this.value">{% for y in range(year - 2, year + 3) %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
 </div>
-
 <div class="form-container">
     <form method="POST">
         {{ form.hidden_tag() }}
-
-        <div class="form-group">
-            {{ form.annual_target.label(class="form-label") }}
-            {{ form.annual_target(class="form-input", step="0.01", placeholder="ex : 500000") }}
-            <small>Objectif total pour l'année {{ year }}, toutes ventes {{ division_label }} confondues.</small>
-        </div>
-
+        <div class="form-group">{{ form.annual_target.label(class="form-label") }}{{ form.annual_target(class="form-input", step="0.01", placeholder="ex : 500000") }}</div>
         <h3>Objectifs mensuels {{ year }}</h3>
-        <div class="chart-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
-            {% for field_name in month_fields %}
-            <div class="form-group" style="margin-bottom:0;">
-                {{ form[field_name].label(class="form-label") }}
-                {{ form[field_name](class="form-input", step="0.01", placeholder="0.00") }}
-            </div>
-            {% endfor %}
-        </div>
-
-        {% if form.errors %}
-            <div class="flash flash-error" style="margin-top:16px;">
-                <ul style="margin:0; padding-left:18px;">
-                    {% for field, errors in form.errors.items() %}
-                        {% for error in errors %}
-                            <li>{{ form[field].label.text }} : {{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-        <div class="form-group" style="margin-top:20px;">
-            {{ form.submit(class="btn-submit") }}
-        </div>
+        <div class="chart-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">{% for field_name in month_fields %}<div class="form-group" style="margin-bottom:0;">{{ form[field_name].label(class="form-label") }}{{ form[field_name](class="form-input", step="0.01", placeholder="0.00") }}</div>{% endfor %}</div>
+        {% if form.errors %}<div class="flash flash-error" style="margin-top:16px;"><ul style="margin:0; padding-left:18px;">{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>{% endif %}
+        <div class="form-group" style="margin-top:20px;">{{ form.submit(class="btn-submit") }}</div>
     </form>
 </div>
 {% endblock %}
