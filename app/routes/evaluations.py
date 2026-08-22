@@ -5,6 +5,7 @@ from datetime import date
 import pandas as pd
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_file
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -13,6 +14,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from app.extensions import db
 from app.forms import EvaluationForm
 from app.models import User, Prospection, Evaluation, EVALUATION_SECTIONS, EVALUATION_MAX_TOTAL
+from app.models_clients import ClientVisit
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -25,12 +27,35 @@ MOIS_LABELS = {
 
 
 def _visits_count(commercial_id, year, month):
-    dates = [
-        d for (d,) in db.session.query(Prospection.date)
-        .filter(Prospection.commercial_id == commercial_id)
-        .all()
-    ]
-    return sum(1 for d in dates if d.year == year and d.month == month)
+    """Nombre de visites métier uniques pour un commercial et un mois.
+
+    Une visite est définie par (commercial, professionnel, date).
+    Les doublons historiques marqués is_duplicate=True sont exclus.
+    Les prospections ne servent plus de compteur de visites afin d'éviter
+    les écarts entre les KPI, les évaluations et le cockpit terrain.
+    """
+    if month == 12:
+        next_month = date(year + 1, 1, 1)
+    else:
+        next_month = date(year, month + 1, 1)
+    month_start = date(year, month, 1)
+
+    unique_visits = (
+        db.session.query(
+            ClientVisit.commercial_id,
+            ClientVisit.client_id,
+            ClientVisit.date,
+        )
+        .filter(
+            ClientVisit.commercial_id == commercial_id,
+            ClientVisit.date >= month_start,
+            ClientVisit.date < next_month,
+            ClientVisit.is_duplicate.is_(False),
+        )
+        .distinct()
+        .subquery()
+    )
+    return db.session.query(func.count()).select_from(unique_visits).scalar() or 0
 
 
 def _evaluation_dashboard_data(commercial_id, year, month):
