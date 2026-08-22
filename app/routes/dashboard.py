@@ -124,18 +124,15 @@ def _sync_professional_from_existing_prospection(prospection):
 
 
 def _delete_linked_records_for_prospection(prospection):
-    """Supprime la visite créée pour cette prospection puis le professionnel
-    uniquement s'il ne possède plus aucune autre visite.
-
-    Une Prospection n'a pas de FK directe vers ClientVisit : on retrouve donc
-    la visite par commercial/date/contenu. On ne supprime jamais un Client
-    tant qu'une autre visite lui est encore rattachée.
+    """Supprime la visite issue de la prospection et le professionnel si cette
+    visite était sa dernière. Un fallback sur commercial/date est utilisé
+    lorsque les champs texte ont été modifiés ou normalisés après la saisie.
     """
     client = _find_client_for_prospection(prospection)
     if client is None:
-        return None, None
+        return None, False
 
-    matching_visits = ClientVisit.query.filter_by(
+    exact_visits = ClientVisit.query.filter_by(
         client_id=client.id,
         commercial_id=prospection.commercial_id,
         date=prospection.date,
@@ -144,10 +141,23 @@ def _delete_linked_records_for_prospection(prospection):
         report=prospection.profils_prospect or None,
     ).order_by(ClientVisit.id.desc()).all()
 
-    visit = matching_visits[0] if matching_visits else None
+    visit = exact_visits[0] if exact_visits else None
+
+    # Si la visite n'est plus identique textuellement (édition, normalisation,
+    # valeur vide, etc.), on prend la dernière visite de ce commercial pour
+    # ce professionnel à la date de la prospection.
+    if visit is None:
+        visit = (
+            ClientVisit.query
+            .filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date)
+            .order_by(ClientVisit.id.desc())
+            .first()
+        )
+
     if visit is not None:
         db.session.delete(visit)
         db.session.flush()
+        logger.info("Visite #%s supprimée avec la prospection #%s", visit.id, prospection.id)
 
     remaining_visits = ClientVisit.query.filter_by(client_id=client.id).count()
     deleted_client = False
@@ -155,6 +165,7 @@ def _delete_linked_records_for_prospection(prospection):
         db.session.delete(client)
         db.session.flush()
         deleted_client = True
+        logger.info("Professionnel #%s supprimé : aucune autre visite", client.id)
 
     return client.id, deleted_client
 
@@ -197,12 +208,7 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    prospections = (
-        Prospection.query
-        .filter_by(commercial_id=current_user.id)
-        .order_by(Prospection.date.desc(), Prospection.id.desc())
-        .all()
-    )
+    prospections = Prospection.query.filter_by(commercial_id=current_user.id).order_by(Prospection.date.desc(), Prospection.id.desc()).all()
     return render_template("dashboard_prospections.html", prospections=prospections)
 
 
@@ -256,12 +262,7 @@ def delete_prospection(prospection_id):
             client_id, deleted_client = _delete_linked_records_for_prospection(prospection)
             db.session.delete(prospection)
             db.session.commit()
-            if deleted_client and client_id:
-                logger.info("Prospection #%s supprimée avec Professionnel #%s et sa visite liée", prospection_id, client_id)
-            elif client_id:
-                logger.info("Prospection #%s et sa visite liée supprimées; Professionnel #%s conservé car d'autres visites existent", prospection_id, client_id)
-            else:
-                logger.info("Prospection #%s supprimée sans professionnel/visite liée retrouvée", prospection_id)
+            logger.info("Prospection #%s supprimée; client=%s deleted_client=%s", prospection_id, client_id, deleted_client)
             flash("Prospection supprimée avec succès.", "success")
         except Exception:
             db.session.rollback()
