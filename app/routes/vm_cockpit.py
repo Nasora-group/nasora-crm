@@ -3,9 +3,51 @@ from collections import Counter
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 from app.models_clients import Client, ClientVisit
+from app.models import SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
 from app.utils import roles_required
+from app.extensions import db
 
 vm_cockpit_bp = Blueprint("vm_cockpit", __name__)
+
+
+def _commercial_revenue_kpis(commercial):
+    today = date.today()
+    division = commercial.project
+    month_key = today.strftime("%Y-%m")
+    current_year = today.year
+    monthly_revenue = 0
+    annual_revenue = 0
+
+    for slug in DIVISION_SUPPLIERS.get(division, []):
+        sale_model = SUPPLIERS[slug]["sale_model"]
+        rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).filter(
+            sale_model.commercial_id == commercial.id,
+            sale_model.project == division,
+        ).all()
+        for sale_date, quantity, price in rows:
+            amount = (quantity or 0) * (price or 0)
+            if sale_date.strftime("%Y-%m") == month_key:
+                monthly_revenue += amount
+            if sale_date.year == current_year:
+                annual_revenue += amount
+
+    monthly_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=today.month).first()
+    annual_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=None).first()
+    monthly_target = monthly_objective.target_amount if monthly_objective else None
+    annual_target = annual_objective.target_amount if annual_objective else None
+
+    return {
+        "division": division,
+        "division_label": division.upper(),
+        "monthly_revenue": monthly_revenue,
+        "annual_revenue": annual_revenue,
+        "monthly_target": monthly_target,
+        "annual_target": annual_target,
+        "monthly_pct": (monthly_revenue / monthly_target * 100) if monthly_target else None,
+        "annual_pct": (annual_revenue / annual_target * 100) if annual_target else None,
+        "current_year": current_year,
+    }
+
 
 @vm_cockpit_bp.route("/dashboard/vm", methods=["GET"])
 @login_required
@@ -23,4 +65,6 @@ def index():
             if product.strip(): presented[product.strip()] += 1
         for product in (visit.products_prescribed or "").split(","):
             if product.strip(): prescribed[product.strip()] += 1
-    return render_template("vm_cockpit.html", today=today, visits_today=visits_today, visits_week=upcoming, upcoming=upcoming, overdue=overdue, recent=recent, presented=presented.most_common(5), prescribed=prescribed.most_common(5))
+
+    revenue_kpis = _commercial_revenue_kpis(current_user)
+    return render_template("vm_cockpit.html", today=today, visits_today=visits_today, visits_week=upcoming, upcoming=upcoming, overdue=overdue, recent=recent, presented=presented.most_common(5), prescribed=prescribed.most_common(5), revenue_kpis=revenue_kpis)
