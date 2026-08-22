@@ -40,14 +40,23 @@ def _render_dashboard(form):
     return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
 
 
-def _sync_professional_from_prospection(prospection):
+def _find_client_for_prospection(prospection):
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
     client = None
     if phone:
         client = Client.query.filter_by(phone=phone).first()
     if client is None and name:
-        client = Client.query.filter(Client.name.ilike(name)).filter(Client.owner_id == current_user.id).first()
+        client = Client.query.filter(Client.name.ilike(name)).first()
+    return client
+
+
+def _sync_professional_from_prospection(prospection):
+    """Synchronise une prospection avec le professionnel et son historique de visites."""
+    phone = (prospection.telephone or "").strip()
+    name = (prospection.nom_client or "").strip()
+    client = _find_client_for_prospection(prospection)
+
     if client is None:
         client = Client(
             name=name,
@@ -64,17 +73,59 @@ def _sync_professional_from_prospection(prospection):
         client.specialty = (prospection.specialite or "").strip() or client.specialty
         client.structure = (prospection.structure or "").strip() or client.structure
         client.phone = phone or client.phone
-        client.owner_id = client.owner_id or current_user.id
-        client.last_visit = prospection.date
+        if client.owner_id is None:
+            client.owner_id = current_user.id
+        if not client.last_visit or prospection.date > client.last_visit:
+            client.last_visit = prospection.date
 
-    db.session.add(ClientVisit(
+    # Une saisie de prospection crée toujours une visite CRM liée.
+    visit = ClientVisit(
         client_id=client.id,
         commercial_id=current_user.id,
         date=prospection.date,
         products_presented=prospection.produits_presentes or None,
         products_prescribed=prospection.produits_prescrits or None,
         report=prospection.profils_prospect or None,
-    ))
+    )
+    db.session.add(visit)
+    db.session.flush()
+    return client, visit
+
+
+def _sync_professional_from_existing_prospection(prospection):
+    """Rattache une prospection existante à un professionnel sans créer une seconde prospection."""
+    client = _find_client_for_prospection(prospection)
+    if client is None:
+        client = Client(
+            name=(prospection.nom_client or "").strip(),
+            specialty=(prospection.specialite or "").strip() or None,
+            structure=(prospection.structure or "").strip(),
+            phone=(prospection.telephone or "").strip() or None,
+            potential=3,
+            owner_id=prospection.commercial_id,
+            last_visit=prospection.date,
+        )
+        db.session.add(client)
+        db.session.flush()
+    existing_visit = ClientVisit.query.filter_by(
+        client_id=client.id,
+        commercial_id=prospection.commercial_id,
+        date=prospection.date,
+        products_presented=prospection.produits_presentes or None,
+        products_prescribed=prospection.produits_prescrits or None,
+        report=prospection.profils_prospect or None,
+    ).first()
+    if existing_visit is None:
+        db.session.add(ClientVisit(
+            client_id=client.id,
+            commercial_id=prospection.commercial_id,
+            date=prospection.date,
+            products_presented=prospection.produits_presentes or None,
+            products_prescribed=prospection.produits_prescrits or None,
+            report=prospection.profils_prospect or None,
+        ))
+    if not client.last_visit or prospection.date > client.last_visit:
+        client.last_visit = prospection.date
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
@@ -103,9 +154,9 @@ def index():
             )
             db.session.add(prospection)
             db.session.flush()
-            _sync_professional_from_prospection(prospection)
+            client, visit = _sync_professional_from_prospection(prospection)
             db.session.commit()
-            logger.info("Prospection #%s enregistrée et synchronisée pour %s", prospection.id, current_user.username)
+            logger.info("Prospection #%s synchronisée avec Client #%s / Visit #%s pour %s", prospection.id, client.id, visit.id, current_user.username)
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
@@ -142,9 +193,10 @@ def edit_prospection(prospection_id):
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
+            _sync_professional_from_existing_prospection(prospection)
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
-            logger.info("Prospection #%s modifiée par %s", prospection_id, current_user.username)
+            logger.info("Prospection #%s modifiée et synchronisée par %s", prospection_id, current_user.username)
             return redirect(url_for("admin.commercial_detail", username=current_user.username))
         except Exception:
             db.session.rollback()
