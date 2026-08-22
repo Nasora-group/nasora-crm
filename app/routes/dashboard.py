@@ -13,7 +13,6 @@ from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 
 logger = logging.getLogger(__name__)
-
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
@@ -57,15 +56,12 @@ def _find_client_for_prospection(prospection):
     name = (prospection.nom_client or "").strip()
     normalized_phone = _normalize_phone(phone)
     normalized_name = _normalize_text(name)
-
     if normalized_phone and not _invalid_phone(phone):
         for client in Client.query.filter(Client.phone.isnot(None)).all():
             if _normalize_phone(client.phone) == normalized_phone:
                 return client
-
     if not normalized_name:
         return None
-
     candidates = Client.query.filter(Client.name.isnot(None)).all()
     same_name = [client for client in candidates if _normalize_text(client.name) == normalized_name]
     owned = [client for client in same_name if client.owner_id == current_user.id]
@@ -97,7 +93,24 @@ def _sync_professional_from_prospection(prospection):
             client.owner_id = current_user.id
         if not client.last_visit or prospection.date > client.last_visit:
             client.last_visit = prospection.date
-    visit = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None)
+
+    products_presented = prospection.produits_presentes or None
+    products_prescribed = prospection.produits_prescrits or None
+    report = prospection.profils_prospect or None
+    existing_visit = ClientVisit.query.filter_by(
+        client_id=client.id,
+        commercial_id=current_user.id,
+        date=prospection.date,
+        products_presented=products_presented,
+        products_prescribed=products_prescribed,
+        report=report,
+        is_duplicate=False,
+    ).order_by(ClientVisit.id.desc()).first()
+    if existing_visit is not None:
+        return client, existing_visit
+
+    visit = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=prospection.date,
+                        products_presented=products_presented, products_prescribed=products_prescribed, report=report)
     db.session.add(visit)
     db.session.flush()
     return client, visit
@@ -118,47 +131,33 @@ def _sync_professional_from_existing_prospection(prospection):
             client.owner_id = prospection.commercial_id
         if not client.last_visit or prospection.date > client.last_visit:
             client.last_visit = prospection.date
-    existing_visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None).first()
+    existing_visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date,
+                                                  products_presented=prospection.produits_presentes or None,
+                                                  products_prescribed=prospection.produits_prescrits or None,
+                                                  report=prospection.profils_prospect or None,
+                                                  is_duplicate=False).first()
     if existing_visit is None:
-        db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None))
+        db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date,
+                                   products_presented=prospection.produits_presentes or None,
+                                   products_prescribed=prospection.produits_prescrits or None,
+                                   report=prospection.profils_prospect or None))
 
 
 def _delete_linked_records_for_prospection(prospection):
-    """Supprime la visite issue de la prospection et le professionnel si cette
-    visite était sa dernière. Un fallback sur commercial/date est utilisé
-    lorsque les champs texte ont été modifiés ou normalisés après la saisie.
-    """
     client = _find_client_for_prospection(prospection)
     if client is None:
         return None, False
-
-    exact_visits = ClientVisit.query.filter_by(
-        client_id=client.id,
-        commercial_id=prospection.commercial_id,
-        date=prospection.date,
-        products_presented=prospection.produits_presentes or None,
-        products_prescribed=prospection.produits_prescrits or None,
-        report=prospection.profils_prospect or None,
-    ).order_by(ClientVisit.id.desc()).all()
-
+    exact_visits = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date,
+                                               products_presented=prospection.produits_presentes or None,
+                                               products_prescribed=prospection.produits_prescrits or None,
+                                               report=prospection.profils_prospect or None).order_by(ClientVisit.id.desc()).all()
     visit = exact_visits[0] if exact_visits else None
-
-    # Si la visite n'est plus identique textuellement (édition, normalisation,
-    # valeur vide, etc.), on prend la dernière visite de ce commercial pour
-    # ce professionnel à la date de la prospection.
     if visit is None:
-        visit = (
-            ClientVisit.query
-            .filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date)
-            .order_by(ClientVisit.id.desc())
-            .first()
-        )
-
+        visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date).order_by(ClientVisit.id.desc()).first()
     if visit is not None:
         db.session.delete(visit)
         db.session.flush()
         logger.info("Visite #%s supprimée avec la prospection #%s", visit.id, prospection.id)
-
     remaining_visits = ClientVisit.query.filter_by(client_id=client.id).count()
     deleted_client = False
     if remaining_visits == 0:
@@ -166,7 +165,6 @@ def _delete_linked_records_for_prospection(prospection):
         db.session.flush()
         deleted_client = True
         logger.info("Professionnel #%s supprimé : aucune autre visite", client.id)
-
     return client.id, deleted_client
 
 
