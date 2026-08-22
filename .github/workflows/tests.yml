@@ -24,4 +24,5 @@ jobs:
         env:
           FLASK_ENV: testing
           SECRET_KEY: ci-test-secret
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest -q
