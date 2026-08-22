@@ -1,4 +1,6 @@
 import logging
+import re
+import unicodedata
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
@@ -34,21 +36,62 @@ def _set_product_choices(form, division, existing_values=None):
     form.produits_prescrits.choices = choices
 
 
-def _render_dashboard(form):
-    labels, totals, _ = _monthly_revenue_for_division(current_user.project)
-    sales_kpis = _objectives_kpis(current_user.project, labels, totals)
-    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
+def _normalize_text(value):
+    value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+    return re.sub(r"\s+", " ", value)
+
+
+def _normalize_phone(value):
+    return re.sub(r"\D", "", value or "")
+
+
+def _invalid_phone(value):
+    """Retourne True pour les valeurs qui ne constituent pas un vrai téléphone."""
+    raw = (value or "").strip().lower()
+    digits = _normalize_phone(raw)
+    return raw in {"", "na", "n/a", "nc", "non renseigne", "non renseigné", "0"} or len(digits) < 6
 
 
 def _find_client_for_prospection(prospection):
+    """Trouve le professionnel existant sans créer de doublon.
+
+    - Un téléphone réellement renseigné est le meilleur identifiant.
+    - Les valeurs NA/0/vides ne servent jamais d'identifiant.
+    - Sans téléphone valide, le nom normalisé est utilisé, en privilégiant
+      le professionnel déjà rattaché au commercial courant.
+    """
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
-    client = None
-    if phone:
-        client = Client.query.filter_by(phone=phone).first()
-    if client is None and name:
-        client = Client.query.filter(Client.name.ilike(name)).first()
-    return client
+    normalized_phone = _normalize_phone(phone)
+    normalized_name = _normalize_text(name)
+
+    if normalized_phone and not _invalid_phone(phone):
+        for client in Client.query.filter(Client.phone.isnot(None)).all():
+            if _normalize_phone(client.phone) == normalized_phone:
+                return client
+
+    if not normalized_name:
+        return None
+
+    candidates = Client.query.filter(Client.name.isnot(None)).all()
+    same_name = [client for client in candidates if _normalize_text(client.name) == normalized_name]
+
+    owned = [client for client in same_name if client.owner_id == current_user.id]
+    if owned:
+        return sorted(owned, key=lambda client: client.id)[0]
+
+    if len(same_name) == 1:
+        return same_name[0]
+
+    visited = [
+        client for client in same_name
+        if ClientVisit.query.filter_by(client_id=client.id, commercial_id=current_user.id).first() is not None
+    ]
+    if visited:
+        return sorted(visited, key=lambda client: client.id)[0]
+
+    return None
 
 
 def _sync_professional_from_prospection(prospection):
@@ -56,13 +99,14 @@ def _sync_professional_from_prospection(prospection):
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
     client = _find_client_for_prospection(prospection)
+    valid_phone = not _invalid_phone(phone)
 
     if client is None:
         client = Client(
             name=name,
             specialty=(prospection.specialite or "").strip() or None,
             structure=(prospection.structure or "").strip(),
-            phone=phone or None,
+            phone=phone if valid_phone else None,
             potential=3,
             owner_id=current_user.id,
             last_visit=prospection.date,
@@ -72,7 +116,8 @@ def _sync_professional_from_prospection(prospection):
     else:
         client.specialty = (prospection.specialite or "").strip() or client.specialty
         client.structure = (prospection.structure or "").strip() or client.structure
-        client.phone = phone or client.phone
+        if valid_phone:
+            client.phone = phone
         if client.owner_id is None:
             client.owner_id = current_user.id
         if not client.last_visit or prospection.date > client.last_visit:
@@ -95,18 +140,29 @@ def _sync_professional_from_prospection(prospection):
 def _sync_professional_from_existing_prospection(prospection):
     """Rattache une prospection existante à un professionnel sans créer une seconde prospection."""
     client = _find_client_for_prospection(prospection)
+    phone = (prospection.telephone or "").strip()
+    valid_phone = not _invalid_phone(phone)
+
     if client is None:
         client = Client(
             name=(prospection.nom_client or "").strip(),
             specialty=(prospection.specialite or "").strip() or None,
             structure=(prospection.structure or "").strip(),
-            phone=(prospection.telephone or "").strip() or None,
+            phone=phone if valid_phone else None,
             potential=3,
             owner_id=prospection.commercial_id,
             last_visit=prospection.date,
         )
         db.session.add(client)
         db.session.flush()
+    else:
+        if valid_phone:
+            client.phone = phone
+        if client.owner_id is None:
+            client.owner_id = prospection.commercial_id
+        if not client.last_visit or prospection.date > client.last_visit:
+            client.last_visit = prospection.date
+
     existing_visit = ClientVisit.query.filter_by(
         client_id=client.id,
         commercial_id=prospection.commercial_id,
@@ -124,8 +180,12 @@ def _sync_professional_from_existing_prospection(prospection):
             products_prescribed=prospection.produits_prescrits or None,
             report=prospection.profils_prospect or None,
         ))
-    if not client.last_visit or prospection.date > client.last_visit:
-        client.last_visit = prospection.date
+
+
+def _render_dashboard(form):
+    labels, totals, _ = _monthly_revenue_for_division(current_user.project)
+    sales_kpis = _objectives_kpis(current_user.project, labels, totals)
+    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
