@@ -15,14 +15,12 @@ dashboard_bp = Blueprint("dashboard", __name__)
 
 
 def _parse_products(raw):
-    """Chaîne stockée en base ('A, B, C') -> liste, pour pré-remplir un SelectMultipleField."""
     if not raw:
         return []
     return [p.strip() for p in raw.split(",") if p.strip()]
 
 
 def _set_product_choices(form, division, existing_values=None):
-    """Renseigne les choix des deux listes déroulantes produits à partir du catalogue actif de la division."""
     active_products = get_active_products_for_division(division)
     choices = [(name, name) for name in active_products]
 
@@ -54,18 +52,19 @@ def index():
                 structure=form.structure.data,
                 telephone=form.telephone.data,
                 profils_prospect=form.profils_prospect.data,
-                produits_presentes=", ".join(form.produits_presentes.data),
-                produits_prescrits=", ".join(form.produits_prescrits.data),
+                produits_presentes=", ".join(form.produits_presentes.data or []),
+                produits_prescrits=", ".join(form.produits_prescrits.data or []),
             )
             db.session.add(prospection)
             db.session.commit()
-            flash("Données enregistrées avec succès", "success")
+            flash("Prospection enregistrée avec succès.", "success")
             logger.info("Prospection enregistrée par %s", current_user.username)
+            return redirect(url_for("dashboard.index"))
         except Exception:
             db.session.rollback()
             flash("Erreur lors de l'enregistrement des données.", "error")
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
-        return redirect(url_for("dashboard.index"))
+            return redirect(url_for("dashboard.index"))
 
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
@@ -99,8 +98,8 @@ def edit_prospection(prospection_id):
             prospection.structure = form.structure.data
             prospection.telephone = form.telephone.data
             prospection.profils_prospect = form.profils_prospect.data
-            prospection.produits_presentes = ", ".join(form.produits_presentes.data)
-            prospection.produits_prescrits = ", ".join(form.produits_prescrits.data)
+            prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
+            prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             logger.info("Prospection #%s modifiée par %s", prospection_id, current_user.username)
