@@ -8,41 +8,20 @@
         <div>
             <span class="hero-eyebrow">ESPACE COMMERCIAL</span>
             <h1>Bonjour {{ current_user.username }}</h1>
-            <p>Votre activité {{ current_user.project|upper }} en un coup d'œil.</p>
-        </div>
-        <div class="hero-actions">
-            <a href="{{ url_for('planning.visualiser') }}" class="btn">📅 Mon planning</a>
-            <a href="{{ url_for('evaluations.my_evaluations') }}" class="btn btn-outline">⭐ Mes évaluations</a>
+            <p>{{ current_user.project|upper }} · votre activité essentielle, sans surcharge.</p>
         </div>
     </div>
 
     <div class="sales-kpi-grid">
-        <div class="sales-kpi-card">
-            <span class="sales-kpi-label">CA du mois</span>
-            <strong>{{ "%.2f"|format(sales_kpis.current_month_revenue or 0) }} €</strong>
-            <span class="sales-kpi-meta">Objectif : {% if sales_kpis.monthly_target is not none %}{{ "%.2f"|format(sales_kpis.monthly_target) }} €{% else %}non défini{% endif %}</span>
-        </div>
-        <div class="sales-kpi-card">
-            <span class="sales-kpi-label">Réalisation du mois</span>
-            <strong>{% if sales_kpis.monthly_pct is not none %}{{ "%.1f"|format(sales_kpis.monthly_pct) }} %{% else %}—{% endif %}</strong>
-            <div class="progress-track"><span style="width: {{ [sales_kpis.monthly_pct or 0, 100]|min }}%"></span></div>
-        </div>
-        <div class="sales-kpi-card">
-            <span class="sales-kpi-label">CA de l'année</span>
-            <strong>{{ "%.2f"|format(sales_kpis.current_year_revenue or 0) }} €</strong>
-            <span class="sales-kpi-meta">Objectif : {% if sales_kpis.annual_target is not none %}{{ "%.2f"|format(sales_kpis.annual_target) }} €{% else %}non défini{% endif %}</span>
-        </div>
-        <div class="sales-kpi-card">
-            <span class="sales-kpi-label">Réalisation de l'année</span>
-            <strong>{% if sales_kpis.annual_pct is not none %}{{ "%.1f"|format(sales_kpis.annual_pct) }} %{% else %}—{% endif %}</strong>
-            <div class="progress-track"><span style="width: {{ [sales_kpis.annual_pct or 0, 100]|min }}%"></span></div>
-        </div>
+        <div class="sales-kpi-card"><span class="sales-kpi-label">CA du mois</span><strong>{{ "%.2f"|format(sales_kpis.current_month_revenue or 0) }} €</strong><span class="sales-kpi-meta">Objectif : {% if sales_kpis.monthly_target is not none %}{{ "%.2f"|format(sales_kpis.monthly_target) }} €{% else %}non défini{% endif %}</span></div>
+        <div class="sales-kpi-card"><span class="sales-kpi-label">% objectif mensuel</span><strong>{% if sales_kpis.monthly_pct is not none %}{{ "%.1f"|format(sales_kpis.monthly_pct) }} %{% else %}—{% endif %}</strong><div class="progress-track"><span style="width: {{ [sales_kpis.monthly_pct or 0, 100]|min }}%"></span></div></div>
+        <div class="sales-kpi-card"><span class="sales-kpi-label">CA annuel</span><strong>{{ "%.2f"|format(sales_kpis.current_year_revenue or 0) }} €</strong><span class="sales-kpi-meta">Objectif : {% if sales_kpis.annual_target is not none %}{{ "%.2f"|format(sales_kpis.annual_target) }} €{% else %}non défini{% endif %}</span></div>
+        <div class="sales-kpi-card"><span class="sales-kpi-label">% objectif annuel</span><strong>{% if sales_kpis.annual_pct is not none %}{{ "%.1f"|format(sales_kpis.annual_pct) }} %{% else %}—{% endif %}</strong><div class="progress-track"><span style="width: {{ [sales_kpis.annual_pct or 0, 100]|min }}%"></span></div></div>
     </div>
 
-    <div class="commercial-actions">
-        <a href="{{ url_for('planning.visualiser') }}" class="action-card"><span>📅</span><div><strong>Mon planning</strong><small>Voir mes visites prévues</small></div></a>
-        <a href="{{ url_for('planning.saisie') }}" class="action-card"><span>➕</span><div><strong>Mon planning</strong><small>Ajouter une activité</small></div></a>
-        <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}" class="action-card"><span>📋</span><div><strong>Mes visites</strong><small>Consulter mon historique</small></div></a>
+    <div class="commercial-actions commercial-actions-simple">
+        <a href="{{ url_for('planning.visualiser') }}" class="action-card"><span>📅</span><div><strong>Mon planning</strong><small>Voir et organiser mes visites</small></div></a>
+        <a href="{{ url_for('clients.list_clients') }}" class="action-card"><span>👥</span><div><strong>Mes professionnels</strong><small>Consulter mon portefeuille</small></div></a>
         <a href="{{ url_for('evaluations.my_evaluations') }}" class="action-card action-card-highlight"><span>⭐</span><div><strong>Mes évaluations</strong><small>Consulter mes résultats</small></div></a>
     </div>
 
@@ -54,7 +33,7 @@
             <div class="form-group">{{ form.nom_client.label(class="form-label") }}{{ form.nom_client(class="form-input") }}{% for error in form.nom_client.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
             <div class="form-group">{{ form.specialite.label(class="form-label") }}{{ form.specialite(class="form-input") }}{% for error in form.specialite.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
             <div class="form-group">{{ form.structure.label(class="form-label") }}{{ form.structure(class="form-input") }}{% for error in form.structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
-            <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input") }}{% for error in form.telephone.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
+            <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel") }}{% for error in form.telephone.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
             <div class="form-group">{{ form.profils_prospect.label(class="form-label") }}{{ form.profils_prospect(class="form-input") }}{% for error in form.profils_prospect.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
             <div class="form-group">{{ form.produits_presentes.label(class="form-label") }}{{ form.produits_presentes(class="form-input select2-products", multiple=true) }}{% for error in form.produits_presentes.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
             <div class="form-group">{{ form.produits_prescrits.label(class="form-label") }}{{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}{% for error in form.produits_prescrits.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
