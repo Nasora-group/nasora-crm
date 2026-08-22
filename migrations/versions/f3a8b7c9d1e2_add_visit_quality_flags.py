@@ -17,6 +17,26 @@ def upgrade():
         "crm_client_visit",
         sa.Column("is_duplicate", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
+
+    # Only exact historical duplicates are flagged: same professional,
+    # commercial, date and visit content. We keep the oldest row and mark
+    # later identical rows. No visit is physically deleted.
+    op.execute(sa.text("""
+        WITH ranked AS (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY client_id, commercial_id, date,
+                                    products_presented, products_prescribed, report
+                       ORDER BY id
+                   ) AS rn
+            FROM crm_client_visit
+        )
+        UPDATE crm_client_visit AS v
+        SET is_duplicate = TRUE
+        FROM ranked r
+        WHERE v.id = r.id AND r.rn > 1
+    """))
+
     op.create_index(
         "ix_crm_visit_commercial_date_duplicate",
         "crm_client_visit",
