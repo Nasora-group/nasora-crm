@@ -12,28 +12,20 @@ from reportlab.pdfgen import canvas
 from app.extensions import db
 from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
+from app.models_clients import ClientVisit
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
 
-# Dérivé de SUPPLIERS : un fournisseur archivé n'est plus comptabilisé.
 SALE_MODELS = [s["sale_model"] for s in SUPPLIERS.values() if not s.get("archived")]
 
 
 def _division_targets(division, today):
-    """Retourne les objectifs mensuel et annuel de la division courante."""
     try:
-        monthly = SalesObjective.query.filter_by(
-            division=division, year=today.year, month=today.month
-        ).first()
-        annual = SalesObjective.query.filter_by(
-            division=division, year=today.year, month=None
-        ).first()
-        return (
-            monthly.target_amount if monthly else None,
-            annual.target_amount if annual else None,
-        )
+        monthly = SalesObjective.query.filter_by(division=division, year=today.year, month=today.month).first()
+        annual = SalesObjective.query.filter_by(division=division, year=today.year, month=None).first()
+        return (monthly.target_amount if monthly else None, annual.target_amount if annual else None)
     except Exception:
         db.session.rollback()
         logger.warning("Impossible de lire les objectifs pour %s", division, exc_info=True)
@@ -46,7 +38,6 @@ def _division_targets(division, today):
 def dashboard():
     today = date.today()
     current_month_key = today.strftime("%Y-%m")
-
     revenue_by_month = {}
     revenue_by_division = {"nasderm": 0.0, "nasmedic": 0.0}
     revenue_by_commercial = {}
@@ -56,10 +47,7 @@ def dashboard():
     current_month_revenue = 0.0
 
     for sale_model in SALE_MODELS:
-        rows = db.session.query(
-            sale_model.date, sale_model.quantity, sale_model.price,
-            sale_model.project, sale_model.commercial_id,
-        ).all()
+        rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price, sale_model.project, sale_model.commercial_id).all()
         for sale_date, quantity, price, project, commercial_id in rows:
             amount = (quantity or 0) * (price or 0)
             month = sale_date.strftime("%Y-%m")
@@ -81,21 +69,10 @@ def dashboard():
     for division in ("nasmedic", "nasderm"):
         monthly_target, annual_target = _division_targets(division, today)
         month_actual = current_month_by_division.get(division, 0.0)
-        year_actual = sum(
-            amount for month, amount in zip(monthly_revenue_labels, monthly_revenue_data)
-            if month.startswith(str(today.year))
-        )
-        # Recalculate annual actual by division from source rows would be more exact;
-        # use division totals as historical total only when current year data is available.
         annual_actual = 0.0
         for sale_model in SALE_MODELS:
-            rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).filter(
-                sale_model.project == division
-            ).all()
-            annual_actual += sum(
-                (q or 0) * (p or 0)
-                for d, q, p in rows if d.year == today.year
-            )
+            rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).filter(sale_model.project == division).all()
+            annual_actual += sum((q or 0) * (p or 0) for d, q, p in rows if d.year == today.year)
         division_kpis[division] = {
             "month_actual": month_actual,
             "month_target": monthly_target,
@@ -107,11 +84,15 @@ def dashboard():
 
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     active_commercials_count = User.query.filter_by(role="commercial", is_active_account=True).count()
-    total_visits = Prospection.query.count()
 
+    # KPI métier : une visite = une ClientVisit. Les doublons historiques marqués
+    # is_duplicate=True restent en base mais ne gonflent plus les indicateurs.
+    valid_visit_filter = ClientVisit.is_duplicate.is_(False)
+    total_visits = ClientVisit.query.filter(valid_visit_filter).count()
     visits_by_commercial_rows = (
-        db.session.query(User.id, User.username, func.count(Prospection.id).label("nombre_visites"))
-        .join(Prospection, Prospection.commercial_id == User.id)
+        db.session.query(User.id, User.username, func.count(ClientVisit.id).label("nombre_visites"))
+        .join(ClientVisit, ClientVisit.commercial_id == User.id)
+        .filter(valid_visit_filter)
         .group_by(User.id)
         .all()
     )
@@ -123,20 +104,16 @@ def dashboard():
         name = commercial_names.get(commercial_id)
         if not name:
             continue
-        performance.append({
-            "username": name,
-            "revenue": revenue_by_commercial.get(commercial_id, 0),
-            "visits": visits_by_commercial.get(commercial_id, 0),
-        })
+        performance.append({"username": name, "revenue": revenue_by_commercial.get(commercial_id, 0), "visits": visits_by_commercial.get(commercial_id, 0)})
 
     top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
     top_visits = sorted(performance, key=lambda p: p["visits"], reverse=True)[:10]
-
     top_5_commerciaux = (
-        db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites"))
-        .join(Prospection)
+        db.session.query(User.username, User.zone, func.count(ClientVisit.id).label("nombre_visites"))
+        .join(ClientVisit, ClientVisit.commercial_id == User.id)
+        .filter(valid_visit_filter)
         .group_by(User.id)
-        .order_by(func.count(Prospection.id).desc())
+        .order_by(func.count(ClientVisit.id).desc())
         .limit(5)
         .all()
     )
@@ -172,21 +149,11 @@ def dashboard():
     }
 
     active_suppliers = {slug: s for slug, s in SUPPLIERS.items() if not s.get("archived")}
-    return render_template(
-        "admin_dashboard.html",
-        commerciaux=commerciaux,
-        prospections=pagination.items,
-        pagination=pagination,
-        top_5_commerciaux=top_5_commerciaux,
-        monthly_revenue_labels=monthly_revenue_labels,
-        monthly_revenue_data=monthly_revenue_data,
-        kpis=kpis,
-        revenue_by_division=revenue_by_division,
-        division_kpis=division_kpis,
-        top_revenue=top_revenue,
-        top_visits=top_visits,
-        active_suppliers=active_suppliers,
-    )
+    return render_template("admin_dashboard.html", commerciaux=commerciaux, prospections=pagination.items, pagination=pagination,
+                           top_5_commerciaux=top_5_commerciaux, monthly_revenue_labels=monthly_revenue_labels,
+                           monthly_revenue_data=monthly_revenue_data, kpis=kpis, revenue_by_division=revenue_by_division,
+                           division_kpis=division_kpis, top_revenue=top_revenue, top_visits=top_visits,
+                           active_suppliers=active_suppliers)
 
 
 @admin_bp.route("/commercial_dashboard/<username>", methods=["GET", "POST"])
@@ -205,12 +172,10 @@ def commercial_detail(username):
     form = DownloadExcelForm()
     if request.method == "POST" and "download_excel" in request.form:
         try:
-            data = [{
-                "Date": p.date.strftime("%Y-%m-%d"), "Nom Client": p.nom_client,
-                "Spécialité": p.specialite, "Structure": p.structure,
-                "Téléphone": p.telephone, "Profils Prospect": p.profils_prospect,
-                "Produits Présentés": p.produits_presentes, "Produits Prescrits": p.produits_prescrits,
-            } for p in commercial.prospections.order_by(Prospection.date.desc()).all()]
+            data = [{"Date": p.date.strftime("%Y-%m-%d"), "Nom Client": p.nom_client, "Spécialité": p.specialite,
+                     "Structure": p.structure, "Téléphone": p.telephone, "Profils Prospect": p.profils_prospect,
+                     "Produits Présentés": p.produits_presentes, "Produits Prescrits": p.produits_prescrits}
+                    for p in commercial.prospections.order_by(Prospection.date.desc()).all()]
             df = pd.DataFrame(data)
             output = BytesIO()
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
