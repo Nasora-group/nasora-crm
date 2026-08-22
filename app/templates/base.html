@@ -18,8 +18,9 @@
 <header class="site-header"><div class="header-inner">
     <a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>
     {% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div>{% endif %}
+    {% if current_user.is_authenticated %}<button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}
 </div></header>
-<nav class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
+<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
     <a href="{{ url_for('auth.home') }}">Accueil</a>
     {% if current_user.is_authenticated %}
         {% if current_user.role == 'admin' %}
@@ -36,13 +37,13 @@
             <span class="nav-divider" aria-hidden="true"></span>
             <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}">📦 Fiches produits</a>
         {% else %}
-            <a href="{{ url_for('dashboard.index') }}">Tableau de bord</a>
+            <a class="commercial-nav-home" href="{{ url_for('dashboard.index') }}">Tableau de bord</a>
             <a href="{{ url_for('planning.visualiser') }}">📅 Mon planning</a>
             <a href="{{ url_for('clients.list_clients') }}">👥 Mes professionnels</a>
             <a href="{{ url_for('evaluations.my_evaluations') }}">⭐ Mes évaluations</a>
         {% endif %}
         <span class="nav-spacer" aria-hidden="true"></span>
-        <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline;margin:0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-logout">Déconnexion</button></form>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="nav-logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-logout">Déconnexion</button></form>
     {% else %}<a href="{{ url_for('auth.login') }}">Connexion</a>{% endif %}
 </div></nav>
 <div class="container">
@@ -50,4 +51,17 @@
 {% block content %}{% endblock %}
 </div>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p></footer>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const toggle=document.querySelector('.mobile-nav-toggle');
+  const nav=document.getElementById('main-navigation');
+  if(!toggle||!nav)return;
+  toggle.addEventListener('click',function(){
+    const open=nav.classList.toggle('mobile-open');
+    toggle.setAttribute('aria-expanded',open?'true':'false');
+    toggle.textContent=open?'✕':'☰';
+  });
+  nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';});});
+});
+</script>
 </body></html>
