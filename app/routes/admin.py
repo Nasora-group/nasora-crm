@@ -14,6 +14,7 @@ from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
 from app.models_clients import ClientVisit
 from app.utils import roles_required
+from app.visit_metrics import unique_visit_count, unique_visits_by_commercial
 
 logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
@@ -85,18 +86,10 @@ def dashboard():
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     active_commercials_count = User.query.filter_by(role="commercial", is_active_account=True).count()
 
-    # KPI métier : une visite = une ClientVisit. Les doublons historiques marqués
-    # is_duplicate=True restent en base mais ne gonflent plus les indicateurs.
-    valid_visit_filter = ClientVisit.is_duplicate.is_(False)
-    total_visits = ClientVisit.query.filter(valid_visit_filter).count()
-    visits_by_commercial_rows = (
-        db.session.query(User.id, User.username, func.count(ClientVisit.id).label("nombre_visites"))
-        .join(ClientVisit, ClientVisit.commercial_id == User.id)
-        .filter(valid_visit_filter)
-        .group_by(User.id)
-        .all()
-    )
-    visits_by_commercial = {row.id: row.nombre_visites for row in visits_by_commercial_rows}
+    # KPI métier : une visite = un triplet unique commercial + professionnel + date.
+    # Les doublons historiques restent en base mais ne gonflent aucun indicateur.
+    total_visits = unique_visit_count()
+    visits_by_commercial = unique_visits_by_commercial()
     commercial_names = {u.id: u.username for u in commerciaux}
 
     performance = []
@@ -111,12 +104,18 @@ def dashboard():
     top_5_commerciaux = (
         db.session.query(User.username, User.zone, func.count(ClientVisit.id).label("nombre_visites"))
         .join(ClientVisit, ClientVisit.commercial_id == User.id)
-        .filter(valid_visit_filter)
+        .filter(ClientVisit.is_duplicate.is_(False))
         .group_by(User.id)
         .order_by(func.count(ClientVisit.id).desc())
         .limit(5)
         .all()
     )
+    # Le classement doit lui aussi utiliser le KPI métier unique.
+    top_5_commerciaux = sorted(
+        ((commercial_names[cid], next((u.zone for u in commerciaux if u.id == cid), None), count)
+         for cid, count in visits_by_commercial.items() if cid in commercial_names),
+        key=lambda row: row[2], reverse=True
+    )[:5]
 
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start = request.args.get("date_start")
