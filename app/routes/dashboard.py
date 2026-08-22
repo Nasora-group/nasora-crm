@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
 from app.models import Prospection, get_active_products_for_division
+from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 
@@ -39,6 +40,43 @@ def _render_dashboard(form):
     return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
 
 
+def _sync_professional_from_prospection(prospection):
+    phone = (prospection.telephone or "").strip()
+    name = (prospection.nom_client or "").strip()
+    client = None
+    if phone:
+        client = Client.query.filter_by(phone=phone).first()
+    if client is None and name:
+        client = Client.query.filter(Client.name.ilike(name)).filter(Client.owner_id == current_user.id).first()
+    if client is None:
+        client = Client(
+            name=name,
+            specialty=(prospection.specialite or "").strip() or None,
+            structure=(prospection.structure or "").strip(),
+            phone=phone or None,
+            potential=3,
+            owner_id=current_user.id,
+            last_visit=prospection.date,
+        )
+        db.session.add(client)
+        db.session.flush()
+    else:
+        client.specialty = (prospection.specialite or "").strip() or client.specialty
+        client.structure = (prospection.structure or "").strip() or client.structure
+        client.phone = phone or client.phone
+        client.owner_id = client.owner_id or current_user.id
+        client.last_visit = prospection.date
+
+    db.session.add(ClientVisit(
+        client_id=client.id,
+        commercial_id=current_user.id,
+        date=prospection.date,
+        products_presented=prospection.produits_presentes or None,
+        products_prescribed=prospection.produits_prescrits or None,
+        report=prospection.profils_prospect or None,
+    ))
+
+
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
 @login_required
 @roles_required("commercial")
@@ -51,7 +89,6 @@ def index():
             logger.warning("Prospection refusée pour %s: %s", current_user.username, form.errors)
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form)
-
         try:
             prospection = Prospection(
                 commercial_id=current_user.id,
@@ -66,14 +103,14 @@ def index():
             )
             db.session.add(prospection)
             db.session.flush()
-            saved_id = prospection.id
+            _sync_professional_from_prospection(prospection)
             db.session.commit()
-            logger.info("Prospection #%s enregistrée par %s", saved_id, current_user.username)
+            logger.info("Prospection #%s enregistrée et synchronisée pour %s", prospection.id, current_user.username)
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
             db.session.rollback()
-            logger.exception("Erreur lors de l'enregistrement d'une prospection pour %s", current_user.username)
+            logger.exception("Erreur lors de l'enregistrement/synchronisation d'une prospection pour %s", current_user.username)
             flash("Impossible d'enregistrer la prospection. Vérifiez les données et réessayez.", "error")
             return _render_dashboard(form)
 
@@ -88,16 +125,13 @@ def edit_prospection(prospection_id):
     if prospection.commercial_id != current_user.id:
         flash("Accès non autorisé : cette prospection ne t'appartient pas.", "error")
         return render_template("403.html"), 403
-
     existing_presentes = _parse_products(prospection.produits_presentes)
     existing_prescrits = _parse_products(prospection.produits_prescrits)
     form = ProspectionForm(obj=prospection)
     _set_product_choices(form, current_user.project, existing_values=set(existing_presentes) | set(existing_prescrits))
-
     if not form.is_submitted():
         form.produits_presentes.data = existing_presentes
         form.produits_prescrits.data = existing_prescrits
-
     if form.validate_on_submit():
         try:
             prospection.date = form.date.data
@@ -116,7 +150,6 @@ def edit_prospection(prospection_id):
             db.session.rollback()
             logger.exception("Erreur lors de la modification de la prospection #%s", prospection_id)
             flash("Erreur lors de la mise à jour.", "error")
-
     return render_template("edit_prospection.html", form=form, prospection=prospection)
 
 
