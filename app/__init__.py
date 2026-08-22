@@ -18,7 +18,11 @@ def create_app(config_object=None):
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
     from app.models import User
     @login_manager.user_loader
-    def load_user(user_id): return db.session.get(User, int(user_id))
+    def load_user(user_id):
+        user = db.session.get(User, int(user_id))
+        # Une désactivation admin doit invalider immédiatement la session
+        # existante au prochain chargement de l'utilisateur.
+        return user if user and user.is_active_account else None
     _register_blueprints(app)
     _register_error_handlers(app)
     @app.context_processor
