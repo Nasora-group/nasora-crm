@@ -44,7 +44,6 @@
                         <div class="table-actions">
                             <a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a>
                             <form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');">
-                                {{ csrf_form.hidden_tag() if csrf_form is defined else '' }}
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
                             </form>
@@ -55,14 +54,6 @@
             </tbody>
         </table>
     </div>
-
-    {% if pagination.pages > 1 %}
-    <div class="pagination">
-        {% if pagination.has_prev %}<a class="btn btn-outline" href="{{ url_for('dashboard.prospections', page=pagination.prev_num) }}">Précédent</a>{% endif %}
-        <span>Page {{ pagination.page }} / {{ pagination.pages }}</span>
-        {% if pagination.has_next %}<a class="btn btn-outline" href="{{ url_for('dashboard.prospections', page=pagination.next_num) }}">Suivant</a>{% endif %}
-    </div>
-    {% endif %}
     {% else %}
     <div class="empty-state">
         <h2>Aucune prospection</h2>
