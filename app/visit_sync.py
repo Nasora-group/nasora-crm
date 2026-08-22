@@ -4,8 +4,9 @@ Règle métier NASORA :
     1 visite réelle = 1 Prospection = 1 ClientVisit.
 
 Les deux tables sont conservées pour compatibilité CRM, mais les KPI sont
-calculés depuis Prospection. Ce listener ne crée jamais un second enregistrement
-lorsque les deux objets sont déjà créés dans la même transaction.
+calculés depuis Prospection. La synchronisation se fait dans ``before_flush``
+afin de pouvoir ajouter les objets manquants sans appeler ``flush()`` depuis
+un événement SQLAlchemy déjà en cours de flush.
 """
 
 from sqlalchemy import event
@@ -34,14 +35,25 @@ def _same_visit_payload(visit, prospect, client=None):
     if (visit.report or "") != (prospect.profils_prospect or ""):
         return False
     if client is not None:
-        phone_match = _phone(client.phone) and _phone(prospect.telephone) and _phone(client.phone) == _phone(prospect.telephone)
-        name_match = _norm(client.name) and _norm(client.name) == _norm(prospect.nom_client)
+        phone_match = (
+            _phone(client.phone)
+            and _phone(prospect.telephone)
+            and _phone(client.phone) == _phone(prospect.telephone)
+        )
+        name_match = (
+            _norm(client.name)
+            and _norm(client.name) == _norm(prospect.nom_client)
+        )
         if not (phone_match or name_match):
             return False
     return True
 
 
 def _find_client_for_visit(visit):
+    if visit.client is not None:
+        return visit.client
+    if visit.client_id is None:
+        return None
     return db.session.get(Client, visit.client_id)
 
 
@@ -92,34 +104,37 @@ def _find_visit_for_prospection(prospection):
 
 
 def _create_client_for_prospection(prospection):
+    """Create a transient Client without forcing a nested flush."""
     client = Client(
-        name=prospection.nom_client.strip(),
+        name=(prospection.nom_client or "").strip(),
         specialty=(prospection.specialite or "").strip() or None,
-        structure=(prospection.structure or "").strip(),
+        structure=(prospection.structure or "").strip() or "Non renseignée",
         phone=(prospection.telephone or "").strip() or None,
         potential=3,
         owner_id=prospection.commercial_id,
         last_visit=prospection.date,
     )
     db.session.add(client)
-    db.session.flush()
     return client
 
 
-@event.listens_for(Session, "after_flush")
-def synchronize_visit_records(session, flush_context):
-    """Complète automatiquement le miroir manquant, sans double création."""
+@event.listens_for(Session, "before_flush")
+def synchronize_visit_records(session, flush_context, instances):
+    """Complète automatiquement le miroir manquant, sans nested flush."""
     if session.info.get("visit_sync_running"):
         return
 
     session.info["visit_sync_running"] = True
     try:
         new_objects = list(session.new)
-        new_visits = [obj for obj in new_objects if isinstance(obj, ClientVisit) and not obj.is_duplicate]
+        new_visits = [
+            obj for obj in new_objects
+            if isinstance(obj, ClientVisit) and not obj.is_duplicate
+        ]
         new_prospects = [obj for obj in new_objects if isinstance(obj, Prospection)]
 
-        # Si l'application a déjà créé les deux côtés dans la même transaction,
-        # ils constituent une seule visite : ne rien ajouter.
+        # Les deux objets peuvent être créés explicitement dans la même
+        # transaction. Dans ce cas ils représentent déjà une seule visite.
         paired_visit_ids = set()
         paired_prospect_ids = set()
         for visit in new_visits:
@@ -159,7 +174,7 @@ def synchronize_visit_records(session, flush_context):
             if client is None:
                 client = _create_client_for_prospection(prospect)
             session.add(ClientVisit(
-                client_id=client.id,
+                client=client,
                 commercial_id=prospect.commercial_id,
                 date=prospect.date,
                 products_presented=prospect.produits_presentes,
