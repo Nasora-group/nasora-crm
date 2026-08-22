@@ -1,12 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Nouvelle visite — {{ client.name }}{% endblock %}
 {% block content %}
-<div class="page-hero"><div><h1>Nouvelle visite</h1><p>{{ client.name }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p></div><div class="hero-actions"><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">← Fiche client</a></div></div>
+<div class="page-hero">
+    <div>
+        <h1>Nouvelle visite</h1>
+        <p>{{ client.name }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">← Fiche client</a>
+    </div>
+</div>
+
 <form method="post" class="form-container">
-<div class="form-grid"><div><label>Date de visite *</label><input class="form-input" type="date" name="date" value="{{ today }}" required></div><div><label>Prochaine visite</label><input class="form-input" type="date" name="next_visit"></div></div>
-<div><label>Produits présentés</label><textarea class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM..." ></textarea></div>
-<div><label>Produits prescrits / demandés</label><textarea class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes..." ></textarea></div>
-<div><label>Compte-rendu de visite</label><textarea class="form-input" name="report" rows="6" placeholder="Besoins, objections, concurrence, engagement, prochaine action..." ></textarea></div>
-<div class="quick-actions"><button class="btn" type="submit">✓ Enregistrer la visite</button><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">Annuler</a></div>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-grid">
+        <div>
+            <label>Date de visite *</label>
+            <input class="form-input" type="date" name="date" value="{{ today }}" required>
+        </div>
+        <div>
+            <label>Prochaine visite</label>
+            <input class="form-input" type="date" name="next_visit">
+        </div>
+    </div>
+
+    <div>
+        <label>Produits présentés</label>
+        <textarea class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM..."></textarea>
+    </div>
+
+    <div>
+        <label>Produits prescrits / demandés</label>
+        <textarea class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes..."></textarea>
+    </div>
+
+    <div>
+        <label>Compte-rendu de visite</label>
+        <textarea class="form-input" name="report" rows="6" placeholder="Besoins, objections, concurrence, engagement, prochaine action..."></textarea>
+    </div>
+
+    <div class="quick-actions">
+        <button class="btn" type="submit">✓ Enregistrer la visite</button>
+        <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">Annuler</a>
+    </div>
 </form>
 {% endblock %}
