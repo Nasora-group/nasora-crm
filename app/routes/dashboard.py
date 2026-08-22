@@ -7,6 +7,7 @@ from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
 from app.models import Prospection, get_active_products_for_division
 from app.utils import roles_required
+from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,7 @@ def _parse_products(raw):
 
 
 def _set_product_choices(form, division, existing_values=None):
-    """Renseigne les choix des deux listes déroulantes produits à partir du
-    catalogue actif de la division du commercial. Les valeurs déjà enregistrées
-    sur une ancienne prospection (produit depuis désactivé/archivé) restent
-    proposées, marquées comme telles, pour ne jamais bloquer une modification."""
+    """Renseigne les choix des deux listes déroulantes produits à partir du catalogue actif de la division."""
     active_products = get_active_products_for_division(division)
     choices = [(name, name) for name in active_products]
 
@@ -69,7 +67,9 @@ def index():
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
         return redirect(url_for("dashboard.index"))
 
-    return render_template("dashboard.html", form=form)
+    labels, totals, _ = _monthly_revenue_for_division(current_user.project)
+    sales_kpis = _objectives_kpis(current_user.project, labels, totals)
+    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
