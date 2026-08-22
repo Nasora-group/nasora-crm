@@ -110,6 +110,24 @@ def _commercial_can_access_client(client):
     return client.owner_id in (None, current_user.id) or ClientVisit.query.filter_by(client_id=client.id, commercial_id=current_user.id).first() is not None
 
 
+def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
+    """Détecte uniquement une visite strictement identique.
+
+    Deux visites le même jour chez le même professionnel restent autorisées
+    si leur contenu diffère. Cela évite de casser les visites légitimes tout en
+    empêchant un double enregistrement identique.
+    """
+    return ClientVisit.query.filter_by(
+        client_id=client_id,
+        commercial_id=commercial_id,
+        date=visit_date,
+        products_presented=products_presented,
+        products_prescribed=products_prescribed,
+        report=report,
+        is_duplicate=False,
+    ).first() is not None
+
+
 @clients_bp.route("/admin/clients")
 @login_required
 @roles_required("admin", "commercial")
@@ -188,7 +206,34 @@ def new_visit(client_id):
         try:
             visit_date = request.form.get("date") or date.today().isoformat()
             next_visit = request.form.get("next_visit") or None
-            v = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=date.fromisoformat(visit_date), products_presented=request.form.get("products_presented", "").strip() or None, products_prescribed=request.form.get("products_prescribed", "").strip() or None, report=request.form.get("report", "").strip() or None, next_visit=date.fromisoformat(next_visit) if next_visit else None)
+            visit_date_obj = date.fromisoformat(visit_date)
+            products_presented = request.form.get("products_presented", "").strip() or None
+            products_prescribed = request.form.get("products_prescribed", "").strip() or None
+            report = request.form.get("report", "").strip() or None
+
+            # Protection des nouvelles données : on bloque seulement un
+            # enregistrement strictement identique. Des visites distinctes
+            # chez le même professionnel le même jour restent possibles.
+            if _exact_visit_exists(
+                client.id,
+                current_user.id,
+                visit_date_obj,
+                products_presented,
+                products_prescribed,
+                report,
+            ):
+                flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
+                return redirect(url_for("clients.client_detail", client_id=client.id))
+
+            v = ClientVisit(
+                client_id=client.id,
+                commercial_id=current_user.id,
+                date=visit_date_obj,
+                products_presented=products_presented,
+                products_prescribed=products_prescribed,
+                report=report,
+                next_visit=date.fromisoformat(next_visit) if next_visit else None,
+            )
             db.session.add(v)
             client.last_visit = v.date
             client.next_visit = v.next_visit
