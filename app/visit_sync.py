@@ -1,8 +1,11 @@
-"""Synchronisation bidirectionnelle des visites métier.
+"""Synchronisation des deux représentations d'une visite réelle.
 
-Règle métier : une visite réelle correspond à une Prospection et à un ClientVisit.
-Le module garde les deux tables synchronisées pour les créations effectuées depuis
-n'importe quelle partie du CRM.
+Règle métier NASORA :
+    1 visite réelle = 1 Prospection = 1 ClientVisit.
+
+Les deux tables sont conservées pour compatibilité CRM, mais les KPI sont
+calculés depuis Prospection. Ce listener ne crée jamais un second enregistrement
+lorsque les deux objets sont déjà créés dans la même transaction.
 """
 
 from sqlalchemy import event
@@ -17,9 +20,29 @@ def _norm(value):
     return " ".join((value or "").strip().lower().split())
 
 
+def _phone(value):
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
+def _same_visit_payload(visit, prospect, client=None):
+    if visit.commercial_id != prospect.commercial_id or visit.date != prospect.date:
+        return False
+    if (visit.products_presented or "") != (prospect.produits_presentes or ""):
+        return False
+    if (visit.products_prescribed or "") != (prospect.produits_prescrits or ""):
+        return False
+    if (visit.report or "") != (prospect.profils_prospect or ""):
+        return False
+    if client is not None:
+        phone_match = _phone(client.phone) and _phone(prospect.telephone) and _phone(client.phone) == _phone(prospect.telephone)
+        name_match = _norm(client.name) and _norm(client.name) == _norm(prospect.nom_client)
+        if not (phone_match or name_match):
+            return False
+    return True
+
+
 def _find_client_for_visit(visit):
-    client = db.session.get(Client, visit.client_id)
-    return client
+    return db.session.get(Client, visit.client_id)
 
 
 def _find_prospection_for_visit(visit):
@@ -27,48 +50,44 @@ def _find_prospection_for_visit(visit):
     if client is None:
         return None
 
-    query = Prospection.query.filter_by(
+    candidates = Prospection.query.filter_by(
         commercial_id=visit.commercial_id,
         date=visit.date,
-        produits_presentes=visit.products_presented,
-        produits_prescrits=visit.products_prescribed,
-        profils_prospect=visit.report,
-    )
-
-    candidates = query.order_by(Prospection.id.asc()).all()
-    client_phone = "".join(ch for ch in (client.phone or "") if ch.isdigit())
-    client_name = _norm(client.name)
-
+    ).order_by(Prospection.id.asc()).all()
     for prospect in candidates:
-        prospect_phone = "".join(ch for ch in (prospect.telephone or "") if ch.isdigit())
-        prospect_name = _norm(prospect.nom_client)
-        if client_phone and prospect_phone and client_phone == prospect_phone:
+        if _same_visit_payload(visit, prospect, client):
             return prospect
-        if client_name and prospect_name == client_name:
-            return prospect
+    return None
 
+
+def _find_client_for_prospection(prospection):
+    prospect_phone = _phone(prospection.telephone)
+    prospect_name = _norm(prospection.nom_client)
+
+    candidates = Client.query.filter(
+        (Client.owner_id == prospection.commercial_id) | (Client.owner_id.is_(None))
+    ).all()
+    for client in candidates:
+        if prospect_phone and _phone(client.phone) and prospect_phone == _phone(client.phone):
+            return client
+        if prospect_name and prospect_name == _norm(client.name):
+            return client
     return None
 
 
 def _find_visit_for_prospection(prospection):
-    client_phone = "".join(ch for ch in (prospection.telephone or "") if ch.isdigit())
-    client_name = _norm(prospection.nom_client)
-
-    clients = Client.query.filter_by(owner_id=prospection.commercial_id).all()
-    clients += Client.query.filter(Client.owner_id.is_(None)).all()
-
-    for client in clients:
-        phone = "".join(ch for ch in (client.phone or "") if ch.isdigit())
-        name = _norm(client.name)
-        if client_phone and phone and client_phone == phone or client_name and name == client_name:
-            visit = ClientVisit.query.filter_by(
-                client_id=client.id,
-                commercial_id=prospection.commercial_id,
-                date=prospection.date,
-                is_duplicate=False,
-            ).order_by(ClientVisit.id.asc()).first()
-            if visit is not None:
-                return visit
+    client = _find_client_for_prospection(prospection)
+    if client is None:
+        return None
+    candidates = ClientVisit.query.filter_by(
+        client_id=client.id,
+        commercial_id=prospection.commercial_id,
+        date=prospection.date,
+        is_duplicate=False,
+    ).order_by(ClientVisit.id.asc()).all()
+    for visit in candidates:
+        if _same_visit_payload(visit, prospection, client):
+            return visit
     return None
 
 
@@ -89,19 +108,32 @@ def _create_client_for_prospection(prospection):
 
 @event.listens_for(Session, "after_flush")
 def synchronize_visit_records(session, flush_context):
-    """Garantit l'équivalence Prospection <-> ClientVisit sans boucle de création."""
+    """Complète automatiquement le miroir manquant, sans double création."""
     if session.info.get("visit_sync_running"):
         return
 
     session.info["visit_sync_running"] = True
     try:
-        # Une ClientVisit créée ailleurs que par le formulaire de prospection
-        # crée automatiquement sa fiche Prospection correspondante.
-        for visit in list(session.new):
-            if not isinstance(visit, ClientVisit) or visit.is_duplicate:
+        new_objects = list(session.new)
+        new_visits = [obj for obj in new_objects if isinstance(obj, ClientVisit) and not obj.is_duplicate]
+        new_prospects = [obj for obj in new_objects if isinstance(obj, Prospection)]
+
+        # Si l'application a déjà créé les deux côtés dans la même transaction,
+        # ils constituent une seule visite : ne rien ajouter.
+        paired_visit_ids = set()
+        paired_prospect_ids = set()
+        for visit in new_visits:
+            client = _find_client_for_visit(visit)
+            for prospect in new_prospects:
+                if _same_visit_payload(visit, prospect, client):
+                    paired_visit_ids.add(id(visit))
+                    paired_prospect_ids.add(id(prospect))
+                    break
+
+        for visit in new_visits:
+            if id(visit) in paired_visit_ids:
                 continue
-            prospect = _find_prospection_for_visit(visit)
-            if prospect is not None:
+            if _find_prospection_for_visit(visit) is not None:
                 continue
             client = _find_client_for_visit(visit)
             if client is None:
@@ -111,28 +143,19 @@ def synchronize_visit_records(session, flush_context):
                 date=visit.date,
                 nom_client=client.name,
                 specialite=client.specialty or "Non renseignée",
-                structure=client.structure,
+                structure=client.structure or "Non renseignée",
                 telephone=client.phone or "NC",
                 profils_prospect=visit.report,
                 produits_presentes=visit.products_presented,
                 produits_prescrits=visit.products_prescribed,
             ))
 
-        # Une Prospection créée par un autre flux crée automatiquement sa
-        # ClientVisit correspondante si elle n'existe pas déjà.
-        for prospect in list(session.new):
-            if not isinstance(prospect, Prospection):
+        for prospect in new_prospects:
+            if id(prospect) in paired_prospect_ids:
                 continue
             if _find_visit_for_prospection(prospect) is not None:
                 continue
-            client = None
-            phone = "".join(ch for ch in (prospect.telephone or "") if ch.isdigit())
-            name = _norm(prospect.nom_client)
-            for candidate in Client.query.filter_by(owner_id=prospect.commercial_id).all():
-                candidate_phone = "".join(ch for ch in (candidate.phone or "") if ch.isdigit())
-                if (phone and candidate_phone and phone == candidate_phone) or (name and _norm(candidate.name) == name):
-                    client = candidate
-                    break
+            client = _find_client_for_prospection(prospect)
             if client is None:
                 client = _create_client_for_prospection(prospect)
             session.add(ClientVisit(
