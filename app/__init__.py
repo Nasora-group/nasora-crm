@@ -26,7 +26,9 @@ def create_app(config_object=None):
     _register_blueprints(app)
     # Charge les écouteurs après l'initialisation des modèles afin que toute
     # création/modification de visite soit synchronisée avec Prospection.
-    import app.visit_sync  # noqa: F401
+    # Utiliser "from ... import" évite que "import app.visit_sync" ne remplace
+    # accidentellement la variable locale Flask "app" par le module Python app.
+    from app import visit_sync  # noqa: F401
     _register_error_handlers(app)
     @app.context_processor
     def inject_globals():
