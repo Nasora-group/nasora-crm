@@ -32,10 +32,10 @@ def create_app(config_object=None):
     _register_error_handlers(app)
     @app.context_processor
     def inject_globals():
-        from datetime import datetime
+        from datetime import datetime, UTC
         from app.models import SUPPLIERS, STRUCTURE_COLORS
         active_slugs = [slug for slug, s in SUPPLIERS.items() if not s.get("archived")]
-        return {"current_year": datetime.utcnow().year, "first_active_supplier_slug": active_slugs[0] if active_slugs else None, "structure_colors": STRUCTURE_COLORS}
+        return {"current_year": datetime.now(UTC).year, "first_active_supplier_slug": active_slugs[0] if active_slugs else None, "structure_colors": STRUCTURE_COLORS}
     from app.utils import format_planning_slot, planning_entries
     app.jinja_env.filters["planning_slot"] = format_planning_slot
     app.jinja_env.filters["planning_entries"] = planning_entries

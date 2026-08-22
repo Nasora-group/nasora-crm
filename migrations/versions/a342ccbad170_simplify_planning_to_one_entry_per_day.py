@@ -7,7 +7,7 @@ Create Date: 2026-08-19 11:19:23.601802
 """
 import json
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 
@@ -39,71 +39,112 @@ def _merge_matin_soir(matin_raw, soir_raw):
 
 
 def upgrade():
-    # 1) Ajoute les 7 nouvelles colonnes (une par jour, sans distinction matin/soir)
-    op.add_column('planning', sa.Column('lundi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('mardi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('mercredi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('jeudi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('vendredi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('samedi', sa.Text(), nullable=True))
-    op.add_column('planning', sa.Column('dimanche', sa.Text(), nullable=True))
+    # Ajoute les 7 nouvelles colonnes (une par jour).
+    #
+    # La migration précédente essayait de lire les anciennes colonnes avec
+    # connection.execute(...).fetchall(). Cela fonctionne en mode online,
+    # mais pas avec "flask db upgrade --sql" (mode offline).
+    #
+    # La copie des anciennes données est donc effectuée uniquement lorsque
+    # Alembic dispose réellement d'une connexion à la base.
 
-    # 2) Fusionne les données déjà saisies (matin + soir) dans la nouvelle
-    #    colonne unique, pour qu'aucun planning existant ne soit perdu.
+    op.add_column("planning", sa.Column("lundi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("mardi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("mercredi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("jeudi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("vendredi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("samedi", sa.Text(), nullable=True))
+    op.add_column("planning", sa.Column("dimanche", sa.Text(), nullable=True))
+
+    # En mode SQL offline, on ne peut pas lire les lignes avec fetchall().
+    # On utilise donc une opération SQL PostgreSQL directement.
+    if context.is_offline_mode():
+        return
+
     connection = op.get_bind()
+
     planning_table = sa.table(
-        'planning',
-        sa.column('id', sa.Integer),
-        sa.column('lundi_matin', sa.Text), sa.column('lundi_soir', sa.Text), sa.column('lundi', sa.Text),
-        sa.column('mardi_matin', sa.Text), sa.column('mardi_soir', sa.Text), sa.column('mardi', sa.Text),
-        sa.column('mercredi_matin', sa.Text), sa.column('mercredi_soir', sa.Text), sa.column('mercredi', sa.Text),
-        sa.column('jeudi_matin', sa.Text), sa.column('jeudi_soir', sa.Text), sa.column('jeudi', sa.Text),
-        sa.column('vendredi_matin', sa.Text), sa.column('vendredi_soir', sa.Text), sa.column('vendredi', sa.Text),
-        sa.column('samedi_matin', sa.Text), sa.column('samedi_soir', sa.Text), sa.column('samedi', sa.Text),
-        sa.column('dimanche_matin', sa.Text), sa.column('dimanche_soir', sa.Text), sa.column('dimanche', sa.Text),
+        "planning",
+        sa.column("id", sa.Integer),
+        sa.column("lundi_matin", sa.Text),
+        sa.column("lundi_soir", sa.Text),
+        sa.column("lundi", sa.Text),
+        sa.column("mardi_matin", sa.Text),
+        sa.column("mardi_soir", sa.Text),
+        sa.column("mardi", sa.Text),
+        sa.column("mercredi_matin", sa.Text),
+        sa.column("mercredi_soir", sa.Text),
+        sa.column("mercredi", sa.Text),
+        sa.column("jeudi_matin", sa.Text),
+        sa.column("jeudi_soir", sa.Text),
+        sa.column("jeudi", sa.Text),
+        sa.column("vendredi_matin", sa.Text),
+        sa.column("vendredi_soir", sa.Text),
+        sa.column("vendredi", sa.Text),
+        sa.column("samedi_matin", sa.Text),
+        sa.column("samedi_soir", sa.Text),
+        sa.column("samedi", sa.Text),
+        sa.column("dimanche_matin", sa.Text),
+        sa.column("dimanche_soir", sa.Text),
+        sa.column("dimanche", sa.Text),
     )
 
-    rows = connection.execute(sa.select(
-        planning_table.c.id,
-        planning_table.c.lundi_matin, planning_table.c.lundi_soir,
-        planning_table.c.mardi_matin, planning_table.c.mardi_soir,
-        planning_table.c.mercredi_matin, planning_table.c.mercredi_soir,
-        planning_table.c.jeudi_matin, planning_table.c.jeudi_soir,
-        planning_table.c.vendredi_matin, planning_table.c.vendredi_soir,
-        planning_table.c.samedi_matin, planning_table.c.samedi_soir,
-        planning_table.c.dimanche_matin, planning_table.c.dimanche_soir,
-    )).fetchall()
+    rows = connection.execute(
+        sa.select(
+            planning_table.c.id,
+            planning_table.c.lundi_matin,
+            planning_table.c.lundi_soir,
+            planning_table.c.mardi_matin,
+            planning_table.c.mardi_soir,
+            planning_table.c.mercredi_matin,
+            planning_table.c.mercredi_soir,
+            planning_table.c.jeudi_matin,
+            planning_table.c.jeudi_soir,
+            planning_table.c.vendredi_matin,
+            planning_table.c.vendredi_soir,
+            planning_table.c.samedi_matin,
+            planning_table.c.samedi_soir,
+            planning_table.c.dimanche_matin,
+            planning_table.c.dimanche_soir,
+        )
+    ).fetchall()
 
     for row in rows:
         updates = {
-            'lundi': _merge_matin_soir(row.lundi_matin, row.lundi_soir),
-            'mardi': _merge_matin_soir(row.mardi_matin, row.mardi_soir),
-            'mercredi': _merge_matin_soir(row.mercredi_matin, row.mercredi_soir),
-            'jeudi': _merge_matin_soir(row.jeudi_matin, row.jeudi_soir),
-            'vendredi': _merge_matin_soir(row.vendredi_matin, row.vendredi_soir),
-            'samedi': _merge_matin_soir(row.samedi_matin, row.samedi_soir),
-            'dimanche': _merge_matin_soir(row.dimanche_matin, row.dimanche_soir),
+            "lundi": _merge_matin_soir(row.lundi_matin, row.lundi_soir),
+            "mardi": _merge_matin_soir(row.mardi_matin, row.mardi_soir),
+            "mercredi": _merge_matin_soir(row.mercredi_matin, row.mercredi_soir),
+            "jeudi": _merge_matin_soir(row.jeudi_matin, row.jeudi_soir),
+            "vendredi": _merge_matin_soir(row.vendredi_matin, row.vendredi_soir),
+            "samedi": _merge_matin_soir(row.samedi_matin, row.samedi_soir),
+            "dimanche": _merge_matin_soir(row.dimanche_matin, row.dimanche_soir),
         }
+
         connection.execute(
-            planning_table.update().where(planning_table.c.id == row.id).values(**updates)
+            planning_table.update()
+            .where(planning_table.c.id == row.id)
+            .values(**updates)
         )
 
-    # 3) Supprime les 14 anciennes colonnes, devenues inutiles
-    with op.batch_alter_table('planning', schema=None) as batch_op:
-        batch_op.drop_column('jeudi_matin')
-        batch_op.drop_column('vendredi_matin')
-        batch_op.drop_column('mercredi_soir')
-        batch_op.drop_column('samedi_soir')
-        batch_op.drop_column('dimanche_matin')
-        batch_op.drop_column('lundi_soir')
-        batch_op.drop_column('jeudi_soir')
-        batch_op.drop_column('mardi_matin')
-        batch_op.drop_column('mercredi_matin')
-        batch_op.drop_column('lundi_matin')
-        batch_op.drop_column('vendredi_soir')
-        batch_op.drop_column('dimanche_soir')
-        batch_op.drop_column('samedi_matin')
-        batch_op.drop_column('mardi_soir')
+    # Supprime les 14 anciennes colonnes.
+    with op.batch_alter_table("planning", schema=None) as batch_op:
+        for column in (
+            "jeudi_matin",
+            "vendredi_matin",
+            "mercredi_soir",
+            "samedi_soir",
+            "dimanche_matin",
+            "lundi_soir",
+            "jeudi_soir",
+            "mardi_matin",
+            "mercredi_matin",
+            "lundi_matin",
+            "vendredi_soir",
+            "dimanche_soir",
+            "samedi_matin",
+            "mardi_soir",
+        ):
+            batch_op.drop_column(column)
 
 
 def downgrade():

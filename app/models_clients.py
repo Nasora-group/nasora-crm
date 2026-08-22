@@ -35,7 +35,7 @@ class ClientVisit(db.Model):
     report = db.Column(db.Text, nullable=True)
     next_visit = db.Column(db.Date, nullable=True, index=True)
     # Historical exact duplicates are flagged, never deleted automatically.
-    is_duplicate = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false(), index=True)
+    is_duplicate = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     client = db.relationship("Client", back_populates="visits")
     commercial = db.relationship("User", foreign_keys=[commercial_id])
