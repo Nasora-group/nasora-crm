@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Mes prospections — NASORA HEALTH & SKINCARE{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <div>
+        <span class="hero-eyebrow">ESPACE COMMERCIAL</span>
+        <h1>Mes prospections</h1>
+        <p>Retrouvez et gérez vos prospections enregistrées.</p>
+    </div>
+    <div class="hero-actions">
+        <a href="{{ url_for('dashboard.index') }}" class="btn">Nouvelle prospection</a>
+    </div>
+</div>
+
+<div class="card">
+    {% if prospections %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Professionnel</th>
+                    <th>Spécialité</th>
+                    <th>Structure</th>
+                    <th>Téléphone</th>
+                    <th>Produits présentés</th>
+                    <th>Produits prescrits</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in prospections %}
+                <tr>
+                    <td>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</td>
+                    <td><strong>{{ p.nom_client }}</strong></td>
+                    <td>{{ p.specialite or '—' }}</td>
+                    <td>{{ p.structure or '—' }}</td>
+                    <td>{{ p.telephone or '—' }}</td>
+                    <td>{{ p.produits_presentes or '—' }}</td>
+                    <td>{{ p.produits_prescrits or '—' }}</td>
+                    <td>
+                        <div class="table-actions">
+                            <a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a>
+                            <form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');">
+                                {{ csrf_form.hidden_tag() if csrf_form is defined else '' }}
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a class="btn btn-outline" href="{{ url_for('dashboard.prospections', page=pagination.prev_num) }}">Précédent</a>{% endif %}
+        <span>Page {{ pagination.page }} / {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a class="btn btn-outline" href="{{ url_for('dashboard.prospections', page=pagination.next_num) }}">Suivant</a>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <h2>Aucune prospection</h2>
+        <p>Vos prochaines prospections apparaîtront ici.</p>
+        <a href="{{ url_for('dashboard.index') }}" class="btn">Saisir une prospection</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
