@@ -24,6 +24,9 @@ def create_app(config_object=None):
         # existante au prochain chargement de l'utilisateur.
         return user if user and user.is_active_account else None
     _register_blueprints(app)
+    # Charge les écouteurs après l'initialisation des modèles afin que toute
+    # création/modification de visite soit synchronisée avec Prospection.
+    import app.visit_sync  # noqa: F401
     _register_error_handlers(app)
     @app.context_processor
     def inject_globals():
