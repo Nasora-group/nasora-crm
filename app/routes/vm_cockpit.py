@@ -11,6 +11,10 @@ vm_cockpit_bp = Blueprint("vm_cockpit", __name__)
 
 
 def _commercial_revenue_kpis(commercial):
+    """Affiche au commercial le même CA de division que celui visible par l'admin.
+    Le CA n'est donc PAS limité aux ventes saisies par le commercial connecté.
+    Un commercial NASMEDIC voit le CA NASMEDIC; un commercial NASDERM voit le CA NASDERM.
+    """
     today = date.today()
     division = commercial.project
     month_key = today.strftime("%Y-%m")
@@ -18,10 +22,10 @@ def _commercial_revenue_kpis(commercial):
     monthly_revenue = 0
     annual_revenue = 0
 
+    # Même logique que le tableau de CA admin : toutes les ventes de la division.
     for slug in DIVISION_SUPPLIERS.get(division, []):
         sale_model = SUPPLIERS[slug]["sale_model"]
         rows = db.session.query(sale_model.date, sale_model.quantity, sale_model.price).filter(
-            sale_model.commercial_id == commercial.id,
             sale_model.project == division,
         ).all()
         for sale_date, quantity, price in rows:
@@ -31,8 +35,12 @@ def _commercial_revenue_kpis(commercial):
             if sale_date.year == current_year:
                 annual_revenue += amount
 
-    monthly_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=today.month).first()
-    annual_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=None).first()
+    monthly_objective = SalesObjective.query.filter_by(
+        division=division, year=current_year, month=today.month
+    ).first()
+    annual_objective = SalesObjective.query.filter_by(
+        division=division, year=current_year, month=None
+    ).first()
     monthly_target = monthly_objective.target_amount if monthly_objective else None
     annual_target = annual_objective.target_amount if annual_objective else None
 
