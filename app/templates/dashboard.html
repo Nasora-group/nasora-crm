@@ -1,74 +1,90 @@
 {% extends "base.html" %}
 
+{% block title %}Mon espace commercial — NASORA HEALTH & SKINCARE{% endblock %}
+
 {% block content %}
-<h1>Tableau de Bord Commercial</h1>
+<div class="dashboard-commercial">
+    <div class="page-header">
+        <h1>Mon espace commercial</h1>
+        <p>Bienvenue {{ current_user.username }}. Enregistrez vos prospections et gérez votre activité simplement.</p>
+    </div>
 
-{% if current_user.project == 'nasmedic' %}
-    <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn">Voir le chiffre d'affaire mensuel</a>
-{% else %}
-    <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn">Voir le chiffre d'affaire mensuel</a>
-{% endif %}
+    <div class="sales-links">
+        <a href="{{ url_for('planning.visualiser') }}" class="btn">📅 Mon planning</a>
+        <a href="{{ url_for('planning.saisie') }}" class="btn">➕ Saisir mon planning</a>
+        <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}" class="btn">📋 Mes visites</a>
+        <a href="{{ url_for('evaluations.my_evaluations') }}" class="btn">⭐ Mes évaluations</a>
+    </div>
 
-<nav class="sales-links">
-    <a href="{{ url_for('planning.visualiser') }}" class="btn">Visualiser le planning</a>
-    <a href="{{ url_for('planning.saisie') }}" class="btn">Saisie du planning</a>
-    <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}" class="btn">Mes visites &amp; export</a>
-</nav>
+    <div class="form-container">
+        <h2>Nouvelle prospection</h2>
+        <p class="form-help">Renseignez uniquement les informations utiles après votre visite.</p>
 
-<div class="form-container">
-    <h2>Nouvelle prospection</h2>
-    <form method="POST" class="prospection-form">
-        {{ form.hidden_tag() }}
+        <form method="POST" class="prospection-form">
+            {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.date.label(class="form-label") }}
-            {{ form.date(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.date.label(class="form-label") }}
+                {{ form.date(class="form-input") }}
+                {% for error in form.date.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.nom_client.label(class="form-label") }}
-            {{ form.nom_client(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.nom_client.label(class="form-label") }}
+                {{ form.nom_client(class="form-input") }}
+                {% for error in form.nom_client.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.specialite.label(class="form-label") }}
-            {{ form.specialite(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.specialite.label(class="form-label") }}
+                {{ form.specialite(class="form-input") }}
+                {% for error in form.specialite.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.structure.label(class="form-label") }}
-            {{ form.structure(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.structure.label(class="form-label") }}
+                {{ form.structure(class="form-input") }}
+                {% for error in form.structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.telephone.label(class="form-label") }}
-            {{ form.telephone(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.telephone.label(class="form-label") }}
+                {{ form.telephone(class="form-input") }}
+                {% for error in form.telephone.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.profils_prospect.label(class="form-label") }}
-            {{ form.profils_prospect(class="form-input") }}
-        </div>
+            <div class="form-group">
+                {{ form.profils_prospect.label(class="form-label") }}
+                {{ form.profils_prospect(class="form-input") }}
+                {% for error in form.profils_prospect.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.produits_presentes.label(class="form-label") }}
-            {{ form.produits_presentes(class="form-input select2-products", multiple=true) }}
-        </div>
+            <div class="form-group">
+                {{ form.produits_presentes.label(class="form-label") }}
+                {{ form.produits_presentes(class="form-input select2-products", multiple=true) }}
+                {% for error in form.produits_presentes.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.produits_prescrits.label(class="form-label") }}
-            {{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}
-        </div>
+            <div class="form-group">
+                {{ form.produits_prescrits.label(class="form-label") }}
+                {{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}
+                {% for error in form.produits_prescrits.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
 
-        <div class="form-group">
-            {{ form.submit(class="btn-submit") }}
-        </div>
-    </form>
+            <div class="form-group">
+                {{ form.submit(class="btn-submit") }}
+            </div>
+        </form>
+    </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' });
+    $('.select2-products').select2({
+        placeholder: 'Choisir un ou plusieurs produits',
+        width: '100%',
+        allowClear: true
+    });
 });
 </script>
 {% endblock %}
