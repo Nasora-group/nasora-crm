@@ -99,13 +99,10 @@ def dashboard():
         performance.append({"username": name, "revenue": revenue_by_commercial.get(commercial_id, 0), "visits": visits_by_commercial.get(commercial_id, 0)})
 
     top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
-    top_visits = sorted(performance, key=lambda p: p["visits"], reverse=True)[:10]
-    top_5_commerciaux = [
-        {"username": commercial_names[cid], "zone": commercial_zones.get(cid), "nombre_visites": count}
-        for cid, count in sorted(visits_by_commercial.items(), key=lambda item: item[1], reverse=True)[:5]
-        if cid in commercial_names
-    ]
 
+    # The "Top commerciaux — prospections" chart must use the Prospection table,
+    # not ClientVisit. Apply exactly the same date/commercial/zone/speciality
+    # filters as the prospection list below so the chart and table stay coherent.
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start = request.args.get("date_start")
     date_end = request.args.get("date_end")
@@ -122,6 +119,29 @@ def dashboard():
         query = query.filter(User.zone == zone)
     if specialite:
         query = query.filter(Prospection.specialite == specialite)
+
+    prospections_by_commercial = dict(
+        query.with_entities(
+            Prospection.commercial_id,
+            func.count(Prospection.id),
+        )
+        .group_by(Prospection.commercial_id)
+        .all()
+    )
+    top_prospections = [
+        {
+            "username": commercial_names[cid],
+            "prospections": count,
+        }
+        for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:10]
+        if cid in commercial_names
+    ]
+
+    top_5_commerciaux = [
+        {"username": commercial_names[cid], "zone": commercial_zones.get(cid), "nombre_visites": count}
+        for cid, count in sorted(visits_by_commercial.items(), key=lambda item: item[1], reverse=True)[:5]
+        if cid in commercial_names
+    ]
 
     page = request.args.get("page", 1, type=int)
     pagination = query.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
@@ -140,7 +160,7 @@ def dashboard():
     return render_template("admin_dashboard.html", commerciaux=commerciaux, prospections=pagination.items, pagination=pagination,
                            top_5_commerciaux=top_5_commerciaux, monthly_revenue_labels=monthly_revenue_labels,
                            monthly_revenue_data=monthly_revenue_data, kpis=kpis, revenue_by_division=revenue_by_division,
-                           division_kpis=division_kpis, top_revenue=top_revenue, top_visits=top_visits,
+                           division_kpis=division_kpis, top_revenue=top_revenue, top_prospections=top_prospections,
                            active_suppliers=active_suppliers)
 
 
