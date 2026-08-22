@@ -47,14 +47,12 @@ def _normalize_phone(value):
 
 
 def _invalid_phone(value):
-    """Retourne True pour les valeurs qui ne constituent pas un vrai téléphone."""
     raw = (value or "").strip().lower()
     digits = _normalize_phone(raw)
     return raw in {"", "na", "n/a", "nc", "non renseigne", "non renseigné", "0"} or len(digits) < 6
 
 
 def _find_client_for_prospection(prospection):
-    """Trouve le professionnel existant sans créer de doublon."""
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
     normalized_phone = _normalize_phone(phone)
@@ -70,41 +68,24 @@ def _find_client_for_prospection(prospection):
 
     candidates = Client.query.filter(Client.name.isnot(None)).all()
     same_name = [client for client in candidates if _normalize_text(client.name) == normalized_name]
-
     owned = [client for client in same_name if client.owner_id == current_user.id]
     if owned:
         return sorted(owned, key=lambda client: client.id)[0]
-
     if len(same_name) == 1:
         return same_name[0]
-
-    visited = [
-        client for client in same_name
-        if ClientVisit.query.filter_by(client_id=client.id, commercial_id=current_user.id).first() is not None
-    ]
+    visited = [client for client in same_name if ClientVisit.query.filter_by(client_id=client.id, commercial_id=current_user.id).first() is not None]
     if visited:
         return sorted(visited, key=lambda client: client.id)[0]
-
     return None
 
 
 def _sync_professional_from_prospection(prospection):
-    """Synchronise une prospection avec le professionnel et son historique de visites."""
     phone = (prospection.telephone or "").strip()
     name = (prospection.nom_client or "").strip()
     client = _find_client_for_prospection(prospection)
     valid_phone = not _invalid_phone(phone)
-
     if client is None:
-        client = Client(
-            name=name,
-            specialty=(prospection.specialite or "").strip() or None,
-            structure=(prospection.structure or "").strip(),
-            phone=phone if valid_phone else None,
-            potential=3,
-            owner_id=current_user.id,
-            last_visit=prospection.date,
-        )
+        client = Client(name=name, specialty=(prospection.specialite or "").strip() or None, structure=(prospection.structure or "").strip(), phone=phone if valid_phone else None, potential=3, owner_id=current_user.id, last_visit=prospection.date)
         db.session.add(client)
         db.session.flush()
     else:
@@ -116,36 +97,18 @@ def _sync_professional_from_prospection(prospection):
             client.owner_id = current_user.id
         if not client.last_visit or prospection.date > client.last_visit:
             client.last_visit = prospection.date
-
-    visit = ClientVisit(
-        client_id=client.id,
-        commercial_id=current_user.id,
-        date=prospection.date,
-        products_presented=prospection.produits_presentes or None,
-        products_prescribed=prospection.produits_prescrits or None,
-        report=prospection.profils_prospect or None,
-    )
+    visit = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None)
     db.session.add(visit)
     db.session.flush()
     return client, visit
 
 
 def _sync_professional_from_existing_prospection(prospection):
-    """Rattache une prospection existante à un professionnel sans créer une seconde prospection."""
     client = _find_client_for_prospection(prospection)
     phone = (prospection.telephone or "").strip()
     valid_phone = not _invalid_phone(phone)
-
     if client is None:
-        client = Client(
-            name=(prospection.nom_client or "").strip(),
-            specialty=(prospection.specialite or "").strip() or None,
-            structure=(prospection.structure or "").strip(),
-            phone=phone if valid_phone else None,
-            potential=3,
-            owner_id=prospection.commercial_id,
-            last_visit=prospection.date,
-        )
+        client = Client(name=(prospection.nom_client or "").strip(), specialty=(prospection.specialite or "").strip() or None, structure=(prospection.structure or "").strip(), phone=phone if valid_phone else None, potential=3, owner_id=prospection.commercial_id, last_visit=prospection.date)
         db.session.add(client)
         db.session.flush()
     else:
@@ -155,24 +118,9 @@ def _sync_professional_from_existing_prospection(prospection):
             client.owner_id = prospection.commercial_id
         if not client.last_visit or prospection.date > client.last_visit:
             client.last_visit = prospection.date
-
-    existing_visit = ClientVisit.query.filter_by(
-        client_id=client.id,
-        commercial_id=prospection.commercial_id,
-        date=prospection.date,
-        products_presented=prospection.produits_presentes or None,
-        products_prescribed=prospection.produits_prescrits or None,
-        report=prospection.profils_prospect or None,
-    ).first()
+    existing_visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None).first()
     if existing_visit is None:
-        db.session.add(ClientVisit(
-            client_id=client.id,
-            commercial_id=prospection.commercial_id,
-            date=prospection.date,
-            products_presented=prospection.produits_presentes or None,
-            products_prescribed=prospection.produits_prescrits or None,
-            report=prospection.profils_prospect or None,
-        ))
+        db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=prospection.produits_presentes or None, products_prescribed=prospection.produits_prescrits or None, report=prospection.profils_prospect or None))
 
 
 def _render_dashboard(form):
@@ -187,24 +135,13 @@ def _render_dashboard(form):
 def index():
     form = ProspectionForm()
     _set_product_choices(form, current_user.project)
-
     if form.is_submitted():
         if not form.validate():
             logger.warning("Prospection refusée pour %s: %s", current_user.username, form.errors)
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form)
         try:
-            prospection = Prospection(
-                commercial_id=current_user.id,
-                date=form.date.data,
-                nom_client=form.nom_client.data.strip(),
-                specialite=form.specialite.data.strip(),
-                structure=form.structure.data.strip(),
-                telephone=form.telephone.data.strip(),
-                profils_prospect=(form.profils_prospect.data or "").strip(),
-                produits_presentes=", ".join(form.produits_presentes.data or []),
-                produits_prescrits=", ".join(form.produits_prescrits.data or []),
-            )
+            prospection = Prospection(commercial_id=current_user.id, date=form.date.data, nom_client=form.nom_client.data.strip(), specialite=form.specialite.data.strip(), structure=form.structure.data.strip(), telephone=form.telephone.data.strip(), profils_prospect=(form.profils_prospect.data or "").strip(), produits_presentes=", ".join(form.produits_presentes.data or []), produits_prescrits=", ".join(form.produits_prescrits.data or []))
             db.session.add(prospection)
             db.session.flush()
             client, visit = _sync_professional_from_prospection(prospection)
@@ -217,7 +154,6 @@ def index():
             logger.exception("Erreur lors de l'enregistrement/synchronisation d'une prospection pour %s", current_user.username)
             flash("Impossible d'enregistrer la prospection. Vérifiez les données et réessayez.", "error")
             return _render_dashboard(form)
-
     return _render_dashboard(form)
 
 
@@ -225,14 +161,15 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    page = request.args.get("page", 1, type=int)
-    pagination = (
+    # Liste simple volontairement sans pagination : évite toute dépendance à l'API
+    # de pagination de Flask-SQLAlchemy et garantit un affichage fiable du commercial.
+    prospections = (
         Prospection.query
         .filter_by(commercial_id=current_user.id)
         .order_by(Prospection.date.desc(), Prospection.id.desc())
-        .paginate(page=page, per_page=20, error_out=False)
+        .all()
     )
-    return render_template("dashboard_prospections.html", prospections=pagination.items, pagination=pagination)
+    return render_template("dashboard_prospections.html", prospections=prospections)
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
@@ -263,7 +200,6 @@ def edit_prospection(prospection_id):
             _sync_professional_from_existing_prospection(prospection)
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
-            logger.info("Prospection #%s modifiée et synchronisée par %s", prospection_id, current_user.username)
             return redirect(url_for("dashboard.prospections"))
         except Exception:
             db.session.rollback()
@@ -285,5 +221,4 @@ def delete_prospection(prospection_id):
         db.session.delete(prospection)
         db.session.commit()
         flash("Prospection supprimée.", "success")
-        logger.info("Prospection #%s supprimée par %s", prospection_id, current_user.username)
     return redirect(url_for("dashboard.prospections"))
