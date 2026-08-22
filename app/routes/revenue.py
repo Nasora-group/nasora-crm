@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from app.extensions import db, cache
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
+from app.models_clients import ClientVisit
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,42 @@ def _objectives_kpis(division, labels, totals):
     }
 
 
+def _division_visit_ranking(division, limit=5):
+    """Classe les commerciaux d'une division selon les visites métier.
+
+    Une visite = (commercial, professionnel, date), doublons historiques exclus.
+    Cette fonction évite d'utiliser Prospection comme proxy de visite, ce qui
+    produisait auparavant un classement différent des autres dashboards.
+    """
+    unique_visits = (
+        db.session.query(
+            ClientVisit.commercial_id.label("commercial_id"),
+            ClientVisit.client_id.label("client_id"),
+            ClientVisit.date.label("date"),
+        )
+        .join(User, User.id == ClientVisit.commercial_id)
+        .filter(
+            User.project == division,
+            User.role == "commercial",
+            ClientVisit.is_duplicate.is_(False),
+        )
+        .distinct()
+        .subquery()
+    )
+    return (
+        db.session.query(
+            User.username,
+            User.zone,
+            func.count().label("nombre_visites"),
+        )
+        .join(unique_visits, unique_visits.c.commercial_id == User.id)
+        .group_by(User.id, User.username, User.zone)
+        .order_by(func.count().desc(), User.username.asc())
+        .limit(limit)
+        .all()
+    )
+
+
 def _division_dashboard(division, template_name):
     prospections = (
         Prospection.query.join(User).filter(User.project == division).order_by(Prospection.date.desc()).all()
@@ -112,16 +149,7 @@ def _division_dashboard(division, template_name):
 
     labels, totals, _ = _monthly_revenue_for_division(division)
     objectives_kpis = _objectives_kpis(division, labels, totals)
-
-    top_5_commerciaux = (
-        db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites"))
-        .join(Prospection)
-        .filter(User.project == division)
-        .group_by(User.id)
-        .order_by(func.count(Prospection.id).desc())
-        .limit(5)
-        .all()
-    )
+    top_5_commerciaux = _division_visit_ranking(division)
 
     commerciaux = User.query.filter_by(project=division, role="commercial").order_by(User.username).all()
     suppliers = _division_suppliers(division)
