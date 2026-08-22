@@ -48,7 +48,8 @@ def _register_blueprints(app):
     from app.routes.objectives import objectives_bp
     from app.routes.evaluations import evaluations_bp
     from app.routes.clients import clients_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp)
+    from app.routes.vm_cockpit import vm_cockpit_bp
+    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(vm_cockpit_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
