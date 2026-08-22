@@ -3,7 +3,7 @@ from wtforms import (
     StringField, DateField, TextAreaField, SubmitField, PasswordField,
     SelectMultipleField, SelectField, BooleanField, FloatField, IntegerField,
 )
-from wtforms.validators import DataRequired, Length, Optional, ValidationError, NumberRange
+from wtforms.validators import DataRequired, Length, Optional, NumberRange
 
 from app.models import STRUCTURES
 
@@ -25,8 +25,6 @@ class ProspectionForm(FlaskForm):
     structure = StringField("Structure", validators=[DataRequired(), Length(max=150)])
     telephone = StringField("Téléphone", validators=[DataRequired(), Length(max=30)])
     profils_prospect = TextAreaField("Profils prospect")
-    # Choix renseignés dynamiquement dans la route selon la division du commercial
-    # (catalogue produits NASDERM ou NASMEDIC) — voir app/routes/dashboard.py.
     produits_presentes = SelectMultipleField("Produits présentés", choices=[], validators=[Optional()])
     produits_prescrits = SelectMultipleField("Produits prescrits", choices=[], validators=[Optional()])
     submit = SubmitField("Enregistrer")
@@ -34,7 +32,6 @@ class ProspectionForm(FlaskForm):
 
 class PlanningForm(FlaskForm):
     date = DateField("Date de début de la semaine", validators=[DataRequired()])
-
     lundi = SelectMultipleField("Lundi", choices=STRUCTURES)
     mardi = SelectMultipleField("Mardi", choices=STRUCTURES)
     mercredi = SelectMultipleField("Mercredi", choices=STRUCTURES)
@@ -42,40 +39,24 @@ class PlanningForm(FlaskForm):
     vendredi = SelectMultipleField("Vendredi", choices=STRUCTURES)
     samedi = SelectMultipleField("Samedi", choices=STRUCTURES)
     dimanche = SelectMultipleField("Dimanche", choices=STRUCTURES)
-
     submit = SubmitField("Valider le planning")
 
 
 class SupplierSalesForm(FlaskForm):
-    """Formulaire générique utilisé pour les 4 fournisseurs (CSRF uniquement,
-    les lignes produits sont générées dynamiquement dans le template)."""
     sale_date = DateField("Date de saisie", validators=[DataRequired()])
     submit = SubmitField("Enregistrer les ventes")
 
 
 class CSRFOnlyForm(FlaskForm):
-    """Formulaire minimal utilisé pour les boutons d'action (activer/désactiver...)
-    qui n'ont besoin que d'une protection CSRF, sans autre champ."""
     pass
 
 
 class UserForm(FlaskForm):
     username = StringField("Nom d'utilisateur", validators=[DataRequired(), Length(max=150)])
-    role = SelectField(
-        "Rôle",
-        choices=[("commercial", "Commercial"), ("admin", "Administrateur")],
-        validators=[DataRequired()],
-    )
-    project = SelectField(
-        "Division",
-        choices=[("nasderm", "NASDERM"), ("nasmedic", "NASMEDIC")],
-        validators=[DataRequired()],
-    )
+    role = SelectField("Rôle", choices=[("commercial", "Commercial"), ("admin", "Administrateur")], validators=[DataRequired()])
+    project = SelectField("Division", choices=[("nasderm", "NASDERM"), ("nasmedic", "NASMEDIC")], validators=[DataRequired()])
     zone = StringField("Zone", validators=[Optional(), Length(max=100)])
-    password = PasswordField(
-        "Mot de passe",
-        validators=[Optional(), Length(min=8, message="8 caractères minimum.")],
-    )
+    password = PasswordField("Mot de passe", validators=[Optional(), Length(min=8, message="8 caractères minimum.")])
     is_active_account = BooleanField("Compte actif", default=True)
     submit = SubmitField("Enregistrer")
 
@@ -83,7 +64,7 @@ class UserForm(FlaskForm):
 class ProductForm(FlaskForm):
     name = StringField("Nom du produit", validators=[DataRequired(), Length(max=200)])
     reference = StringField("Référence / code produit", validators=[Optional(), Length(max=100)])
-    default_price = FloatField("Prix HT par défaut (€)", validators=[DataRequired()])
+    default_price = FloatField("Prix HT par défaut (€)", validators=[DataRequired(), NumberRange(min=0, message="Le prix ne peut pas être négatif.")])
     is_active = BooleanField("Référence active", default=True)
     submit = SubmitField("Enregistrer")
 
@@ -129,10 +110,8 @@ class EvaluationForm(FlaskForm):
     score_ponctualite = FloatField("Ponctualité, assiduité et présence", validators=[Optional(), NumberRange(min=0, max=10)])
     score_consignes = FloatField("Respect des consignes & directives", validators=[Optional(), NumberRange(min=0, max=10)])
     score_esprit_equipe = FloatField("Esprit d'équipe, proactivité & attitude", validators=[Optional(), NumberRange(min=0, max=5)])
-
     points_forts = TextAreaField("Points forts", validators=[Optional()])
     axes_amelioration = TextAreaField("Axes d'amélioration", validators=[Optional()])
     objectifs_quantitatifs = TextAreaField("Objectifs quantitatifs (mois suivant)", validators=[Optional()])
     objectifs_qualitatifs = TextAreaField("Objectifs qualitatifs (mois suivant)", validators=[Optional()])
-
     submit = SubmitField("Enregistrer l'évaluation")
