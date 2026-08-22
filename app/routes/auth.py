@@ -17,6 +17,11 @@ def home():
     return render_template("welcome.html")
 
 
+@auth_bp.route("/favicon.ico")
+def favicon():
+    return redirect(url_for("static", filename="images/logo.jpg"))
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
