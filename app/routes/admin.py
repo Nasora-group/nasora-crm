@@ -125,13 +125,8 @@ def dashboard():
         monthly_target, annual_target = _division_targets(division, today)
         month_actual = current_month_by_division.get(division, 0.0)
         annual_actual = _annual_revenue_for_division(division, today.year)
-
-        # Les montants issus de PostgreSQL sont convertis en float pour les KPI.
-        # Les objectifs SalesObjective sont des Decimal (NUMERIC(12,2)).
-        # On normalise les deux côtés afin d'éviter le TypeError float / Decimal.
         month_target = float(monthly_target) if monthly_target is not None else None
         year_target = float(annual_target) if annual_target is not None else None
-
         division_kpis[division] = {
             "month_actual": month_actual,
             "month_target": month_target,
@@ -195,3 +190,39 @@ def commercial_detail(username):
     pagination = commercial.prospections.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
     form = DownloadExcelForm()
     if request.method == "POST" and "download_excel" in request.form:
+        try:
+            data = [{"Date": p.date.strftime("%Y-%m-%d"), "Nom Client": p.nom_client, "Spécialité": p.specialite, "Structure": p.structure, "Téléphone": p.telephone, "Profils Prospect": p.profils_prospect, "Produits Présentés": p.produits_presentes, "Produits Prescrits": p.produits_prescrits} for p in commercial.prospections.order_by(Prospection.date.desc()).all()]
+            df = pd.DataFrame(data)
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                df.to_excel(writer, index=False, sheet_name="Prospections")
+            output.seek(0)
+            return send_file(output, download_name=f"prospections_{username}.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        except Exception:
+            logger.exception("Erreur export Excel pour %s", username)
+            flash("Erreur lors de la génération du fichier Excel.", "error")
+    return render_template("commercial_dashboard.html", commercial=commercial, prospections=pagination.items, pagination=pagination, form=form, delete_form=CSRFOnlyForm())
+
+
+@admin_bp.route("/export_pdf/<username>")
+@login_required
+@roles_required("admin", "commercial")
+def export_pdf(username):
+    if current_user.role == "commercial" and current_user.username != username:
+        flash("Accès non autorisé.", "error")
+        return render_template("403.html"), 403
+    commercial = User.query.filter_by(username=username).first_or_404()
+    prospections = commercial.prospections.order_by(Prospection.date.desc()).all()
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(72, 750, f"Prospections de {username}")
+    p.setFont("Helvetica", 10)
+    y = 720
+    for prospection in prospections:
+        if y < 60:
+            p.showPage(); p.setFont("Helvetica", 10); y = 750
+        p.drawString(72, y, f"{prospection.date} - {prospection.nom_client} ({prospection.structure})")
+        y -= 18
+    p.showPage(); p.save(); buffer.seek(0)
+    return send_file(buffer, download_name=f"prospections_{username}.pdf", as_attachment=True, mimetype="application/pdf")
