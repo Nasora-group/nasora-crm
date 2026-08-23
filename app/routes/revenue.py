@@ -59,10 +59,10 @@ def _objectives_kpis(division, labels, totals):
     today = date.today()
     current_month_key = today.strftime("%Y-%m")
     current_year = today.year
-    total_revenue = sum(totals)
-    monthly_avg = (total_revenue / len(labels)) if labels else 0
-    current_month_revenue = next((amount for month, amount in zip(labels, totals) if month == current_month_key), 0)
-    current_year_revenue = sum(amount for month, amount in zip(labels, totals) if month.startswith(str(current_year)))
+    total_revenue = sum(float(amount or 0) for amount in totals)
+    monthly_avg = (total_revenue / len(labels)) if labels else 0.0
+    current_month_revenue = next((float(amount or 0) for month, amount in zip(labels, totals) if month == current_month_key), 0.0)
+    current_year_revenue = sum(float(amount or 0) for month, amount in zip(labels, totals) if month.startswith(str(current_year)))
 
     monthly_target = None
     annual_target = None
@@ -70,8 +70,8 @@ def _objectives_kpis(division, labels, totals):
     try:
         monthly_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=today.month).first()
         annual_objective = SalesObjective.query.filter_by(division=division, year=current_year, month=None).first()
-        monthly_target = monthly_objective.target_amount if monthly_objective else None
-        annual_target = annual_objective.target_amount if annual_objective else None
+        monthly_target = float(monthly_objective.target_amount) if monthly_objective and monthly_objective.target_amount is not None else None
+        annual_target = float(annual_objective.target_amount) if annual_objective and annual_objective.target_amount is not None else None
     except Exception:
         db.session.rollback()
         logger.warning("Impossible de lire les objectifs (%s)", division, exc_info=True)
@@ -83,8 +83,8 @@ def _objectives_kpis(division, labels, totals):
         "current_year_revenue": current_year_revenue,
         "monthly_target": monthly_target,
         "annual_target": annual_target,
-        "monthly_pct": (current_month_revenue / monthly_target * 100) if monthly_target else None,
-        "annual_pct": (current_year_revenue / annual_target * 100) if annual_target else None,
+        "monthly_pct": (current_month_revenue / monthly_target * 100.0) if monthly_target else None,
+        "annual_pct": (current_year_revenue / annual_target * 100.0) if annual_target else None,
         "current_year": current_year,
         "current_month_label": current_month_key,
         "objectives_available": objectives_available,
@@ -143,7 +143,7 @@ def _monthly_revenue_route(division, template_name):
     labels, totals, combined = _monthly_revenue_for_division(division)
     rows = []
     for month in labels:
-        values = {slug: combined[month].get(slug, 0) for slug, *_ in suppliers}
+        values = {slug: combined[month].get(slug, 0.0) for slug, *_ in suppliers}
         rows.append({"month": month, "amounts": values, "total": sum(values.values())})
     kpis = _objectives_kpis(division, labels, totals)
     return render_template(template_name, rows=rows, suppliers=suppliers, kpis=kpis, division=division, monthly_revenue_labels=labels)
