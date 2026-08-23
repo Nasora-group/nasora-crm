@@ -1,12 +1,13 @@
 import logging
+from calendar import monthrange
 from collections import namedtuple
-from datetime import date
+from datetime import date, datetime
 
 from flask import Blueprint, render_template, flash, request, abort
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from app.extensions import db, cache
+from app.extensions import db
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
 from app.utils import roles_required
 
@@ -31,17 +32,23 @@ def _ensure_division_access(division):
 
 
 def _monthly_revenue_for_division(division):
+    """Agrège le CA mensuel côté PostgreSQL au lieu de charger toutes les ventes."""
     combined = {}
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
+        month_expr = func.to_char(sale_model.date, "YYYY-MM")
+        amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
         rows = (
-            db.session.query(sale_model.date, sale_model.quantity, sale_model.price)
+            db.session.query(
+                month_expr.label("month"),
+                func.coalesce(func.sum(amount_expr), 0).label("revenue"),
+            )
             .filter(sale_model.project == division)
+            .group_by(month_expr)
+            .order_by(month_expr)
             .all()
         )
-        for sale_date, quantity, price in rows:
-            month = sale_date.strftime("%Y-%m")
-            combined.setdefault(month, {}).setdefault(slug, 0)
-            combined[month][slug] += (quantity or 0) * (price or 0)
+        for month, revenue in rows:
+            combined.setdefault(month, {})[slug] = float(revenue or 0)
 
     labels = sorted(combined.keys())
     totals = [sum(combined[m].values()) for m in labels]
@@ -54,10 +61,7 @@ def _objectives_kpis(division, labels, totals):
     current_year = today.year
     total_revenue = sum(totals)
     monthly_avg = (total_revenue / len(labels)) if labels else 0
-    current_month_revenue = 0
-    for month, amount in zip(labels, totals):
-        if month == current_month_key:
-            current_month_revenue = amount
+    current_month_revenue = next((amount for month, amount in zip(labels, totals) if month == current_month_key), 0)
     current_year_revenue = sum(amount for month, amount in zip(labels, totals) if month.startswith(str(current_year)))
 
     monthly_target = None
@@ -88,12 +92,7 @@ def _objectives_kpis(division, labels, totals):
 
 
 def _division_visit_ranking(division, limit=5):
-    """Classement métier des visites : Prospection est la source de vérité.
-
-    ClientVisit reste le miroir/historique professionnel, mais ne doit pas
-    être utilisé pour les KPI de visites afin d'éviter les écarts entre
-    dashboards et le nombre réel de prospections enregistrées.
-    """
+    """Classement métier des visites : Prospection est la source de vérité."""
     return (
         db.session.query(
             User.username,
@@ -101,10 +100,7 @@ def _division_visit_ranking(division, limit=5):
             func.count(Prospection.id).label("nombre_visites"),
         )
         .join(Prospection, Prospection.commercial_id == User.id)
-        .filter(
-            User.project == division,
-            User.role == "commercial",
-        )
+        .filter(User.project == division, User.role == "commercial")
         .group_by(User.id, User.username, User.zone)
         .order_by(func.count(Prospection.id).desc(), User.username.asc())
         .limit(limit)
@@ -146,7 +142,7 @@ def _monthly_revenue_route(division, template_name):
     suppliers = _division_suppliers(division)
     labels, totals, combined = _monthly_revenue_for_division(division)
     rows = []
-    for month in sorted(combined.keys()):
+    for month in labels:
         values = {slug: combined[month].get(slug, 0) for slug, *_ in suppliers}
         rows.append({"month": month, "amounts": values, "total": sum(values.values())})
     kpis = _objectives_kpis(division, labels, totals)
@@ -167,16 +163,40 @@ def monthly_revenue_nasmedic():
     return _monthly_revenue_route("nasmedic", "monthly_revenue_nasmedic.html")
 
 
+def _month_bounds(month):
+    """Retourne les bornes [début, fin) d'un mois YYYY-MM validé."""
+    try:
+        parsed = datetime.strptime(month, "%Y-%m")
+    except ValueError:
+        abort(404)
+    start = date(parsed.year, parsed.month, 1)
+    if parsed.month == 12:
+        end = date(parsed.year + 1, 1, 1)
+    else:
+        end = date(parsed.year, parsed.month + 1, 1)
+    return start, end
+
+
 def _product_sales_detail(sale_model, product_model, month):
-    rows = db.session.query(product_model.name, sale_model.quantity, sale_model.price, sale_model.date).join(sale_model, sale_model.product_id == product_model.id).all()
-    aggregated = {}
-    for name, quantity, price, sale_date in rows:
-        if sale_date.strftime("%Y-%m") != month:
-            continue
-        agg = aggregated.setdefault(name, {"total_quantity": 0, "total_revenue": 0})
-        agg["total_quantity"] += quantity or 0
-        agg["total_revenue"] += (quantity or 0) * (price or 0)
-    return [ProductSaleRow(name=name, total_quantity=values["total_quantity"], total_revenue=values["total_revenue"]) for name, values in aggregated.items()]
+    """Agrège le détail produit du mois directement en SQL."""
+    start, end = _month_bounds(month)
+    amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
+    rows = (
+        db.session.query(
+            product_model.name,
+            func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"),
+            func.coalesce(func.sum(amount_expr), 0).label("total_revenue"),
+        )
+        .join(sale_model, sale_model.product_id == product_model.id)
+        .filter(sale_model.date >= start, sale_model.date < end)
+        .group_by(product_model.id, product_model.name)
+        .order_by(product_model.name.asc())
+        .all()
+    )
+    return [
+        ProductSaleRow(name=name, total_quantity=quantity, total_revenue=float(revenue or 0))
+        for name, quantity, revenue in rows
+    ]
 
 
 def _monthly_revenue_detail_route(division, month, template_name):
