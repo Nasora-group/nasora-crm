@@ -8,7 +8,6 @@ from sqlalchemy import func
 
 from app.extensions import db, cache
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
-from app.models_clients import ClientVisit
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -89,22 +88,25 @@ def _objectives_kpis(division, labels, totals):
 
 
 def _division_visit_ranking(division, limit=5):
-    unique_visits = (
-        db.session.query(
-            ClientVisit.commercial_id.label("commercial_id"),
-            ClientVisit.client_id.label("client_id"),
-            ClientVisit.date.label("date"),
-        )
-        .join(User, User.id == ClientVisit.commercial_id)
-        .filter(User.project == division, User.role == "commercial", ClientVisit.is_duplicate.is_(False))
-        .distinct()
-        .subquery()
-    )
+    """Classement métier des visites : Prospection est la source de vérité.
+
+    ClientVisit reste le miroir/historique professionnel, mais ne doit pas
+    être utilisé pour les KPI de visites afin d'éviter les écarts entre
+    dashboards et le nombre réel de prospections enregistrées.
+    """
     return (
-        db.session.query(User.username, User.zone, func.count().label("nombre_visites"))
-        .join(unique_visits, unique_visits.c.commercial_id == User.id)
+        db.session.query(
+            User.username,
+            User.zone,
+            func.count(Prospection.id).label("nombre_visites"),
+        )
+        .join(Prospection, Prospection.commercial_id == User.id)
+        .filter(
+            User.project == division,
+            User.role == "commercial",
+        )
         .group_by(User.id, User.username, User.zone)
-        .order_by(func.count().desc(), User.username.asc())
+        .order_by(func.count(Prospection.id).desc(), User.username.asc())
         .limit(limit)
         .all()
     )
