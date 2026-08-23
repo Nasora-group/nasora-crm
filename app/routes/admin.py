@@ -13,7 +13,6 @@ from app.extensions import db
 from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
 from app.utils import roles_required
-from app.visit_metrics import unique_visit_count, unique_visits_by_commercial
 
 logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
@@ -30,6 +29,34 @@ def _division_targets(division, today):
         db.session.rollback()
         logger.warning("Impossible de lire les objectifs pour %s", division, exc_info=True)
         return None, None
+
+
+def _filtered_prospections_query():
+    """Construit la requête de référence des visites du dashboard admin.
+
+    Règle métier : 1 Prospection = 1 visite réelle.
+    Tous les tableaux/KPI de visites doivent partir de cette même requête.
+    """
+    query = Prospection.query.join(User).filter(User.role == "commercial")
+
+    date_start = request.args.get("date_start")
+    date_end = request.args.get("date_end")
+    commercial_id_filter = request.args.get("commercial")
+    zone = request.args.get("zone")
+    specialite = request.args.get("specialite")
+
+    if date_start:
+        query = query.filter(Prospection.date >= date_start)
+    if date_end:
+        query = query.filter(Prospection.date <= date_end)
+    if commercial_id_filter:
+        query = query.filter(Prospection.commercial_id == commercial_id_filter)
+    if zone:
+        query = query.filter(User.zone == zone)
+    if specialite:
+        query = query.filter(Prospection.specialite == specialite)
+
+    return query
 
 
 @admin_bp.route("/admin_dashboard", methods=["GET"])
@@ -84,70 +111,56 @@ def dashboard():
 
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     active_commercials_count = User.query.filter_by(role="commercial", is_active_account=True).count()
-
-    # Visites réelles = Prospections. ClientVisit est désormais le miroir CRM.
-    total_visits = unique_visit_count()
-    visits_by_commercial = unique_visits_by_commercial()
     commercial_names = {u.id: u.username for u in commerciaux}
     commercial_zones = {u.id: u.zone for u in commerciaux}
 
-    performance = []
-    for commercial_id in set(list(revenue_by_commercial.keys()) + list(visits_by_commercial.keys())):
-        name = commercial_names.get(commercial_id)
-        if not name:
-            continue
-        performance.append({"username": name, "revenue": revenue_by_commercial.get(commercial_id, 0), "visits": visits_by_commercial.get(commercial_id, 0)})
-
-    top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
-
-    # Source unique du graphique et du tableau de prospections.
-    # Les mêmes filtres sont appliqués aux deux pour garantir leur cohérence.
-    query = Prospection.query.join(User).filter(User.role == "commercial")
-    date_start = request.args.get("date_start")
-    date_end = request.args.get("date_end")
-    commercial_id_filter = request.args.get("commercial")
-    zone = request.args.get("zone")
-    specialite = request.args.get("specialite")
-    if date_start:
-        query = query.filter(Prospection.date >= date_start)
-    if date_end:
-        query = query.filter(Prospection.date <= date_end)
-    if commercial_id_filter:
-        query = query.filter(Prospection.commercial_id == commercial_id_filter)
-    if zone:
-        query = query.filter(User.zone == zone)
-    if specialite:
-        query = query.filter(Prospection.specialite == specialite)
-
-    prospections_by_commercial = dict(
-        query.with_entities(
+    # Source unique des visites du dashboard : Prospection + filtres courants.
+    filtered_query = _filtered_prospections_query()
+    filtered_visit_counts = dict(
+        filtered_query.with_entities(
             Prospection.commercial_id,
             func.count(Prospection.id),
         )
         .group_by(Prospection.commercial_id)
         .all()
     )
+    total_filtered_visits = sum(filtered_visit_counts.values())
+
+    performance = []
+    for commercial_id in set(list(revenue_by_commercial.keys()) + list(filtered_visit_counts.keys())):
+        name = commercial_names.get(commercial_id)
+        if not name:
+            continue
+        performance.append({
+            "username": name,
+            "revenue": revenue_by_commercial.get(commercial_id, 0),
+            "visits": filtered_visit_counts.get(commercial_id, 0),
+        })
+
+    top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
+
+    # Le graphique et le tableau de prospections utilisent exactement la même requête filtrée.
+    prospections_by_commercial = filtered_visit_counts
     top_prospections = [
         {"username": commercial_names[cid], "prospections": count}
         for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:10]
         if cid in commercial_names
     ]
 
-    # Le classement des visites utilise exactement la même source Prospection
-    # et les mêmes filtres que le graphique.
+    # Visites = Prospections, avec exactement les mêmes filtres de date/commercial/zone/spécialité.
     top_5_commerciaux = [
         {"username": commercial_names[cid], "zone": commercial_zones.get(cid), "nombre_visites": count}
-        for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:5]
+        for cid, count in sorted(filtered_visit_counts.items(), key=lambda item: item[1], reverse=True)[:5]
         if cid in commercial_names
     ]
 
     page = request.args.get("page", 1, type=int)
-    pagination = query.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
+    pagination = filtered_query.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
 
     kpis = {
         "total_revenue": total_revenue,
         "current_month_revenue": current_month_revenue,
-        "total_visits": total_visits,
+        "total_visits": total_filtered_visits,
         "active_commercials": active_commercials_count,
         "monthly_avg": (total_revenue / len(monthly_revenue_labels)) if monthly_revenue_labels else 0,
         "months_with_sales": len(monthly_revenue_labels),
@@ -215,4 +228,4 @@ def export_pdf(username):
         p.drawString(72, y, f"{prospection.date} - {prospection.nom_client} ({prospection.structure})")
         y -= 18
     p.showPage(); p.save(); buffer.seek(0)
-    return send_file(buffer, download_name=f"prospections_{username}.pdf", as_attachment=True, mimetype="application/pdf")
+    return send_file(buffer, download_name=f"prospections_{username}.pdf", as_attachment=True, as_attachment=True, mimetype="application/pdf")
