@@ -29,7 +29,7 @@
             <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}">CA NASDERM</a>
             <span class="nav-divider" aria-hidden="true"></span>
             <a href="{{ url_for('planning.admin_plannings') }}">Plannings</a>
-            <a href="{{ url_for('clients.list_clients') }}">👥 Professionnels</a>
+            <a href="{{ url_for('clients.list_clients') }}">👥 Base de données NASORA</a>
             <span class="nav-divider" aria-hidden="true"></span>
             <a href="{{ url_for('users.list_users') }}">Utilisateurs</a>
             <a href="{{ url_for('evaluations.list_commercials') }}">⭐ Évaluations</a>
@@ -39,7 +39,7 @@
         {% else %}
             <a class="commercial-nav-home" href="{{ url_for('dashboard.index') }}">Tableau de bord</a>
             <a href="{{ url_for('planning.visualiser') }}">📅 Mon planning</a>
-            <a href="{{ url_for('clients.list_clients') }}">👥 Mes professionnels</a>
+            <a href="{{ url_for('clients.list_clients') }}">👥 Ma base de données</a>
             <a href="{{ url_for('dashboard.prospections') }}">📋 Mes prospections</a>
             <a href="{{ url_for('evaluations.my_evaluations') }}">⭐ Mes évaluations</a>
         {% endif %}
