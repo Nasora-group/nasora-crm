@@ -32,13 +32,12 @@ def _division_targets(division, today):
 
 
 def _filtered_prospections_query():
-    """Construit la requête de référence des visites du dashboard admin.
+    """Requête de référence des visites du dashboard admin.
 
     Règle métier : 1 Prospection = 1 visite réelle.
-    Tous les tableaux/KPI de visites doivent partir de cette même requête.
+    Tous les KPI/tableaux de visites utilisent cette même requête filtrée.
     """
     query = Prospection.query.join(User).filter(User.role == "commercial")
-
     date_start = request.args.get("date_start")
     date_end = request.args.get("date_end")
     commercial_id_filter = request.args.get("commercial")
@@ -55,7 +54,6 @@ def _filtered_prospections_query():
         query = query.filter(User.zone == zone)
     if specialite:
         query = query.filter(Prospection.specialite == specialite)
-
     return query
 
 
@@ -114,7 +112,6 @@ def dashboard():
     commercial_names = {u.id: u.username for u in commerciaux}
     commercial_zones = {u.id: u.zone for u in commerciaux}
 
-    # Source unique des visites du dashboard : Prospection + filtres courants.
     filtered_query = _filtered_prospections_query()
     filtered_visit_counts = dict(
         filtered_query.with_entities(
@@ -138,16 +135,12 @@ def dashboard():
         })
 
     top_revenue = sorted(performance, key=lambda p: p["revenue"], reverse=True)[:10]
-
-    # Le graphique et le tableau de prospections utilisent exactement la même requête filtrée.
     prospections_by_commercial = filtered_visit_counts
     top_prospections = [
         {"username": commercial_names[cid], "prospections": count}
         for cid, count in sorted(prospections_by_commercial.items(), key=lambda item: item[1], reverse=True)[:10]
         if cid in commercial_names
     ]
-
-    # Visites = Prospections, avec exactement les mêmes filtres de date/commercial/zone/spécialité.
     top_5_commerciaux = [
         {"username": commercial_names[cid], "zone": commercial_zones.get(cid), "nombre_visites": count}
         for cid, count in sorted(filtered_visit_counts.items(), key=lambda item: item[1], reverse=True)[:5]
@@ -228,4 +221,4 @@ def export_pdf(username):
         p.drawString(72, y, f"{prospection.date} - {prospection.nom_client} ({prospection.structure})")
         y -= 18
     p.showPage(); p.save(); buffer.seek(0)
-    return send_file(buffer, download_name=f"prospections_{username}.pdf", as_attachment=True, as_attachment=True, mimetype="application/pdf")
+    return send_file(buffer, download_name=f"prospections_{username}.pdf", as_attachment=True, mimetype="application/pdf")
