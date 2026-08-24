@@ -111,6 +111,41 @@ def _annual_revenue_for_division(division, year):
     return total
 
 
+def _commercial_sales_visualization(division):
+    """Retourne le CA mensuel et le détail des ventes du secteur du commercial connecté."""
+    monthly = {}
+    details_by_month = {}
+    commercial_names = {u.id: u.username for u in User.query.filter_by(role="commercial").all()}
+
+    for supplier in SUPPLIERS.values():
+        if supplier.get("archived") or supplier.get("division") != division:
+            continue
+        sale_model = supplier["sale_model"]
+        supplier_label = supplier.get("label", sale_model.__name__)
+        rows = (
+            db.session.query(sale_model)
+            .filter(sale_model.project == division)
+            .order_by(sale_model.date.desc())
+            .all()
+        )
+        for sale in rows:
+            month_key = sale.date.strftime("%Y-%m")
+            amount = float((sale.quantity or 0) * (sale.price or 0))
+            monthly[month_key] = monthly.get(month_key, 0.0) + amount
+            details_by_month.setdefault(month_key, []).append({
+                "date": sale.date,
+                "supplier": supplier_label,
+                "product": sale.product.name if sale.product else "Produit",
+                "quantity": sale.quantity,
+                "price": float(sale.price or 0),
+                "amount": amount,
+                "commercial": commercial_names.get(sale.commercial_id, "N/A"),
+            })
+
+    labels = sorted(monthly.keys(), reverse=True)
+    return [{"key": key, "label": key, "amount": monthly[key], "details": details_by_month.get(key, [])} for key in labels]
+
+
 @admin_bp.route("/admin_dashboard", methods=["GET"])
 @login_required
 @roles_required("admin")
@@ -189,6 +224,7 @@ def commercial_detail(username):
     page = request.args.get("page", 1, type=int)
     pagination = commercial.prospections.order_by(Prospection.date.desc()).paginate(page=page, per_page=25, error_out=False)
     form = DownloadExcelForm()
+    sales_months = _commercial_sales_visualization(commercial.project)
     if request.method == "POST" and "download_excel" in request.form:
         try:
             data = [{"Date": p.date.strftime("%Y-%m-%d"), "Nom Client": p.nom_client, "Spécialité": p.specialite, "Structure": p.structure, "Téléphone": p.telephone, "Profils Prospect": p.profils_prospect, "Produits Présentés": p.produits_presentes, "Produits Prescrits": p.produits_prescrits} for p in commercial.prospections.order_by(Prospection.date.desc()).all()]
@@ -201,7 +237,7 @@ def commercial_detail(username):
         except Exception:
             logger.exception("Erreur export Excel pour %s", username)
             flash("Erreur lors de la génération du fichier Excel.", "error")
-    return render_template("commercial_dashboard.html", commercial=commercial, prospections=pagination.items, pagination=pagination, form=form, delete_form=CSRFOnlyForm())
+    return render_template("commercial_dashboard.html", commercial=commercial, prospections=pagination.items, pagination=pagination, form=form, delete_form=CSRFOnlyForm(), sales_months=sales_months)
 
 
 @admin_bp.route("/export_pdf/<username>")
