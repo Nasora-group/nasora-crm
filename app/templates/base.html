@@ -6,7 +6,8 @@
     <title>{% block title %}NASORA HEALTH & SKINCARE — CRM{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-refresh.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/crm-pro.css') }}">
@@ -59,13 +60,17 @@
 document.addEventListener('DOMContentLoaded', function(){
   const toggle=document.querySelector('.mobile-nav-toggle');
   const nav=document.getElementById('main-navigation');
-  if(!toggle||!nav)return;
-  toggle.addEventListener('click',function(){
-    const open=nav.classList.toggle('mobile-open');
-    toggle.setAttribute('aria-expanded',open?'true':'false');
-    toggle.textContent=open?'✕':'☰';
-  });
-  nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';});});
+  if(toggle&&nav){
+    toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});
+    nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';});});
+  }
+  if(window.jQuery && jQuery.fn.select2){
+    jQuery('.select2-products').each(function(){
+      const $field=jQuery(this);
+      if($field.hasClass('select2-hidden-accessible')) return;
+      $field.select2({width:'100%',placeholder:'Sélectionner un ou plusieurs produits',allowClear:true,closeOnSelect:false,language:{noResults:function(){return 'Aucun produit trouvé';},searching:function(){return 'Recherche…';}}});
+    });
+  }
 });
 </script>
 </body></html>
