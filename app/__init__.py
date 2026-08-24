@@ -20,12 +20,8 @@ def create_app(config_object=None):
     @login_manager.user_loader
     def load_user(user_id):
         user = db.session.get(User, int(user_id))
-        # Une désactivation admin doit invalider immédiatement la session
-        # existante au prochain chargement de l'utilisateur.
         return user if user and user.is_active_account else None
     _register_blueprints(app)
-    # Charge les écouteurs après l'initialisation des modèles afin que toute
-    # création/modification de visite soit synchronisée avec Prospection.
     from app import visit_sync  # noqa: F401
     _register_error_handlers(app)
     @app.context_processor
@@ -56,8 +52,9 @@ def _register_blueprints(app):
     from app.routes.evaluations import evaluations_bp
     from app.routes.clients import clients_bp
     from app.routes.clients_export import clients_export_bp
+    from app.routes.prospections_export import prospections_export_bp
     from app.routes.vm_cockpit import vm_cockpit_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(vm_cockpit_bp)
+    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
