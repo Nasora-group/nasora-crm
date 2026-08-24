@@ -20,9 +20,10 @@ class DownloadExcelForm(FlaskForm):
 
 class ProspectionForm(FlaskForm):
     date = DateField("Date", validators=[DataRequired()])
-    nom_client = StringField("Nom du client", validators=[DataRequired(), Length(max=150)])
-    specialite = StringField("Spécialité", validators=[DataRequired(), Length(max=150)])
-    structure = StringField("Structure", validators=[DataRequired(), Length(max=150)])
+    prospect_id = SelectField("Prospect", choices=[], coerce=int, validators=[Optional()])
+    nom_client = StringField("Nom du prospect", validators=[DataRequired(), Length(max=150)])
+    specialite = StringField("Service / spécialité", validators=[DataRequired(), Length(max=150)])
+    structure = SelectField("Structure", choices=[], validators=[DataRequired(), Length(max=150)])
     telephone = StringField("Téléphone", validators=[DataRequired(), Length(max=30)])
     profils_prospect = TextAreaField("Profils prospect")
     produits_presentes = SelectMultipleField("Produits présentés", choices=[], validators=[Optional()])
