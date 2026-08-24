@@ -38,6 +38,7 @@
             <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}">📦 Fiches produits</a>
         {% else %}
             <a class="commercial-nav-home" href="{{ url_for('dashboard.index') }}">Tableau de bord</a>
+            <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}">💰 Visualisation du CA</a>
             <a href="{{ url_for('planning.visualiser') }}">📅 Mon planning</a>
             <a href="{{ url_for('clients.list_clients') }}">👥 Ma base de données</a>
             <a href="{{ url_for('dashboard.prospections') }}">📋 Mes prospections</a>
