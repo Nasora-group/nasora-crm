@@ -56,12 +56,20 @@ def _annual_revenue_for_division(division,year):
     return total
 
 def _commercial_sales_visualization(division,commercial_id):
-    """CA mensuel du commercial sélectionné uniquement."""
+    """CA mensuel du secteur du commercial sélectionné.
+
+    Les ventes sont saisies par l'administrateur et leur commercial_id peut
+    correspondre à l'utilisateur qui a effectué la saisie. La page
+    « Visualisation du CA » est une vue du secteur (NASMEDIC/NASDERM),
+    comme l'indique son intitulé. On filtre donc uniquement sur la division
+    afin de ne pas afficher artificiellement 0 CA pour un commercial dont
+    les ventes historiques ne portent pas son id.
+    """
     monthly={}; details_by_month={}
     for supplier in SUPPLIERS.values():
         if supplier.get("archived") or supplier.get("division")!=division: continue
         sale_model=supplier["sale_model"]; supplier_label=supplier.get("label",sale_model.__name__)
-        rows=db.session.query(sale_model).filter(sale_model.project==division,sale_model.commercial_id==commercial_id).order_by(sale_model.date.desc()).all()
+        rows=db.session.query(sale_model).filter(sale_model.project==division).order_by(sale_model.date.desc()).all()
         for sale in rows:
             if not sale.date: continue
             month_key=sale.date.strftime("%Y-%m"); quantity=sale.quantity or 0; price=float(sale.price or 0); amount=float(quantity)*price; product=getattr(getattr(sale,"product",None),"name",None) or "Produit"
