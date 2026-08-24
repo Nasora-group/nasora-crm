@@ -14,6 +14,64 @@
     <a href="{{ url_for('admin.export_pdf', username=commercial.username) }}" class="btn">Exporter en PDF</a>
 </div>
 
+<h2>Visualisation du CA — {{ commercial.project|upper }}</h2>
+<p>CA mensuel du secteur concerné. Cliquez sur « Voir le détail » pour consulter les ventes du mois.</p>
+
+{% if sales_months %}
+<div class="responsive-table">
+<table>
+    <thead>
+        <tr>
+            <th>Mois</th>
+            <th>CA</th>
+            <th>Détail</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for month in sales_months %}
+        <tr>
+            <td>{{ month.label }}</td>
+            <td><strong>{{ "{:,.2f}".format(month.amount).replace(',', ' ') }} €</strong></td>
+            <td>
+                <details>
+                    <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir le détail</summary>
+                    <div style="margin-top:12px;overflow-x:auto;">
+                        <table class="responsive-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Fournisseur</th>
+                                    <th>Produit</th>
+                                    <th>Qté</th>
+                                    <th>Prix</th>
+                                    <th>CA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in month.details %}
+                                <tr>
+                                    <td>{{ sale.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ sale.supplier }}</td>
+                                    <td>{{ sale.product }}</td>
+                                    <td>{{ sale.quantity }}</td>
+                                    <td>{{ "{:,.2f}".format(sale.price).replace(',', ' ') }} €</td>
+                                    <td><strong>{{ "{:,.2f}".format(sale.amount).replace(',', ' ') }} €</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>Aucun CA enregistré pour cette division.</p>
+{% endif %}
+
 <h2>Visites Effectuées</h2>
 <table class="responsive-table">
     <thead>
