@@ -135,7 +135,11 @@ def index():
 @roles_required("commercial")
 def prospections():
     rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(Prospection.date.desc(), Prospection.id.desc()).all()
-    return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={})
+    establishments_by_prospection = {}
+    for row in rows:
+        client = _find_client_for_prospection(row)
+        establishments_by_prospection[row.id] = client.establishment if client and client.establishment else ""
+    return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
 @login_required
