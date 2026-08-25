@@ -3,11 +3,45 @@ from wtforms import StringField, DateField, TextAreaField, SubmitField, Password
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from app.models import STRUCTURES
 
-class LoginForm(FlaskForm):
-    username=StringField("Nom d'utilisateur",validators=[DataRequired(),Length(max=150)]); password=PasswordField("Mot de passe",validators=[DataRequired()]); submit=SubmitField("Se connecter")
+SPECIALITES=[
+    ("MEDECIN GENERALISTE","MEDECIN GENERALISTE"),
+    ("INFIRMIER","INFIRMIER"),
+    ("PEDIATRE","PEDIATRE"),
+    ("SAGE FEMME","SAGE FEMME"),
+    ("ORTHOPEDISTE","ORTHOPEDISTE"),
+    ("RHUMATOLOGUE","RHUMATOLOGUE"),
+    ("GYNECOLOGUE","GYNECOLOGUE"),
+    ("DIABETOLOGUE","DIABETOLOGUE"),
+    ("NEUROLOGUE","NEUROLOGUE"),
+    ("NEUROCHIRURGIEN","NEUROCHIRURGIEN"),
+    ("CHIRURGIENS","CHIRURGIENS"),
+    ("UROLOGUE","UROLOGUE"),
+    ("GASTRO-ENTEROLOGUE","GASTRO-ENTEROLOGUE"),
+    ("GERIATRE","GERIATRE"),
+    ("INFECTIOLOGUE","INFECTIOLOGUE"),
+    ("CANCEROLOGUE","CANCEROLOGUE"),
+    ("CARDIOLOGUE","CARDIOLOGUE"),
+    ("DERMATOLOGUE","DERMATOLOGUE"),
+    ("NEPHROLOGUE","NEPHROLOGUE"),
+    ("PNEUMOLOGUE","PNEUMOLOGUE"),
+    ("ENDOCRINOLOGUE","ENDOCRINOLOGUE"),
+    ("NEONATOLOGUE","NEONATOLOGUE"),
+    ("HEMATOLOGUE","HEMATOLOGUE"),
+    ("RHINO-LARYNGOLOGUE (ORL)","RHINO-LARYNGOLOGUE (ORL)"),
+    ("OPHTALMOLOGUE","OPHTALMOLOGUE"),
+    ("DENTISTE","DENTISTE"),
+    ("PHARMACIEN","PHARMACIEN"),
+    ("KINESITHERAPEUTE","KINESITHERAPEUTE"),
+    ("PSYCHIATRE","PSYCHIATRE"),
+    ("MEDECIN DU TRAVAIL","MEDECIN DU TRAVAIL"),
+    ("MEDECIN INTERNISTE","MEDECIN INTERNISTE"),
+    ("AUTRE SPECIALITE","AUTRE SPECIALITE"),
+]
+
+class LoginForm(FlaskForm): username=StringField("Nom d'utilisateur",validators=[DataRequired(),Length(max=150)]); password=PasswordField("Mot de passe",validators=[DataRequired()]); submit=SubmitField("Se connecter")
 class DownloadExcelForm(FlaskForm): submit=SubmitField("Télécharger en Excel")
 class ProspectionForm(FlaskForm):
-    date=DateField("Date",validators=[DataRequired()]); nom_client=StringField("Nom du prospect",validators=[DataRequired(),Length(max=150)]); specialite=StringField("Service / spécialité",validators=[DataRequired(),Length(max=150)]); structure=SelectField("Structure",choices=[],validators=[DataRequired(),Length(max=150)]); telephone=StringField("Téléphone",validators=[DataRequired(),Length(max=30)]); profils_prospect=TextAreaField("Profils prospect"); produits_presentes=SelectMultipleField("Produits présentés",choices=[],validators=[Optional()]); produits_prescrits=SelectMultipleField("Produits prescrits",choices=[],validators=[Optional()]); submit=SubmitField("Enregistrer")
+    date=DateField("Date",validators=[DataRequired()]); nom_client=StringField("Nom du prospect",validators=[DataRequired(),Length(max=150)]); specialite=SelectField("Service / spécialité",choices=SPECIALITES,validators=[DataRequired(),Length(max=150)]); structure=SelectField("Structure",choices=[],validators=[DataRequired(),Length(max=150)]); telephone=StringField("Téléphone",validators=[DataRequired(),Length(max=30)]); profils_prospect=TextAreaField("Profils prospect"); produits_presentes=SelectMultipleField("Produits présentés",choices=[],validators=[Optional()]); produits_prescrits=SelectMultipleField("Produits prescrits",choices=[],validators=[Optional()]); submit=SubmitField("Enregistrer")
 class PlanningForm(FlaskForm):
     date=DateField("Date de début de la semaine",validators=[DataRequired()]); lundi=SelectMultipleField("Lundi",choices=STRUCTURES); mardi=SelectMultipleField("Mardi",choices=STRUCTURES); mercredi=SelectMultipleField("Mercredi",choices=STRUCTURES); jeudi=SelectMultipleField("Jeudi",choices=STRUCTURES); vendredi=SelectMultipleField("Vendredi",choices=STRUCTURES); samedi=SelectMultipleField("Samedi",choices=STRUCTURES); dimanche=SelectMultipleField("Dimanche",choices=STRUCTURES); submit=SubmitField("Valider le planning")
 class SupplierSalesForm(FlaskForm): sale_date=DateField("Date de saisie",validators=[DataRequired()]); submit=SubmitField("Enregistrer les ventes")
