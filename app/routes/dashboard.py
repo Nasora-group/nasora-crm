@@ -56,17 +56,20 @@ def _find_client_for_prospection(prospection):
         return sorted(owned, key=lambda c: c.id)[0]
     return same_name[0] if len(same_name) == 1 else None
 
-def _sync_professional_from_prospection(prospection):
+def _sync_professional_from_prospection(prospection, establishment=None):
     phone = (prospection.telephone or "").strip()
     client = _find_client_for_prospection(prospection)
     valid_phone = not _invalid_phone(phone)
+    establishment = (establishment or "").strip() or None
     if client is None:
-        client = Client(name=prospection.nom_client.strip(), specialty=prospection.specialite.strip() or None, structure=prospection.structure.strip(), phone=phone if valid_phone else None, potential=3, owner_id=prospection.commercial_id, last_visit=prospection.date)
+        client = Client(name=prospection.nom_client.strip(), specialty=prospection.specialite.strip() or None, structure=prospection.structure.strip(), establishment=establishment, phone=phone if valid_phone else None, potential=3, owner_id=prospection.commercial_id, last_visit=prospection.date)
         db.session.add(client)
         db.session.flush()
     else:
         client.specialty = prospection.specialite.strip() or client.specialty
         client.structure = prospection.structure.strip() or client.structure
+        if establishment:
+            client.establishment = establishment
         if valid_phone:
             client.phone = phone
         if client.owner_id is None:
@@ -80,8 +83,8 @@ def _sync_professional_from_prospection(prospection):
     if visit is None:
         db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=pp, products_prescribed=pr, report=report))
 
-def _sync_professional_from_existing_prospection(prospection):
-    _sync_professional_from_prospection(prospection)
+def _sync_professional_from_existing_prospection(prospection, establishment=None):
+    _sync_professional_from_prospection(prospection, establishment=establishment)
 
 def _delete_linked_records_for_prospection(prospection):
     client = _find_client_for_prospection(prospection)
@@ -113,20 +116,10 @@ def index():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form)
         try:
-            prospection = Prospection(
-                commercial_id=current_user.id,
-                date=form.date.data,
-                nom_client=form.nom_client.data.strip(),
-                specialite=form.specialite.data.strip(),
-                structure=form.structure.data.strip(),
-                telephone=form.telephone.data.strip(),
-                profils_prospect=(form.profils_prospect.data or "").strip(),
-                produits_presentes=", ".join(form.produits_presentes.data or []),
-                produits_prescrits=", ".join(form.produits_prescrits.data or []),
-            )
+            prospection = Prospection(commercial_id=current_user.id, date=form.date.data, nom_client=form.nom_client.data.strip(), specialite=form.specialite.data.strip(), structure=form.structure.data.strip(), telephone=form.telephone.data.strip(), profils_prospect=(form.profils_prospect.data or "").strip(), produits_presentes=", ".join(form.produits_presentes.data or []), produits_prescrits=", ".join(form.produits_prescrits.data or []))
             db.session.add(prospection)
             db.session.flush()
-            _sync_professional_from_prospection(prospection)
+            _sync_professional_from_prospection(prospection, form.nom_structure.data)
             db.session.commit()
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
@@ -159,6 +152,8 @@ def edit_prospection(prospection_id):
     if not form.is_submitted():
         form.produits_presentes.data = existing_presentes
         form.produits_prescrits.data = existing_prescrits
+        client = _find_client_for_prospection(prospection)
+        form.nom_structure.data = (client.establishment if client else "") or ""
     if form.validate_on_submit():
         try:
             prospection.date = form.date.data
@@ -169,7 +164,7 @@ def edit_prospection(prospection_id):
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
-            _sync_professional_from_existing_prospection(prospection)
+            _sync_professional_from_existing_prospection(prospection, form.nom_structure.data)
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             return redirect(url_for("dashboard.prospections"))
