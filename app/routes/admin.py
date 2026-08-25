@@ -38,13 +38,6 @@ def _filtered_prospections_query():
     return query
 
 def _establishments_by_prospection(rows):
-    """Retourne le nom réel de la structure enregistré dans la fiche CRM.
-
-    La prospection conserve la catégorie de structure (HOPITAL, CLINIQUE,
-    PHARMACIES, etc.). Le nom de l'établissement est porté par Client.establishment.
-    On utilise d'abord le téléphone, puis le nom + commercial pour rattacher
-    proprement les anciennes prospections à leur fiche CRM.
-    """
     establishments = {}
     clients = Client.query.all()
     by_phone = {}
@@ -120,6 +113,10 @@ def dashboard():
         if name: performance.append({"username":name,"revenue":revenue_by_commercial.get(commercial_id,0),"visits":filtered_visit_counts.get(commercial_id,0)})
     top_revenue=sorted(performance,key=lambda p:p["revenue"],reverse=True)[:10]; top_prospections=[{"username":commercial_names[cid],"prospections":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:10] if cid in commercial_names]; top_5_commerciaux=[{"username":commercial_names[cid],"zone":commercial_zones.get(cid),"nombre_visites":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:5] if cid in commercial_names]; page=request.args.get("page",1,type=int); pagination=filtered_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); kpis={"total_revenue":total_revenue,"current_month_revenue":current_month_revenue,"total_visits":total_filtered_visits,"active_commercials":active_commercials_count,"monthly_avg":(total_revenue/len(monthly_revenue_labels)) if monthly_revenue_labels else 0,"months_with_sales":len(monthly_revenue_labels),"total_sales_count":total_sales_count}; active_suppliers={slug:s for slug,s in SUPPLIERS.items() if not s.get("archived")}
     establishments_by_prospection = _establishments_by_prospection(pagination.items)
+    for row in pagination.items:
+        establishment = establishments_by_prospection.get(row.id)
+        if establishment:
+            row.structure = f"{row.structure} — {establishment}"
     return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_5_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection)
 
 @admin_bp.route("/commercial_dashboard/<username>",methods=["GET","POST"])
