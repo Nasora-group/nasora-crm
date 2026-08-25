@@ -38,6 +38,12 @@ def _filtered_prospections_query():
     return query
 
 def _establishments_by_prospection(rows):
+    """Resolve the real establishment name for each prospection.
+
+    Priority: explicit Prospection.establishment, linked CRM client through
+    client_id, phone match, then commercial + normalized professional name.
+    This makes the admin dashboard independent from fragile historical links.
+    """
     establishments = {}
     clients = Client.query.all()
     by_phone = {}
@@ -50,8 +56,16 @@ def _establishments_by_prospection(rows):
         if key[1]:
             by_owner_name.setdefault(key, client)
     for row in rows:
+        explicit = (row.establishment or "").strip()
+        if explicit:
+            establishments[row.id] = explicit
+            continue
+        client = getattr(row, "client", None)
+        if client is None and getattr(row, "client_id", None):
+            client = next((c for c in clients if c.id == row.client_id), None)
         phone = "".join(ch for ch in (row.telephone or "") if ch.isdigit())
-        client = by_phone.get(phone) if phone else None
+        if client is None and phone:
+            client = by_phone.get(phone)
         if client is None:
             client = by_owner_name.get((row.commercial_id, (row.nom_client or "").strip().casefold()))
         establishments[row.id] = (client.establishment or "").strip() if client else ""
@@ -77,15 +91,6 @@ def _annual_revenue_for_division(division,year):
     return total
 
 def _commercial_sales_visualization(division,commercial_id):
-    """CA mensuel du secteur du commercial sélectionné.
-
-    Les ventes sont saisies par l'administrateur et leur commercial_id peut
-    correspondre à l'utilisateur qui a effectué la saisie. La page
-    « Visualisation du CA » est une vue du secteur (NASMEDIC/NASDERM),
-    comme l'indique son intitulé. On filtre donc uniquement sur la division
-    afin de ne pas afficher artificiellement 0 CA pour un commercial dont
-    les ventes historiques ne portent pas son id.
-    """
     monthly={}; details_by_month={}
     for supplier in SUPPLIERS.values():
         if supplier.get("archived") or supplier.get("division")!=division: continue
@@ -115,7 +120,7 @@ def dashboard():
     establishments_by_prospection = _establishments_by_prospection(pagination.items)
     for row in pagination.items:
         establishment = establishments_by_prospection.get(row.id)
-        if establishment:
+        if establishment and establishment.casefold() not in row.structure.casefold():
             row.structure = f"{row.structure} — {establishment}"
     return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_5_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection)
 
@@ -132,7 +137,7 @@ def commercial_detail(username):
     except Exception: db.session.rollback(); logger.exception("Erreur CA commercial %s",username); sales_months=[]; flash("Les données de CA ne sont momentanément pas disponibles.","error")
     if request.method=="POST" and "download_excel" in request.form:
         try:
-            data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
+            data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Nom de la structure":p.establishment or "","Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
             with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
             output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
