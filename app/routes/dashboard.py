@@ -116,7 +116,7 @@ def index():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form)
         try:
-            prospection = Prospection(commercial_id=current_user.id, date=form.date.data, nom_client=form.nom_client.data.strip(), specialite=form.specialite.data.strip(), structure=form.structure.data.strip(), telephone=form.telephone.data.strip(), profils_prospect=(form.profils_prospect.data or "").strip(), produits_presentes=", ".join(form.produits_presentes.data or []), produits_prescrits=", ".join(form.produits_prescrits.data or []))
+            prospection = Prospection(commercial_id=current_user.id, date=form.date.data, nom_client=form.nom_client.data.strip(), specialite=form.specialite.data.strip(), structure=form.structure.data.strip(), telephone=form.telephone.data.strip(), profils_prospect=(form.profils_prospect.data or "").strip(), produits_presentes=", ".join(form.produits_presentes.data or []), produits_prescrits=", ".join(form.produits_prescrits.data or []), establishment=form.nom_structure.data.strip())
             db.session.add(prospection)
             db.session.flush()
             _sync_professional_from_prospection(prospection, form.nom_structure.data)
@@ -138,7 +138,7 @@ def prospections():
     establishments_by_prospection = {}
     for row in rows:
         client = _find_client_for_prospection(row)
-        establishments_by_prospection[row.id] = client.establishment if client and client.establishment else ""
+        establishments_by_prospection[row.id] = (row.establishment or "").strip() or (client.establishment if client and client.establishment else "")
     return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
@@ -157,13 +157,14 @@ def edit_prospection(prospection_id):
         form.produits_presentes.data = existing_presentes
         form.produits_prescrits.data = existing_prescrits
         client = _find_client_for_prospection(prospection)
-        form.nom_structure.data = (client.establishment if client else "") or ""
+        form.nom_structure.data = (prospection.establishment or (client.establishment if client else "")) or ""
     if form.validate_on_submit():
         try:
             prospection.date = form.date.data
             prospection.nom_client = form.nom_client.data.strip()
             prospection.specialite = form.specialite.data.strip()
             prospection.structure = form.structure.data.strip()
+            prospection.establishment = form.nom_structure.data.strip()
             prospection.telephone = form.telephone.data.strip()
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
