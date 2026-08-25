@@ -14,7 +14,14 @@ class User(UserMixin,db.Model):
 
 class Prospection(db.Model):
     id=db.Column(db.Integer,primary_key=True); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); date=db.Column(db.Date,nullable=False,index=True); nom_client=db.Column(db.String(150),nullable=False); specialite=db.Column(db.String(150),nullable=False); structure=db.Column(db.String(150),nullable=False); telephone=db.Column(db.String(30),nullable=False); profils_prospect=db.Column(db.Text,nullable=True); produits_presentes=db.Column(db.Text,nullable=True); produits_prescrits=db.Column(db.Text,nullable=True)
+    # Legacy/CRM linkage fields intentionally retained: they already exist in PostgreSQL and are used by the historical prospection linkage migration.
+    establishment=db.Column(db.String(200),nullable=True,index=True)
+    client_id=db.Column(db.Integer,db.ForeignKey("crm_client.id",name="fk_prospection_client"),nullable=True,index=True)
+    planning_id=db.Column(db.Integer,db.ForeignKey("planning.id",name="fk_prospection_planning"),nullable=True,index=True)
+    planning_day=db.Column(db.String(20),nullable=True)
     commercial=db.relationship("User",backref=db.backref("prospections",lazy="dynamic"))
+    client=db.relationship("Client",foreign_keys=[client_id])
+    planning=db.relationship("Planning",foreign_keys=[planning_id])
 
 class Planning(db.Model):
     id=db.Column(db.Integer,primary_key=True); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); date=db.Column(db.Date,nullable=False); lundi=db.Column(db.Text,nullable=True); mardi=db.Column(db.Text,nullable=True); mercredi=db.Column(db.Text,nullable=True); jeudi=db.Column(db.Text,nullable=True); vendredi=db.Column(db.Text,nullable=True); samedi=db.Column(db.Text,nullable=True); dimanche=db.Column(db.Text,nullable=True)
