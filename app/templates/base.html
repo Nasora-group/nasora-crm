@@ -16,103 +16,119 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
-      /* NASORA PRO — barre latérale droite */
+      /* NASORA PRO — barre latérale gauche compacte desktop */
       @media (min-width: 901px) {
-        body { padding-right: 88px; }
-        .site-header { margin-right: 0; }
+        body { padding-left: 58px !important; padding-right: 0 !important; overflow-x: hidden !important; }
+        .site-header { margin-left: 0 !important; margin-right: 0 !important; }
         .site-nav {
           position: fixed !important;
           top: 0 !important;
-          right: 0 !important;
+          left: 0 !important;
+          right: auto !important;
           bottom: 0 !important;
-          width: 88px !important;
+          width: 58px !important;
           height: 100vh !important;
-          z-index: 2000 !important;
-          border-left: 1px solid var(--n-border, #e1e8df) !important;
+          z-index: 9999 !important;
+          border-right: 1px solid rgba(255,255,255,.08) !important;
+          border-left: 0 !important;
           border-bottom: 0 !important;
-          box-shadow: -6px 0 24px rgba(30,55,35,.08) !important;
+          box-shadow: 3px 0 16px rgba(20,35,28,.10) !important;
           overflow: visible !important;
           display: flex !important;
           align-items: stretch !important;
         }
         .nav-inner {
-          width: 100% !important;
-          height: 100% !important;
-          padding: 18px 10px !important;
+          width: 58px !important;
+          height: 100vh !important;
+          padding: 5px 4px !important;
+          box-sizing: border-box !important;
           flex-direction: column !important;
           align-items: center !important;
-          gap: 7px !important;
-          overflow-y: auto !important;
-          overflow-x: visible !important;
-          scrollbar-width: thin;
+          gap: 0 !important;
+          overflow: hidden !important;
         }
         .site-nav a, .site-nav button {
-          width: 66px !important;
-          min-height: 58px !important;
-          padding: 7px 4px !important;
+          width: 46px !important;
+          min-width: 46px !important;
+          height: 34px !important;
+          min-height: 34px !important;
+          max-height: 34px !important;
+          flex: 0 0 34px !important;
+          padding: 2px !important;
+          margin: 0 !important;
           border: 0 !important;
-          border-radius: 14px !important;
+          border-radius: 7px !important;
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
           justify-content: center !important;
-          gap: 4px !important;
+          gap: 0 !important;
           text-align: center !important;
           font-size: 0 !important;
-          line-height: 1.1 !important;
-          white-space: normal !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
           position: relative !important;
-        }
-        .site-nav a:hover, .site-nav button:hover {
-          background: var(--n-primary-soft, #edf5ed) !important;
-          color: var(--n-primary, #355d3a) !important;
-          border: 0 !important;
+          color: #eaf0eb !important;
+          box-sizing: border-box !important;
         }
         .site-nav .nav-icon {
-          width: 40px !important;
-          height: 40px !important;
-          border-radius: 12px !important;
+          width: 24px !important;
+          height: 24px !important;
+          min-width: 24px !important;
+          min-height: 24px !important;
+          max-width: 24px !important;
+          max-height: 24px !important;
+          flex: 0 0 24px !important;
+          border-radius: 6px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
           background: var(--n-icon-bg, #eef4ea) !important;
           color: var(--n-icon, #4d2d78) !important;
         }
-        .site-nav .nav-icon svg { width: 20px !important; height: 20px !important; }
-        .site-nav a::after, .site-nav button::after {
-          content: attr(data-label);
-          display: block;
-          font-size: 9px;
-          font-weight: 700;
-          color: var(--n-muted, #6b786d);
-          max-width: 64px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+        .site-nav .nav-icon svg { width: 13px !important; height: 13px !important; }
+        .site-nav a::after, .site-nav button::after { content: none !important; display: none !important; }
+        .site-nav a.active { background: var(--n-primary-soft, #edf5ed) !important; box-shadow: inset 3px 0 var(--crm-accent, #6f9650) !important; }
+        .site-nav a:hover, .site-nav button:hover,
+        .site-nav a:focus-visible, .site-nav button:focus-visible {
+          width: max-content !important;
+          min-width: 46px !important;
+          max-width: calc(100vw - 80px) !important;
+          height: 34px !important;
+          flex: 0 0 34px !important;
+          flex-direction: row !important;
+          justify-content: flex-start !important;
+          gap: 8px !important;
+          padding: 3px 14px 3px 7px !important;
+          background: var(--n-primary, #203c30) !important;
+          color: #fff !important;
+          border-radius: 7px !important;
+          z-index: 10000 !important;
+          box-shadow: 4px 5px 16px rgba(20,35,28,.22) !important;
         }
-        .site-nav a[href*="auth.home"]::after { content: "Accueil"; }
-        .site-nav a[href*="admin.dashboard"]::after { content: "Dashboard"; }
-        .site-nav a[href*="prospections_export"]::after { content: "Prospections"; }
-        .site-nav a[href*="monthly_revenue_nasmedic"]::after { content: "NASMEDIC"; }
-        .site-nav a[href*="monthly_revenue_nasderm"]::after { content: "NASDERM"; }
-        .site-nav a[href*="admin_plannings"], .site-nav a[href*="planning.visualiser"] { }
-        .site-nav a[href*="admin_plannings"]::after { content: "Planning"; }
-        .site-nav a[href*="list_clients"]::after { content: "Base"; }
-        .site-nav a[href*="list_users"]::after { content: "Équipe"; }
-        .site-nav a[href*="list_commercials"]::after { content: "Évaluations"; }
-        .site-nav a[href*="classement"]::after { content: "Classement"; }
-        .site-nav a[href*="list_products"]::after { content: "Produits"; }
-        .site-nav a[href*="commercial_detail"]::after { content: "CA"; }
-        .site-nav a[href*="dashboard.index"]::after { content: "Dashboard"; }
-        .site-nav a[href*="dashboard.prospections"]::after { content: "Prospections"; }
-        .site-nav a[href*="my_evaluations"]::after { content: "Évaluations"; }
-        .nav-divider { width: 42px !important; height: 1px !important; margin: 3px 0 !important; flex: 0 0 auto !important; }
-        .nav-spacer { flex: 1 !important; min-height: 8px !important; }
-        .nav-logout-form { width: 66px !important; margin: 0 !important; }
-        .nav-logout-form button { width: 66px !important; }
-        .nav-logout-form button::after { content: "Quitter"; }
-        .container { max-width: 1440px; padding-right: 30px; }
-        footer { margin-right: 0; }
+        .site-nav a:hover .nav-icon, .site-nav button:hover .nav-icon,
+        .site-nav a:focus-visible .nav-icon, .site-nav button:focus-visible .nav-icon {
+          flex: 0 0 24px !important;
+          background: rgba(255,255,255,.14) !important;
+          color: #fff !important;
+        }
+        .site-nav a:hover, .site-nav a:focus-visible,
+        .site-nav button:hover, .site-nav button:focus-visible {
+          font-size: .76rem !important;
+          line-height: 1.2 !important;
+          font-weight: 600 !important;
+          text-align: left !important;
+          white-space: nowrap !important;
+        }
+        .nav-divider { width: 34px !important; height: 1px !important; margin: 2px 0 !important; flex: 0 0 1px !important; background: rgba(255,255,255,.12) !important; }
+        .nav-spacer { flex: 1 1 auto !important; min-height: 2px !important; }
+        .nav-logout-form { width: 46px !important; height: 34px !important; margin: 0 !important; flex: 0 0 34px !important; }
+        .nav-logout-form button { width: 46px !important; height: 34px !important; }
+        .container { max-width: 1440px !important; padding-left: 26px !important; padding-right: 26px !important; }
+        footer { margin-left: 0 !important; margin-right: 0 !important; }
       }
       @media (max-width: 900px) {
-        body { padding-right: 0; }
+        body { padding-left: 0 !important; padding-right: 0 !important; overflow-x: hidden !important; }
       }
     </style>
 </head>
@@ -145,7 +161,7 @@
             <a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Mon planning</a>
             <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Ma base de données</a>
             <a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5M8 2v4M16 2v4"/></svg></span>Mes prospections</a>
-            <a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>
+            <a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4-1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>
         {% endif %}
         <span class="nav-spacer" aria-hidden="true"></span>
         <form method="post" action="{{ url_for('auth.logout') }}" class="nav-logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-logout"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></span>Déconnexion</button></form>
@@ -168,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function(){
     jQuery('.select2-products').each(function(){const $field=jQuery(this);if($field.hasClass('select2-hidden-accessible')) return;$field.select2({width:'100%',placeholder:'Sélectionner un ou plusieurs produits',allowClear:true,closeOnSelect:false,language:{noResults:function(){return 'Aucun produit trouvé';},searching:function(){return 'Recherche…';}}});});
   }
   const icons={'📊':'chart','📈':'chart','💰':'revenue','📅':'calendar','📍':'location','👥':'users','📋':'document','⭐':'star','🏆':'trophy','📦':'box','🧾':'receipt','📝':'document','🕘':'clock','⚠️':'alert','🥇':'rank1','🥈':'rank2','🥉':'rank3'};
-  const paths={chart:'<path d="M4 19V5M4 19h16M7 15l4-4 3 2 5-7"/>',revenue:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c-.7-.7-1.7-1-3-1-1.8 0-3 1-3 2.2 0 3.2 6 1.6 6 4.5 0 1.2-1.2 2.3-3 2.3-1.3 0-2.4-.4-3.2-1.1"/>',calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/>',location:'<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',users:'<path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/>',document:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 11h8M8 15h8M8 19h5"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',trophy:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/>',box:'<path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/>',receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',alert:'<path d="M12 4 21 20H3z"/><path d="M12 9v5M12 17h.01"/>',rank1:'<path d="M8 20h8M10 20v-4h4v4M7 4h10v5a5 5 0 0 1-10 0z"/>',rank2:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>',rank3:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>'};
+  const paths={chart:'<path d="M4 19V5M4 19h16M7 15l4-4 3 2 5-7"/>',revenue:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c-.7-.7-1.7-1-3-1-1.8 0-3 1.2-3 2.2 0 3.2 6 1.6 6 4.5 0 1.2-1.2 2.3-3 2.3-1.3 0-2.4-.4-3.2-1.1"/>',calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/>',location:'<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',users:'<path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/>',document:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 11h8M8 15h8M8 19h5"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',trophy:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/>',box:'<path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/>',receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',alert:'<path d="M12 4 21 20H3z"/><path d="M12 9v5M12 17h.01"/>',rank1:'<path d="M8 20h8M10 20v-4h4v4M7 4h10v5a5 5 0 0 1-10 0z"/>',rank2:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>',rank3:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>'};
   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){if(!node.nodeValue.trim()||node.parentElement.closest('script,style,svg,.nav-icon')) return NodeFilter.FILTER_REJECT;return Object.keys(icons).some(e=>node.nodeValue.includes(e))?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
   const nodes=[];while(walker.nextNode()) nodes.push(walker.currentNode);
   nodes.forEach(function(node){let text=node.nodeValue;const frag=document.createDocumentFragment();while(text){let found=null,index=text.length;Object.keys(icons).forEach(function(e){const i=text.indexOf(e);if(i>=0&&i<index){found=e;index=i;}});if(!found){frag.appendChild(document.createTextNode(text));break;}if(index) frag.appendChild(document.createTextNode(text.slice(0,index)));const span=document.createElement('span');span.className='rubric-icon rubric-icon-inline';span.setAttribute('aria-hidden','true');span.innerHTML='<svg viewBox="0 0 24 24">'+paths[icons[found]]+'</svg>';frag.appendChild(span);text=text.slice(index+found.length);}node.parentNode.replaceChild(frag,node);});
