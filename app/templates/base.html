@@ -1,193 +1,59 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}NASORA HEALTH & SKINCARE — CRM{% endblock %}</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-refresh.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/crm-pro.css') }}">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <style>
-      /* NASORA PRO — barre latérale gauche compacte desktop */
-      @media (min-width: 901px) {
-        body { padding-left: 58px !important; padding-right: 0 !important; overflow-x: hidden !important; }
-        .site-header { margin-left: 0 !important; margin-right: 0 !important; }
-        .site-nav {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: auto !important;
-          bottom: 0 !important;
-          width: 58px !important;
-          height: 100vh !important;
-          z-index: 9999 !important;
-          border-right: 1px solid rgba(255,255,255,.08) !important;
-          border-left: 0 !important;
-          border-bottom: 0 !important;
-          box-shadow: 3px 0 16px rgba(20,35,28,.10) !important;
-          overflow: visible !important;
-          display: flex !important;
-          align-items: stretch !important;
-        }
-        .nav-inner {
-          width: 58px !important;
-          height: 100vh !important;
-          padding: 5px 4px !important;
-          box-sizing: border-box !important;
-          flex-direction: column !important;
-          align-items: center !important;
-          gap: 0 !important;
-          overflow: hidden !important;
-        }
-        .site-nav a, .site-nav button {
-          width: 46px !important;
-          min-width: 46px !important;
-          height: 34px !important;
-          min-height: 34px !important;
-          max-height: 34px !important;
-          flex: 0 0 34px !important;
-          padding: 2px !important;
-          margin: 0 !important;
-          border: 0 !important;
-          border-radius: 7px !important;
-          display: flex !important;
-          flex-direction: column !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 0 !important;
-          text-align: center !important;
-          font-size: 0 !important;
-          line-height: 1 !important;
-          white-space: nowrap !important;
-          position: relative !important;
-          color: #eaf0eb !important;
-          box-sizing: border-box !important;
-        }
-        .site-nav .nav-icon {
-          width: 24px !important;
-          height: 24px !important;
-          min-width: 24px !important;
-          min-height: 24px !important;
-          max-width: 24px !important;
-          max-height: 24px !important;
-          flex: 0 0 24px !important;
-          border-radius: 6px !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          background: var(--n-icon-bg, #eef4ea) !important;
-          color: var(--n-icon, #4d2d78) !important;
-        }
-        .site-nav .nav-icon svg { width: 13px !important; height: 13px !important; }
-        .site-nav a::after, .site-nav button::after { content: none !important; display: none !important; }
-        .site-nav a.active { background: var(--n-primary-soft, #edf5ed) !important; box-shadow: inset 3px 0 var(--crm-accent, #6f9650) !important; }
-        .site-nav a:hover, .site-nav button:hover,
-        .site-nav a:focus-visible, .site-nav button:focus-visible {
-          width: max-content !important;
-          min-width: 46px !important;
-          max-width: calc(100vw - 80px) !important;
-          height: 34px !important;
-          flex: 0 0 34px !important;
-          flex-direction: row !important;
-          justify-content: flex-start !important;
-          gap: 8px !important;
-          padding: 3px 14px 3px 7px !important;
-          background: var(--n-primary, #203c30) !important;
-          color: #fff !important;
-          border-radius: 7px !important;
-          z-index: 10000 !important;
-          box-shadow: 4px 5px 16px rgba(20,35,28,.22) !important;
-        }
-        .site-nav a:hover .nav-icon, .site-nav button:hover .nav-icon,
-        .site-nav a:focus-visible .nav-icon, .site-nav button:focus-visible .nav-icon {
-          flex: 0 0 24px !important;
-          background: rgba(255,255,255,.14) !important;
-          color: #fff !important;
-        }
-        .site-nav a:hover, .site-nav a:focus-visible,
-        .site-nav button:hover, .site-nav button:focus-visible {
-          font-size: .76rem !important;
-          line-height: 1.2 !important;
-          font-weight: 600 !important;
-          text-align: left !important;
-          white-space: nowrap !important;
-        }
-        .nav-divider { width: 34px !important; height: 1px !important; margin: 2px 0 !important; flex: 0 0 1px !important; background: rgba(255,255,255,.12) !important; }
-        .nav-spacer { flex: 1 1 auto !important; min-height: 2px !important; }
-        .nav-logout-form { width: 46px !important; height: 34px !important; margin: 0 !important; flex: 0 0 34px !important; }
-        .nav-logout-form button { width: 46px !important; height: 34px !important; }
-        .container { max-width: 1440px !important; padding-left: 26px !important; padding-right: 26px !important; }
-        footer { margin-left: 0 !important; margin-right: 0 !important; }
-      }
-      @media (max-width: 900px) {
-        body { padding-left: 0 !important; padding-right: 0 !important; overflow-x: hidden !important; }
-      }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}NASORA HEALTH & SKINCARE — CRM{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/ui-refresh.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/crm-pro.css') }}">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<style>
+@media (min-width:901px){
+body{padding-left:58px!important;padding-right:0!important;overflow-x:visible!important}.site-header{margin-left:0!important;margin-right:0!important}
+.site-nav{position:fixed!important;top:0!important;left:0!important;right:auto!important;bottom:0!important;width:58px!important;height:100vh!important;z-index:2147483000!important;overflow:visible!important;isolation:isolate!important;border-right:1px solid rgba(255,255,255,.08)!important;box-shadow:3px 0 16px rgba(20,35,28,.1)!important}
+.nav-inner{width:58px!important;height:100vh!important;padding:5px 4px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:0!important;overflow:visible!important;position:relative!important}
+.site-nav a,.site-nav button{width:46px!important;min-width:46px!important;height:34px!important;min-height:34px!important;max-height:34px!important;flex:0 0 34px!important;padding:2px!important;margin:0!important;border:0!important;border-radius:7px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:0!important;text-align:center!important;font-size:0!important;line-height:1!important;white-space:nowrap!important;position:relative!important;color:#eaf0eb!important;box-sizing:border-box!important;overflow:visible!important}
+.site-nav .nav-icon{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important;max-width:24px!important;max-height:24px!important;flex:0 0 24px!important;border-radius:6px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;background:var(--n-icon-bg,#eef4ea)!important;color:var(--n-icon,#4d2d78)!important}.site-nav .nav-icon svg{width:13px!important;height:13px!important}
+.site-nav a.active{background:var(--n-primary-soft,#edf5ed)!important;box-shadow:inset 3px 0 var(--crm-accent,#6f9650)!important}
+.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:var(--n-primary,#203c30)!important;color:#fff!important;z-index:2147483001!important;box-shadow:4px 5px 16px rgba(20,35,28,.28)!important}
+.site-nav .sidebar-tooltip{position:fixed!important;left:66px!important;display:none!important;align-items:center!important;width:max-content!important;max-width:calc(100vw - 90px)!important;min-height:32px!important;padding:7px 13px!important;box-sizing:border-box!important;border-radius:7px!important;background:#203c30!important;color:#fff!important;font:600 .76rem/1.2 Inter,sans-serif!important;white-space:nowrap!important;pointer-events:none!important;z-index:2147483647!important;box-shadow:4px 5px 16px rgba(20,35,28,.3)!important}
+.site-nav .sidebar-tooltip.visible{display:flex!important}
+.site-nav a:hover .nav-icon,.site-nav a:focus-visible .nav-icon,.site-nav button:hover .nav-icon,.site-nav button:focus-visible .nav-icon{background:rgba(255,255,255,.14)!important;color:#fff!important}
+.nav-divider{width:34px!important;height:1px!important;margin:2px 0!important;flex:0 0 1px!important;background:rgba(255,255,255,.12)!important}.nav-spacer{flex:1 1 auto!important;min-height:2px!important}.nav-logout-form{width:46px!important;height:34px!important;margin:0!important;flex:0 0 34px!important}.nav-logout-form button{width:46px!important;height:34px!important}.container{max-width:1440px!important;padding-left:26px!important;padding-right:26px!important}footer{margin-left:0!important;margin-right:0!important}}
+@media(max-width:900px){body{padding-left:0!important;padding-right:0!important;overflow-x:hidden!important}}
+</style>
 </head>
 <body>
-<header class="site-header"><div class="header-inner">
-    <a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>
-    {% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div>{% endif %}
-    {% if current_user.is_authenticated %}<button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}
-</div></header>
+<header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health & Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div>{% endif %}{% if current_user.is_authenticated %}<button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
 <nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
-    <a href="{{ url_for('auth.home') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></svg></span>Accueil</a>
-    {% if current_user.is_authenticated %}
-        {% if current_user.role == 'admin' %}
-            <a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V10"/><path d="M10 19V5"/><path d="M16 19v-8"/><path d="M22 19V8"/></svg></span>Tableau de bord</a>
-            <a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 15h8M8 11h5M8 18h6"/></svg></span>Extraction prospections</a>
-            <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 5-7"/></svg></span>CA NASMEDIC</a>
-            <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 16 4-5 3 3 5-8"/></svg></span>CA NASDERM</a>
-            <span class="nav-divider" aria-hidden="true"></span>
-            <a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Plannings</a>
-            <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Base de données NASORA</a>
-            <span class="nav-divider" aria-hidden="true"></span>
-            <a href="{{ url_for('users.list_users') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1"/><circle cx="17" cy="8" r="2.5"/><path d="M15 20v-1a5 5 0 0 1 5-5"/></svg></span>Utilisateurs</a>
-            <a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Évaluations</a>
-            <a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/></svg></span>Classement</a>
-            <span class="nav-divider" aria-hidden="true"></span>
-            <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></span>Fiches produits</a>
-        {% else %}
-            <a class="commercial-nav-home" href="{{ url_for('dashboard.index') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-8M22 19V8"/></svg></span>Tableau de bord</a>
-            <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2M8 3.5 6 2M16 3.5 18 2"/></svg></span>Visualisation du CA</a>
-            <a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Mon planning</a>
-            <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Ma base de données</a>
-            <a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5M8 2v4M16 2v4"/></svg></span>Mes prospections</a>
-            <a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4-1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>
-        {% endif %}
-        <span class="nav-spacer" aria-hidden="true"></span>
-        <form method="post" action="{{ url_for('auth.logout') }}" class="nav-logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-logout"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></span>Déconnexion</button></form>
-    {% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 5h5v14h-5M10 8 6 12l4 4M6 12h10"/></svg></span>Connexion</a>{% endif %}
+<a href="{{ url_for('auth.home') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></svg></span>Accueil</a>
+{% if current_user.is_authenticated %}{% if current_user.role == 'admin' %}
+<a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V10"/><path d="M10 19V5"/><path d="M16 19v-8"/><path d="M22 19V8"/></svg></span>Tableau de bord</a>
+<a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 15h8M8 11h5M8 18h6"/></svg></span>Extraction prospections</a>
+<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 5-7"/></svg></span>CA NASMEDIC</a>
+<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 16 4-5 3 3 5-8"/></svg></span>CA NASDERM</a><span class="nav-divider"></span>
+<a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Plannings</a>
+<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Base de données NASORA</a><span class="nav-divider"></span>
+<a href="{{ url_for('users.list_users') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1"/><circle cx="17" cy="8" r="2.5"/><path d="M15 20v-1a5 5 0 0 1 5-5"/></svg></span>Utilisateurs</a>
+<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Évaluations</a>
+<a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/></svg></span>Classement</a><span class="nav-divider"></span>
+<a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></span>Fiches produits</a>
+{% else %}
+<a class="commercial-nav-home" href="{{ url_for('dashboard.index') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-8M22 19V8"/></svg></span>Tableau de bord</a>
+<a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2M8 3.5 6 2M16 3.5 18 2"/></svg></span>Visualisation du CA</a>
+<a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Mon planning</a>
+<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Ma base de données</a>
+<a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>Mes prospections</a>
+<a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>{% endif %}<span class="nav-spacer"></span>
+<form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><button type="submit"><span class="nav-icon" aria-hidden="true">↪</span>Déconnexion</button></form>{% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 5h5v14h-5M10 8 6 12l4 4M6 12h10"/></svg></span>Connexion</a>{% endif %}
 </div></nav>
-<div class="container">
-{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-messages">{% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
-{% block content %}{% endblock %}
-</div>
+<div class="container">{% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-messages">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}{% block content %}{% endblock %}</div>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  const toggle=document.querySelector('.mobile-nav-toggle');
-  const nav=document.getElementById('main-navigation');
-  if(toggle&&nav){
-    toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});
-    nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';});});
-  }
-  if(window.jQuery && jQuery.fn.select2){
-    jQuery('.select2-products').each(function(){const $field=jQuery(this);if($field.hasClass('select2-hidden-accessible')) return;$field.select2({width:'100%',placeholder:'Sélectionner un ou plusieurs produits',allowClear:true,closeOnSelect:false,language:{noResults:function(){return 'Aucun produit trouvé';},searching:function(){return 'Recherche…';}}});});
-  }
-  const icons={'📊':'chart','📈':'chart','💰':'revenue','📅':'calendar','📍':'location','👥':'users','📋':'document','⭐':'star','🏆':'trophy','📦':'box','🧾':'receipt','📝':'document','🕘':'clock','⚠️':'alert','🥇':'rank1','🥈':'rank2','🥉':'rank3'};
-  const paths={chart:'<path d="M4 19V5M4 19h16M7 15l4-4 3 2 5-7"/>',revenue:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c-.7-.7-1.7-1-3-1-1.8 0-3 1.2-3 2.2 0 3.2 6 1.6 6 4.5 0 1.2-1.2 2.3-3 2.3-1.3 0-2.4-.4-3.2-1.1"/>',calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/>',location:'<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',users:'<path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/>',document:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 11h8M8 15h8M8 19h5"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',trophy:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/>',box:'<path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/>',receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',alert:'<path d="M12 4 21 20H3z"/><path d="M12 9v5M12 17h.01"/>',rank1:'<path d="M8 20h8M10 20v-4h4v4M7 4h10v5a5 5 0 0 1-10 0z"/>',rank2:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>',rank3:'<path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0z"/>'};
-  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){if(!node.nodeValue.trim()||node.parentElement.closest('script,style,svg,.nav-icon')) return NodeFilter.FILTER_REJECT;return Object.keys(icons).some(e=>node.nodeValue.includes(e))?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
-  const nodes=[];while(walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach(function(node){let text=node.nodeValue;const frag=document.createDocumentFragment();while(text){let found=null,index=text.length;Object.keys(icons).forEach(function(e){const i=text.indexOf(e);if(i>=0&&i<index){found=e;index=i;}});if(!found){frag.appendChild(document.createTextNode(text));break;}if(index) frag.appendChild(document.createTextNode(text.slice(0,index)));const span=document.createElement('span');span.className='rubric-icon rubric-icon-inline';span.setAttribute('aria-hidden','true');span.innerHTML='<svg viewBox="0 0 24 24">'+paths[icons[found]]+'</svg>';frag.appendChild(span);text=text.slice(index+found.length);}node.parentNode.replaceChild(frag,node);});
+document.addEventListener('DOMContentLoaded',function(){
+const nav=document.getElementById('main-navigation');const toggle=document.querySelector('.mobile-nav-toggle');
+if(toggle&&nav){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';});});}
+if(nav&&window.matchMedia('(min-width:901px)').matches){nav.querySelectorAll('a,button').forEach(function(item){const label=Array.from(item.childNodes).filter(function(n){return n.nodeType===Node.TEXT_NODE;}).map(function(n){return n.textContent;}).join(' ').replace(/\s+/g,' ').trim();if(!label)return;const tip=document.createElement('span');tip.className='sidebar-tooltip';tip.textContent=label;document.body.appendChild(tip);function show(){const r=item.getBoundingClientRect();tip.style.top=(r.top+r.height/2-tip.offsetHeight/2)+'px';tip.classList.add('visible');}function hide(){tip.classList.remove('visible');}item.addEventListener('mouseenter',show);item.addEventListener('mouseleave',hide);item.addEventListener('focus',show);item.addEventListener('blur',hide);});}
 });
 </script>
 </body></html>
