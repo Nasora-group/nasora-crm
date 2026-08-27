@@ -55,7 +55,7 @@
 {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-messages">{% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
 {% block content %}{% endblock %}
 </div>
-<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p></footer>
+<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   const toggle=document.querySelector('.mobile-nav-toggle');
