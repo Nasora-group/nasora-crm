@@ -1,95 +1,102 @@
 @import url("/static/css/crm-pro-base.css");
 
-/* NASORA CRM — barre compacte desktop : icônes seules, intitulé au survol */
+/* NASORA CRM — desktop : barre ultra-compacte, tous les onglets sur un seul écran */
 @media (min-width: 901px) {
-  body { padding-left: 72px !important; padding-right: 0 !important; }
+  body { padding-left: 58px !important; padding-right: 0 !important; }
 
   .site-nav {
     left: 0 !important; right: auto !important; top: 0 !important; bottom: 0 !important;
-    width: 72px !important; height: 100vh !important; position: fixed !important;
+    width: 58px !important; height: 100vh !important; position: fixed !important;
     z-index: 2000 !important; overflow: visible !important;
     border-right: 1px solid rgba(255,255,255,.08) !important;
-    box-shadow: 4px 0 20px rgba(20,35,28,.10) !important;
+    box-shadow: 3px 0 16px rgba(20,35,28,.10) !important;
   }
 
   .nav-inner {
-    width: 72px !important; height: 100% !important;
-    padding: 10px 7px !important; box-sizing: border-box !important;
+    width: 58px !important; height: 100vh !important;
+    padding: 5px 4px !important; box-sizing: border-box !important;
     display: flex !important; flex-direction: column !important;
-    align-items: center !important; gap: 2px !important;
-    overflow-y: auto !important; overflow-x: visible !important;
+    align-items: center !important; gap: 0 !important;
+    overflow: hidden !important;
   }
 
-  /* Chaque onglet est compact pour que toute la navigation tienne sur un seul écran */
+  /* Onglets très compacts : toute la navigation admin reste visible simultanément */
   .site-nav a, .site-nav button {
-    width: 54px !important; min-width: 54px !important;
-    height: 43px !important; min-height: 43px !important;
-    padding: 5px !important; margin: 0 !important;
-    box-sizing: border-box !important; border: 0 !important; border-radius: 9px !important;
+    width: 46px !important; min-width: 46px !important;
+    height: 34px !important; min-height: 34px !important;
+    padding: 2px !important; margin: 0 !important;
+    box-sizing: border-box !important; border: 0 !important; border-radius: 7px !important;
     display: flex !important; flex-direction: column !important;
     align-items: center !important; justify-content: center !important;
     gap: 0 !important; font-size: 0 !important; line-height: 1 !important;
     white-space: nowrap !important; position: relative !important;
     color: #eaf0eb !important;
-    transition: width .16s ease, background .16s ease, transform .16s ease !important;
+    transition: width .16s ease, background .16s ease !important;
   }
 
   .site-nav .nav-icon {
-    width: 30px !important; height: 30px !important; min-width: 30px !important;
-    border-radius: 8px !important; display: inline-flex !important;
+    width: 24px !important; height: 24px !important; min-width: 24px !important;
+    border-radius: 6px !important; display: inline-flex !important;
     align-items: center !important; justify-content: center !important;
     background: rgba(255,255,255,.07) !important; color: #dce8df !important;
   }
-  .site-nav .nav-icon svg { width: 16px !important; height: 16px !important; }
-
-  .site-nav a:hover, .site-nav button:hover,
-  .site-nav a:focus-visible, .site-nav button:focus-visible {
-    width: 205px !important;
-    flex-direction: row !important;
-    justify-content: flex-start !important;
-    gap: 9px !important;
-    padding-left: 8px !important;
-    background: var(--crm-sidebar-2) !important;
-    color: #fff !important;
-    z-index: 4000 !important;
-  }
-
-  /* Le texte réel de l'onglet apparaît au survol : plus besoin de liste de href */
-  .site-nav a:hover, .site-nav a:focus-visible,
-  .site-nav button:hover, .site-nav button:focus-visible {
-    font-size: .78rem !important;
-    line-height: 1.15 !important;
-    font-weight: 600 !important;
-    text-align: left !important;
-  }
-
-  .site-nav a:hover .nav-icon, .site-nav button:hover .nav-icon {
-    background: rgba(255,255,255,.14) !important; color: #fff !important;
-  }
+  .site-nav .nav-icon svg { width: 13px !important; height: 13px !important; }
 
   .site-nav a.active {
     background: var(--crm-sidebar-2) !important;
     box-shadow: inset 3px 0 var(--crm-accent) !important;
   }
 
-  /* Désactive les anciens labels pseudo-éléments pour éviter les doublons */
+  .site-nav a:hover, .site-nav button:hover,
+  .site-nav a:focus-visible, .site-nav button:focus-visible {
+    /* La bande verte s'élargit suffisamment pour lire normalement l'intitulé complet */
+    width: max-content !important;
+    min-width: 46px !important;
+    max-width: 280px !important;
+    padding: 3px 12px 3px 7px !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    background: var(--crm-sidebar-2) !important;
+    color: #fff !important;
+    z-index: 4000 !important;
+    box-shadow: 4px 5px 16px rgba(20,35,28,.18) !important;
+  }
+
+  /* Le texte HTML original devient visible au survol et reste complet, sans coupure */
+  .site-nav a:hover, .site-nav a:focus-visible,
+  .site-nav button:hover, .site-nav button:focus-visible {
+    font-size: .76rem !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+  }
+
+  .site-nav a:hover .nav-icon, .site-nav button:hover .nav-icon {
+    flex: 0 0 24px !important;
+    background: rgba(255,255,255,.14) !important;
+    color: #fff !important;
+  }
+
+  /* Aucun ancien pseudo-label ne doit superposer le nouveau comportement */
   .site-nav a::after, .site-nav button::after {
     content: none !important;
     display: none !important;
   }
 
   .nav-divider {
-    width: 38px !important; height: 1px !important;
-    margin: 3px 0 !important; flex: 0 0 auto !important;
+    width: 34px !important; height: 1px !important;
+    margin: 2px 0 !important; flex: 0 0 auto !important;
   }
 
-  .nav-spacer { flex: 1 !important; min-height: 4px !important; }
-  .nav-logout-form { width: 54px !important; margin: 0 !important; }
-  .nav-logout-form button { width: 54px !important; }
+  .nav-spacer { flex: 1 !important; min-height: 2px !important; }
+  .nav-logout-form { width: 46px !important; margin: 0 !important; }
+  .nav-logout-form button { width: 46px !important; }
 
   .container {
     max-width: 1440px !important;
-    padding-left: 28px !important; padding-right: 28px !important;
+    padding-left: 26px !important; padding-right: 26px !important;
   }
 }
 
