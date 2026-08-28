@@ -20,7 +20,15 @@ body{padding-left:58px!important;padding-right:0!important;overflow-x:visible!im
 .site-nav .sidebar-tooltip.visible{display:flex!important}
 .site-nav a:hover .nav-icon,.site-nav a:focus-visible .nav-icon,.site-nav button:hover .nav-icon,.site-nav button:focus-visible .nav-icon{background:rgba(255,255,255,.14)!important;color:#fff!important}
 .nav-divider{width:34px!important;height:1px!important;margin:2px 0!important;flex:0 0 1px!important;background:rgba(255,255,255,.12)!important}.nav-spacer{flex:1 1 auto!important;min-height:2px!important}.nav-logout-form{width:46px!important;height:34px!important;margin:0!important;flex:0 0 34px!important}.nav-logout-form button{width:46px!important;height:34px!important}.container{max-width:1440px!important;padding-left:26px!important;padding-right:26px!important}footer{margin-left:0!important;margin-right:0!important}}
-@media(max-width:900px){body{padding-left:0!important;padding-right:0!important;overflow-x:hidden!important}}
+@media(max-width:900px){
+body{padding-left:0!important;padding-right:0!important;overflow-x:hidden!important}
+/* Le menu mobile est masque par defaut : il ne doit jamais apparaitre dans le flux apres le footer. */
+.site-nav{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;width:100%!important;height:auto!important;z-index:2147483000!important;display:none!important;overflow:auto!important;max-height:100vh!important}
+.site-nav.mobile-open{display:block!important}
+.nav-inner{width:100%!important;max-width:none!important;padding:8px 12px!important;display:flex!important;flex-direction:column!important;align-items:stretch!important}
+.site-nav a,.site-nav button{display:flex!important;width:100%!important;height:auto!important;min-height:42px!important;align-items:center!important;justify-content:flex-start!important;font-size:.9rem!important;color:#fff!important;padding:10px 14px!important}
+.site-nav .nav-icon{margin-right:10px!important;flex:0 0 24px!important}.site-nav .sidebar-tooltip{display:none!important}.nav-spacer{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -35,7 +43,7 @@ body{padding-left:58px!important;padding-right:0!important;overflow-x:visible!im
 <a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Plannings</a>
 <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Base de données NASORA</a><span class="nav-divider"></span>
 <a href="{{ url_for('users.list_users') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1"/><circle cx="17" cy="8" r="2.5"/><path d="M15 20v-1a5 5 0 0 1 5-5"/></svg></span>Utilisateurs</a>
-<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Évaluations</a>
+<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Évaluations</a>
 <a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 20h10M9 20v-4h6v4M6 4h12v5a6 6 0 0 1-12 0zM6 7H3v2a4 4 0 0 0 4 4M18 7h3v2a4 4 0 0 1-4 4"/></svg></span>Classement</a><span class="nav-divider"></span>
 <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></span>Fiches produits</a>
 {% else %}
@@ -44,7 +52,7 @@ body{padding-left:58px!important;padding-right:0!important;overflow-x:visible!im
 <a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M13 14h3M8 18h3"/></svg></span>Mon planning</a>
 <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3"/><path d="M17 11a3 3 0 1 0-1.2-5.75M16 14.5h2a4 4 0 0 1 4 4V20"/></svg></span>Ma base de données</a>
 <a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>Mes prospections</a>
-<a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>{% endif %}<span class="nav-spacer"></span>
+<a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Mes évaluations</a>{% endif %}<span class="nav-spacer"></span>
 <form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><button type="submit"><span class="nav-icon" aria-hidden="true">↪</span>Déconnexion</button></form>{% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 5h5v14h-5M10 8 6 12l4 4M6 12h10"/></svg></span>Connexion</a>{% endif %}
 </div></nav>
 <div class="container">{% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-messages">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}{% block content %}{% endblock %}</div>
