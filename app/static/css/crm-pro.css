@@ -1,7 +1,7 @@
 @import url("/static/css/crm-pro-base.css");
 
 /* NASORA CRM — sidebar premium polish
-   The current HTML structure is intentionally preserved so this remains a visual-only change. */
+   Visual-only navigation styling. No routes, data, or business logic are changed. */
 :root {
   --crm-nav-bg: #172b22;
   --crm-nav-bg-deep: #12231c;
@@ -15,42 +15,62 @@
 }
 
 @media (min-width: 901px) {
-  body {
-    overflow-x: visible !important;
-  }
+  body { overflow-x: visible !important; }
 
   .site-nav {
     background:
-      radial-gradient(circle at 50% 8%, rgba(134,169,95,.11), transparent 25%),
+      radial-gradient(circle at 50% 7%, rgba(134,169,95,.14), transparent 23%),
+      radial-gradient(circle at 100% 52%, rgba(255,255,255,.025), transparent 34%),
       linear-gradient(180deg, var(--crm-nav-bg) 0%, var(--crm-nav-bg-deep) 100%) !important;
     border-right: 1px solid rgba(255,255,255,.075) !important;
-    box-shadow: 5px 0 28px rgba(10,24,17,.18) !important;
+    box-shadow: 5px 0 28px rgba(10,24,17,.20) !important;
     overflow: visible !important;
   }
 
+  .site-nav::before {
+    content: "N";
+    position: absolute !important;
+    top: 8px !important;
+    left: 50% !important;
+    width: 30px !important;
+    height: 30px !important;
+    transform: translateX(-50%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(134,169,95,.32) !important;
+    border-radius: 9px !important;
+    background: linear-gradient(145deg, rgba(134,169,95,.20), rgba(255,255,255,.035)) !important;
+    color: #d8e8c8 !important;
+    font: 700 .78rem/1 Inter, sans-serif !important;
+    letter-spacing: .08em !important;
+    box-shadow: inset 0 1px rgba(255,255,255,.08), 0 5px 14px rgba(0,0,0,.14) !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+  }
+
   .nav-inner {
-    padding: 10px 5px 12px !important;
+    padding: 45px 5px 12px !important;
     background: linear-gradient(180deg, rgba(255,255,255,.018), transparent 35%) !important;
   }
 
-  /* Every navigation item gets a cleaner, calmer visual rhythm. */
   .site-nav a,
   .site-nav button {
     border: 1px solid transparent !important;
     border-radius: 9px !important;
-    transition:
-      background-color .18s ease,
-      border-color .18s ease,
-      box-shadow .18s ease,
-      transform .18s ease !important;
+    transition: background-color .18s ease, border-color .18s ease,
+      box-shadow .18s ease, transform .18s ease !important;
+  }
+
+  .site-nav a:first-child {
+    margin-bottom: 5px !important;
+    background: rgba(255,255,255,.025) !important;
   }
 
   .site-nav a.active {
     background: linear-gradient(135deg, var(--crm-nav-active), #274334) !important;
-    border-color: rgba(255,255,255,.06) !important;
-    box-shadow:
-      inset 3px 0 var(--crm-nav-accent),
-      0 4px 14px rgba(7,20,14,.20) !important;
+    border-color: rgba(255,255,255,.07) !important;
+    box-shadow: inset 3px 0 var(--crm-nav-accent), 0 4px 14px rgba(7,20,14,.20) !important;
   }
 
   .site-nav a:hover,
@@ -69,6 +89,11 @@
     border: 1px solid rgba(255,255,255,.045) !important;
     box-shadow: inset 0 1px rgba(255,255,255,.035) !important;
     transition: background-color .18s ease, color .18s ease, transform .18s ease !important;
+  }
+
+  .site-nav a:first-child .nav-icon {
+    background: rgba(134,169,95,.12) !important;
+    color: #cfe4b7 !important;
   }
 
   .site-nav a.active .nav-icon {
@@ -101,7 +126,6 @@
     background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent) !important;
   }
 
-  /* Compact, premium tooltips: easier to scan than the previous heavy labels. */
   .site-nav a:hover::after,
   .site-nav a:focus-visible::after,
   .site-nav button:hover::after,
@@ -136,9 +160,7 @@
     z-index: 2147483646 !important;
   }
 
-  .nav-logout-form button {
-    color: #dce8e0 !important;
-  }
+  .nav-logout-form button { color: #dce8e0 !important; }
 
   .nav-logout-form button:hover,
   .nav-logout-form button:focus-visible {
@@ -152,7 +174,6 @@
     color: #ffe2d5 !important;
   }
 
-  /* Keep labels/tooltips positioned cleanly even when the page is scrolled. */
   body > .sidebar-tooltip {
     left: 66px !important;
     min-height: 32px !important;
@@ -176,7 +197,6 @@
     transform: translateY(-50%) rotate(45deg) !important;
   }
 
-  /* Prevent any accidental duplicate navigation from appearing below content. */
   footer ~ .site-nav,
   footer + .site-nav,
   footer ~ nav.site-nav,
@@ -205,9 +225,7 @@
     overflow: auto !important;
   }
 
-  .site-nav.mobile-open {
-    display: block !important;
-  }
+  .site-nav.mobile-open { display: block !important; }
 
   .nav-inner {
     width: 100% !important;
@@ -227,26 +245,13 @@
     color: #fff !important;
   }
 
-  .site-nav .nav-icon {
-    margin-right: 10px !important;
-    flex: 0 0 24px !important;
-  }
-
-  .nav-divider,
-  .nav-spacer {
-    display: none !important;
-  }
-
-  .site-nav .sidebar-tooltip,
-  body > .sidebar-tooltip {
-    display: none !important;
-  }
+  .site-nav .nav-icon { margin-right: 10px !important; flex: 0 0 24px !important; }
+  .nav-divider, .nav-spacer { display: none !important; }
+  .site-nav .sidebar-tooltip, body > .sidebar-tooltip { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .site-nav a,
   .site-nav button,
-  .site-nav .nav-icon {
-    transition: none !important;
-  }
+  .site-nav .nav-icon { transition: none !important; }
 }
