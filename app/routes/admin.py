@@ -19,6 +19,14 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
 SALE_MODELS = [s["sale_model"] for s in SUPPLIERS.values() if not s.get("archived")]
 
+
+def _month_expression(sale_model):
+    """Expression mensuelle compatible avec SQLite (CI) et PostgreSQL (production)."""
+    if db.engine.dialect.name == "sqlite":
+        return func.strftime("%Y-%m", sale_model.date)
+    return func.to_char(sale_model.date, "YYYY-MM")
+
+
 def _division_targets(division, today):
     try:
         monthly = SalesObjective.query.filter_by(division=division, year=today.year, month=today.month).first()
@@ -26,6 +34,7 @@ def _division_targets(division, today):
         return (monthly.target_amount if monthly else None, annual.target_amount if annual else None)
     except Exception:
         db.session.rollback(); logger.warning("Impossible de lire les objectifs pour %s", division, exc_info=True); return None, None
+
 
 def _filtered_prospections_query():
     query = Prospection.query.join(User).filter(User.role == "commercial")
@@ -36,6 +45,7 @@ def _filtered_prospections_query():
     if zone: query=query.filter(User.zone==zone)
     if specialite: query=query.filter(Prospection.specialite==specialite)
     return query
+
 
 def _establishments_by_prospection(rows):
     establishments={}; clients=Client.query.all(); by_phone={}; by_owner_name={}
@@ -55,10 +65,11 @@ def _establishments_by_prospection(rows):
         establishments[row.id]=(client.establishment or "").strip() if client else ""
     return establishments
 
+
 def _aggregate_sales():
     revenue_by_month={}; revenue_by_division={"nasderm":0.0,"nasmedic":0.0}; revenue_by_commercial={}; current_month_by_division={"nasderm":0.0,"nasmedic":0.0}; total_revenue=0.0; total_sales_count=0; current_month_revenue=0.0; current_month_key=date.today().strftime("%Y-%m")
     for sale_model in SALE_MODELS:
-        month_expr=func.to_char(sale_model.date,"YYYY-MM"); amount_expr=func.coalesce(sale_model.quantity,0)*func.coalesce(sale_model.price,0)
+        month_expr=_month_expression(sale_model); amount_expr=func.coalesce(sale_model.quantity,0)*func.coalesce(sale_model.price,0)
         rows=db.session.query(month_expr.label("month"),sale_model.project,sale_model.commercial_id,func.sum(amount_expr).label("revenue"),func.count(sale_model.id).label("sales_count")).group_by(month_expr,sale_model.project,sale_model.commercial_id).all()
         for month,project,commercial_id,revenue,sales_count in rows:
             amount=float(revenue or 0); count=int(sales_count or 0); revenue_by_month[month]=revenue_by_month.get(month,0.0)+amount; revenue_by_division[project]=revenue_by_division.get(project,0.0)+amount
@@ -67,12 +78,14 @@ def _aggregate_sales():
             if month==current_month_key: current_month_revenue+=amount; current_month_by_division[project]=current_month_by_division.get(project,0.0)+amount
     return revenue_by_month,revenue_by_division,revenue_by_commercial,current_month_by_division,total_revenue,total_sales_count,current_month_revenue
 
+
 def _annual_revenue_for_division(division,year):
     total=0.0
     for sale_model in SALE_MODELS:
         amount_expr=func.coalesce(sale_model.quantity,0)*func.coalesce(sale_model.price,0)
         value=db.session.query(func.coalesce(func.sum(amount_expr),0)).filter(sale_model.project==division,func.extract("year",sale_model.date)==year).scalar(); total+=float(value or 0)
     return total
+
 
 def _commercial_sales_visualization(division,commercial_id):
     monthly={}; details_by_month={}
