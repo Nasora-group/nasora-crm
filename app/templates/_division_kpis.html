@@ -1,46 +1,32 @@
 <div class="dashboard-links">
-    {% if current_user.role == 'admin' %}
-    <a href="{{ url_for('objectives.edit_objectives', division=division) }}" class="btn btn-outline">Gérer les objectifs {{ 'NASDERM' if division == 'nasderm' else 'NASMEDIC' }}</a>
-    {% endif %}
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('objectives.edit_objectives', division=division) }}" class="btn btn-outline">Gérer les objectifs {{ 'NASDERM' if division == 'nasderm' else 'NASMEDIC' }}</a>
+  {% endif %}
 </div>
 
-<div class="kpi-grid">
-    <div class="kpi-card">
-        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg></div>
-        <div class="kpi-body">
-            <span class="kpi-label">Vente moyenne mensuelle</span>
-            <span class="kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</span>
-            <span class="kpi-sub">calculée sur {{ monthly_revenue_labels|length }} mois avec ventes</span>
-        </div>
+<div class="kpi-grid division-kpi-grid">
+  <article class="kpi-card division-kpi-card">
+    <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-7"/></svg></div>
+    <div class="kpi-body"><span class="kpi-label">Vente moyenne mensuelle</span><strong class="kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</strong><span class="kpi-sub">{{ monthly_revenue_labels|length }} mois avec ventes</span></div>
+  </article>
+  <article class="kpi-card division-kpi-card">
+    <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+    <div class="kpi-body"><span class="kpi-label">Objectif du mois</span>
+      {% if not kpis.objectives_available %}<strong class="kpi-value kpi-unavailable">Indisponible</strong>
+      {% elif kpis.monthly_target %}<strong class="kpi-value">{{ "%.0f"|format(kpis.monthly_pct) }} %</strong><div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.monthly_pct, 100] | min }}%;"></div></div><span class="kpi-sub">{{ "%.2f"|format(kpis.current_month_revenue) }} € / {{ "%.2f"|format(kpis.monthly_target) }} €</span>
+      {% else %}<strong class="kpi-value kpi-unavailable">Aucun objectif</strong>{% endif %}
     </div>
-    <div class="kpi-card">
-        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-        <div class="kpi-body" style="width:100%;">
-            <span class="kpi-label">Réalisation objectif du mois</span>
-            {% if not kpis.objectives_available %}
-                <span class="kpi-value" style="font-size:1rem; color:var(--ink-soft);">Temporairement indisponible</span>
-            {% elif kpis.monthly_target %}
-                <span class="kpi-value">{{ "%.0f"|format(kpis.monthly_pct) }} %</span>
-                <div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.monthly_pct, 100] | min }}%;"></div></div>
-                <span class="kpi-sub">{{ "%.2f"|format(kpis.current_month_revenue) }} € / {{ "%.2f"|format(kpis.monthly_target) }} €</span>
-            {% else %}
-                <span class="kpi-value" style="font-size:1rem; color:var(--ink-soft);">Aucun objectif défini</span>
-            {% endif %}
-        </div>
+  </article>
+  <article class="kpi-card division-kpi-card">
+    <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.8 6.3L22 9l-5 4.4 1.5 6.6-6.5-3.5-6.5 3.5L7 13.4 2 9l7.2-.7z"/></svg></div>
+    <div class="kpi-body"><span class="kpi-label">Objectif annuel {{ kpis.current_year }}</span>
+      {% if not kpis.objectives_available %}<strong class="kpi-value kpi-unavailable">Indisponible</strong>
+      {% elif kpis.annual_target %}<strong class="kpi-value">{{ "%.0f"|format(kpis.annual_pct) }} %</strong><div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.annual_pct, 100] | min }}%;"></div></div><span class="kpi-sub">{{ "%.2f"|format(kpis.current_year_revenue) }} € / {{ "%.2f"|format(kpis.annual_target) }} €</span>
+      {% else %}<strong class="kpi-value kpi-unavailable">Aucun objectif</strong>{% endif %}
     </div>
-    <div class="kpi-card">
-        <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg></div>
-        <div class="kpi-body" style="width:100%;">
-            <span class="kpi-label">Réalisation objectif annuel {{ kpis.current_year }}</span>
-            {% if not kpis.objectives_available %}
-                <span class="kpi-value" style="font-size:1rem; color:var(--ink-soft);">Temporairement indisponible</span>
-            {% elif kpis.annual_target %}
-                <span class="kpi-value">{{ "%.0f"|format(kpis.annual_pct) }} %</span>
-                <div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.annual_pct, 100] | min }}%;"></div></div>
-                <span class="kpi-sub">{{ "%.2f"|format(kpis.current_year_revenue) }} € / {{ "%.2f"|format(kpis.annual_target) }} €</span>
-            {% else %}
-                <span class="kpi-value" style="font-size:1rem; color:var(--ink-soft);">Aucun objectif défini</span>
-            {% endif %}
-        </div>
-    </div>
+  </article>
 </div>
+<style>
+.division-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}.division-kpi-card{min-height:128px;padding:20px;align-items:flex-start}.division-kpi-card .kpi-icon{width:42px;height:42px;flex:0 0 42px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(31,107,77,.10);color:#1f6b4d}.division-kpi-card .kpi-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.division-kpi-card .kpi-body{width:100%;min-width:0}.division-kpi-card .kpi-label{font-size:.78rem;font-weight:650;margin-bottom:7px}.division-kpi-card .kpi-value{font-size:1.55rem;line-height:1.15;letter-spacing:-.02em;color:var(--ink,#20352b);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.division-kpi-card .kpi-sub{font-size:.76rem;line-height:1.35;margin-top:7px}.division-kpi-card .kpi-progress{height:9px;margin-top:10px;border-radius:99px;background:#e7ece8;overflow:hidden}.division-kpi-card .kpi-progress-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,#3f765b,#8aa968);transition:width .35s ease}.division-kpi-card .kpi-unavailable{font-size:1rem;white-space:normal;color:var(--ink-soft,#6a756e)}
+@media(max-width:1050px){.division-kpi-grid{grid-template-columns:1fr}.division-kpi-card{min-height:112px}}@media(max-width:600px){.division-kpi-card{padding:16px}.division-kpi-card .kpi-value{font-size:1.3rem}}
+</style>
