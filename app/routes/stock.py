@@ -4,6 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
+from sqlalchemy import false
 
 from app.extensions import db
 from app.models import DIVISION_SUPPLIERS, SUPPLIERS
@@ -11,12 +12,7 @@ from app.models_stock import StockEntry
 from app.utils import roles_required
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
-WHOLESALERS = {
-    "duopharm": "DUOPHARM",
-    "sodipharm": "SODIPHARM",
-    "laborex": "LABOREX",
-    "ubipharm": "UBIPHARM (COPHASE)",
-}
+WHOLESALERS = {"duopharm": "DUOPHARM", "sodipharm": "SODIPHARM", "laborex": "LABOREX", "ubipharm": "UBIPHARM (COPHASE)"}
 
 
 def _monday(value):
@@ -37,13 +33,7 @@ def _catalog():
             supplier = SUPPLIERS[slug]
             model = supplier["product_model"]
             for product in model.query.filter_by(is_active=True).order_by(model.name).all():
-                catalog.append(
-                    {
-                        "division": division,
-                        "laboratory": supplier["label"],
-                        "product": product.name,
-                    }
-                )
+                catalog.append({"division": division, "laboratory": supplier["label"], "product": product.name})
     return catalog
 
 
@@ -58,14 +48,8 @@ def _status(quantity):
 def _snapshot(week_start):
     query = StockEntry.query.filter_by(week_start=week_start)
     allowed = _allowed_divisions()
-    if allowed:
-        query = query.filter(StockEntry.division.in_(allowed))
-    else:
-        query = query.filter(sa.false())
-    return {
-        (entry.division, entry.laboratory, entry.wholesaler, entry.product_name): entry
-        for entry in query.all()
-    }
+    query = query.filter(StockEntry.division.in_(allowed)) if allowed else query.filter(false())
+    return {(e.division, e.laboratory, e.wholesaler, e.product_name): e for e in query.all()}
 
 
 @stock_bp.route("/disponible")
@@ -81,10 +65,7 @@ def available():
     grouped = {}
     for item in _catalog():
         key = (item["division"], item["laboratory"])
-        row = grouped.setdefault(
-            key,
-            {"division": item["division"], "laboratory": item["laboratory"], "products": []},
-        )
+        row = grouped.setdefault(key, {"division": item["division"], "laboratory": item["laboratory"], "products": []})
         stocks = {}
         for slug in WHOLESALERS:
             entry = entries.get((item["division"], item["laboratory"], slug, item["product"]))
@@ -92,14 +73,7 @@ def available():
             status, label = _status(quantity)
             stocks[slug] = {"quantity": quantity, "status": status, "label": label}
         row["products"].append({"product": item["product"], "stocks": stocks})
-    return render_template(
-        "stock_available.html",
-        groups=list(grouped.values()),
-        week_start=week_start,
-        wholesalers=WHOLESALERS,
-        is_admin=current_user.role == "admin",
-        allowed_divisions=_allowed_divisions(),
-    )
+    return render_template("stock_available.html", groups=list(grouped.values()), week_start=week_start, wholesalers=WHOLESALERS, is_admin=current_user.role == "admin", allowed_divisions=_allowed_divisions())
 
 
 @stock_bp.route("/saisie", methods=["GET", "POST"])
@@ -118,24 +92,10 @@ def entry():
             for item in catalog:
                 for slug in WHOLESALERS:
                     key = f"stock__{item['division']}__{item['laboratory']}__{slug}__{item['product']}"
-                    raw = request.form.get(key, "0").strip()
-                    quantity = max(0, int(raw or 0))
-                    stock = StockEntry.query.filter_by(
-                        week_start=week_start,
-                        division=item["division"],
-                        laboratory=item["laboratory"],
-                        wholesaler=slug,
-                        product_name=item["product"],
-                    ).first()
+                    quantity = max(0, int(request.form.get(key, "0").strip() or 0))
+                    stock = StockEntry.query.filter_by(week_start=week_start, division=item["division"], laboratory=item["laboratory"], wholesaler=slug, product_name=item["product"]).first()
                     if stock is None:
-                        stock = StockEntry(
-                            week_start=week_start,
-                            division=item["division"],
-                            laboratory=item["laboratory"],
-                            wholesaler=slug,
-                            product_name=item["product"],
-                            created_by_id=current_user.id,
-                        )
+                        stock = StockEntry(week_start=week_start, division=item["division"], laboratory=item["laboratory"], wholesaler=slug, product_name=item["product"], created_by_id=current_user.id)
                         db.session.add(stock)
                     stock.quantity = quantity
             db.session.commit()
@@ -155,12 +115,5 @@ def entry():
 @login_required
 @roles_required("admin")
 def history():
-    weeks = [
-        week
-        for (week,) in db.session.query(StockEntry.week_start)
-        .filter(StockEntry.division.in_(_allowed_divisions()))
-        .distinct()
-        .order_by(StockEntry.week_start.desc())
-        .all()
-    ]
+    weeks = [week for (week,) in db.session.query(StockEntry.week_start).filter(StockEntry.division.in_(_allowed_divisions())).distinct().order_by(StockEntry.week_start.desc()).all()]
     return render_template("stock_history.html", weeks=weeks, wholesalers=WHOLESALERS)
