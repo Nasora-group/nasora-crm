@@ -3,15 +3,40 @@
 {% block content %}
 <h1>Plannings des commerciaux</h1>
 
+<div class="card" style="margin-bottom:1.5rem; padding:1rem;">
+    <h2>Génération intelligente — cycle de 4 semaines</h2>
+    <p style="margin-bottom:1rem;">
+        Le système génère deux semaines originales à partir des établissements
+        réellement saisis par le commercial, puis applique automatiquement
+        <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.
+    </p>
+</div>
+
 <table class="responsive-table">
     <thead>
-        <tr><th>Commercial</th><th>Division</th><th>Actions</th></tr>
+        <tr><th>Commercial</th><th>Division</th><th>Génération</th><th>Actions</th></tr>
     </thead>
     <tbody>
         {% for commercial in commerciaux %}
         <tr>
             <td>{{ commercial.username }}</td>
             <td>{{ commercial.project|upper }}</td>
+            <td>
+                <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>
+                        Début
+                        <input type="date" name="start_date" required>
+                    </label>
+                    <label>
+                        Visites/jour
+                        <input type="number" name="visits_per_day" value="5" min="1" max="20" required>
+                    </label>
+                    <button type="submit" onclick="return confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.');">
+                        Générer le cycle IA
+                    </button>
+                </form>
+            </td>
             <td><a href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Voir le planning</a></td>
         </tr>
         {% endfor %}
