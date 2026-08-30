@@ -1,0 +1,102 @@
+/* NASORA — Premium horizontal navigation */
+:root {
+  --nav-green: #16a34a;
+  --nav-green-dark: #15803d;
+  --nav-ink: #172033;
+  --nav-muted: #64748b;
+  --nav-border: #e5e7eb;
+  --nav-bg: #ffffff;
+}
+
+.nasora-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid var(--nav-border);
+  box-shadow: 0 4px 18px rgba(15,23,42,.07);
+}
+
+.nasora-navbar .nav-inner {
+  min-height: 68px;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 8px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nasora-navbar .nav-brand { flex: 0 0 auto; margin-right: 10px; }
+.nasora-navbar .nav-links {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nasora-navbar .nav-links a,
+.nasora-navbar .nav-actions a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  color: var(--nav-muted);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: .92rem;
+  white-space: nowrap;
+  transition: transform .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.nasora-navbar .nav-links a:hover,
+.nasora-navbar .nav-actions a:hover {
+  color: var(--nav-green-dark);
+  background: #f0fdf4;
+  transform: translateY(-1px);
+}
+
+.nasora-navbar .nav-links a.active,
+.nasora-navbar .nav-links a[aria-current="page"] {
+  color: #fff;
+  background: linear-gradient(135deg, var(--nav-green), var(--nav-green-dark));
+  box-shadow: 0 7px 16px rgba(22,163,74,.22);
+}
+
+.nasora-navbar .nav-links a.active::after,
+.nasora-navbar .nav-links a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.85);
+}
+
+.nasora-navbar .nav-actions { flex: 0 0 auto; }
+.nasora-navbar .nav-actions a {
+  color: #b42318;
+  background: #fff7f5;
+}
+.nasora-navbar .nav-icon { width: 18px; height: 18px; flex: 0 0 18px; }
+
+@media (max-width: 1050px) {
+  .nasora-navbar .nav-inner { align-items: flex-start; flex-wrap: wrap; }
+  .nasora-navbar .nav-links { order: 3; flex-basis: 100%; justify-content: flex-start; }
+}
+
+@media (max-width: 640px) {
+  .nasora-navbar .nav-inner { padding: 8px 12px; }
+  .nasora-navbar .nav-links { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); width: 100%; }
+  .nasora-navbar .nav-links a { width: 100%; }
+  .nasora-navbar .nav-actions { margin-left: auto; }
+}
