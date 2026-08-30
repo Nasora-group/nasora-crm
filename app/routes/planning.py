@@ -1,17 +1,19 @@
+from datetime import date, timedelta
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
-from app.models import Planning, User, JOURS, STRUCTURE_SLUGS
+from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS
+from app.services.planning_ai import PlanningCandidate, generate_two_weeks, planning_entries_for_week
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
 
 planning_bp = Blueprint("planning", __name__)
 
 
 def _build_creneaux_from_form():
-    """Lit les structures sélectionnées + noms précis postés dans le
-    formulaire et les encode en JSON, un champ par jour."""
+    """Lit les structures sélectionnées + noms précis postés dans le formulaire et les encode en JSON, un champ par jour."""
     creneaux = {}
     for jour in JOURS:
         structures_selectionnees = request.form.getlist(jour)
@@ -22,6 +24,30 @@ def _build_creneaux_from_form():
             entries.append((structure, nom))
         creneaux[jour] = encode_planning_slot(entries)
     return creneaux
+
+
+def _next_monday(reference=None):
+    reference = reference or date.today()
+    return reference + timedelta(days=(7 - reference.weekday()) % 7)
+
+
+def _planning_candidates(commercial_id):
+    """Build candidates only from real establishments already entered by this commercial."""
+    rows = (
+        Prospection.query.filter_by(commercial_id=commercial_id)
+        .order_by(Prospection.date.desc(), Prospection.id.desc())
+        .all()
+    )
+    latest = {}
+    for row in rows:
+        name = (row.establishment or row.nom_client or "").strip()
+        structure = (row.structure or "").strip()
+        if not name or not structure:
+            continue
+        key = (structure.upper(), name.casefold())
+        if key not in latest:
+            latest[key] = PlanningCandidate(structure=structure, name=name, last_visit=row.date)
+    return list(latest.values())
 
 
 @planning_bp.route("/visualiser_planning")
@@ -131,3 +157,59 @@ def admin_planning_detail(commercial_id):
         .all()
     )
     return render_template("admin_planning_detail.html", plannings=plannings, commercial=commercial)
+
+
+@planning_bp.route("/admin_planning_generate/<int:commercial_id>", methods=["POST"])
+@login_required
+@roles_required("admin")
+def admin_planning_generate(commercial_id):
+    commercial = User.query.get_or_404(commercial_id)
+    try:
+        visits_per_day = int(request.form.get("visits_per_day", "5"))
+    except ValueError:
+        visits_per_day = 5
+    if not 1 <= visits_per_day <= 20:
+        flash("Le nombre de visites par jour doit être compris entre 1 et 20.", "error")
+        return redirect(url_for("planning.admin_plannings"))
+
+    start_raw = request.form.get("start_date", "").strip()
+    try:
+        start_date = date.fromisoformat(start_raw) if start_raw else _next_monday()
+    except ValueError:
+        flash("Date de début invalide.", "error")
+        return redirect(url_for("planning.admin_plannings"))
+    if start_date.weekday() != 0:
+        flash("La date de début doit être un lundi.", "error")
+        return redirect(url_for("planning.admin_plannings"))
+
+    candidates = _planning_candidates(commercial.id)
+    try:
+        weeks = generate_two_weeks(candidates, start_date, visits_per_day=visits_per_day)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("planning.admin_plannings"))
+
+    dates = [start_date + timedelta(days=7 * index) for index in range(4)]
+    existing = Planning.query.filter(
+        Planning.commercial_id == commercial.id,
+        Planning.date.in_(dates),
+    ).first()
+    if existing:
+        flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
+        return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+
+    generated_entries = [planning_entries_for_week(week) for week in weeks]
+    complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
+    for cycle_index, cycle_date in enumerate(dates):
+        fields = {
+            jour: encode_planning_slot(entries)
+            for jour, entries in complete_cycle[cycle_index].items()
+        }
+        db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
+
+    db.session.commit()
+    flash(
+        f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.",
+        "success",
+    )
+    return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
