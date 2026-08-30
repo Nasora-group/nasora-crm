@@ -1,0 +1,5 @@
+Assertions required by the planning generator:
+- 2 generated weeks contain exactly 5 working days each.
+- Saturday and Sunday never receive generated visits.
+- S1/S3 and S2/S4 remain identical.
+- A cycle must start on Monday.
