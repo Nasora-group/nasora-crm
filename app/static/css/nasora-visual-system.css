@@ -1,0 +1,16 @@
+/* NASORA CRM — unified visual system */
+:root{--nasora-green:#1f6b45;--nasora-green-hover:#2f7d55;--nasora-green-soft:#eef6f0;--nasora-ink:#26302a;--nasora-muted:#5b6b5e;--nasora-border:#dfe7df;--nasora-white:#fff;--nasora-shadow:0 4px 16px rgba(38,48,42,.08);--nasora-radius:12px}
+.site-nav{background:linear-gradient(90deg,var(--nasora-green),#245f42)!important;box-shadow:0 3px 12px rgba(31,107,69,.18)!important}
+.nav-inner{align-items:center!important;gap:2px!important}
+.site-nav a,.site-nav button{font-family:Inter,sans-serif!important;font-size:.70rem!important;font-weight:650!important;line-height:1.25!important;letter-spacing:.005em!important;padding:10px 8px!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.15)!important;border-radius:7px!important}
+.site-nav .nav-icon{width:20px!important;min-width:20px!important;height:20px!important;font-size:.88rem!important;font-weight:700!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.site-nav a:hover,.site-nav a:focus-visible{background:rgba(255,255,255,.14)!important;color:#fff!important;transform:translateY(-1px)}
+.site-nav .nav-divider{height:24px!important;width:1px!important;margin:0 4px!important;background:rgba(255,255,255,.3)!important}
+.site-nav .nav-logout-form button{background:#fff!important;color:var(--nasora-green)!important;text-shadow:none!important;border:1px solid rgba(255,255,255,.8)!important}
+.site-nav .nav-logout-form button .nav-icon{color:var(--nasora-green)!important}
+.kpi-card,.panel,.chart-card,.form-container,.filter-form,.responsive-table{border-color:var(--nasora-border)!important;box-shadow:var(--nasora-shadow)!important}
+.kpi-card:hover,.chart-card:hover,.panel:hover{box-shadow:0 8px 24px rgba(38,48,42,.11)!important}
+.btn,.btn-submit{background:var(--nasora-green)!important}.btn:hover,.btn-submit:hover{background:var(--nasora-green-hover)!important}
+.form-input:focus{border-color:var(--nasora-green)!important;box-shadow:0 0 0 3px rgba(31,107,69,.14)!important}
+.responsive-table th{background:var(--nasora-green-soft)!important;color:var(--nasora-green)!important}
+@media(max-width:900px){.site-nav a,.site-nav button{font-size:.82rem!important;padding:11px 12px!important}.site-nav .nav-icon{font-size:.95rem!important}}
