@@ -38,37 +38,21 @@ def _filtered_prospections_query():
     return query
 
 def _establishments_by_prospection(rows):
-    """Resolve the real establishment name for each prospection.
-
-    Priority: explicit Prospection.establishment, linked CRM client through
-    client_id, phone match, then commercial + normalized professional name.
-    This makes the admin dashboard independent from fragile historical links.
-    """
-    establishments = {}
-    clients = Client.query.all()
-    by_phone = {}
-    by_owner_name = {}
+    establishments={}; clients=Client.query.all(); by_phone={}; by_owner_name={}
     for client in clients:
-        phone = "".join(ch for ch in (client.phone or "") if ch.isdigit())
-        if phone:
-            by_phone.setdefault(phone, client)
-        key = ((client.owner_id or 0), (client.name or "").strip().casefold())
-        if key[1]:
-            by_owner_name.setdefault(key, client)
+        phone="".join(ch for ch in (client.phone or "") if ch.isdigit())
+        if phone: by_phone.setdefault(phone,client)
+        key=((client.owner_id or 0),(client.name or "").strip().casefold())
+        if key[1]: by_owner_name.setdefault(key,client)
     for row in rows:
-        explicit = (row.establishment or "").strip()
-        if explicit:
-            establishments[row.id] = explicit
-            continue
-        client = getattr(row, "client", None)
-        if client is None and getattr(row, "client_id", None):
-            client = next((c for c in clients if c.id == row.client_id), None)
-        phone = "".join(ch for ch in (row.telephone or "") if ch.isdigit())
-        if client is None and phone:
-            client = by_phone.get(phone)
-        if client is None:
-            client = by_owner_name.get((row.commercial_id, (row.nom_client or "").strip().casefold()))
-        establishments[row.id] = (client.establishment or "").strip() if client else ""
+        explicit=(row.establishment or "").strip()
+        if explicit: establishments[row.id]=explicit; continue
+        client=getattr(row,"client",None)
+        if client is None and getattr(row,"client_id",None): client=next((c for c in clients if c.id==row.client_id),None)
+        phone="".join(ch for ch in (row.telephone or "") if ch.isdigit())
+        if client is None and phone: client=by_phone.get(phone)
+        if client is None: client=by_owner_name.get((row.commercial_id,(row.nom_client or "").strip().casefold()))
+        establishments[row.id]=(client.establishment or "").strip() if client else ""
     return establishments
 
 def _aggregate_sales():
@@ -99,30 +83,26 @@ def _commercial_sales_visualization(division,commercial_id):
         for sale in rows:
             if not sale.date: continue
             month_key=sale.date.strftime("%Y-%m"); quantity=sale.quantity or 0; price=float(sale.price or 0); amount=float(quantity)*price; product=getattr(getattr(sale,"product",None),"name",None) or "Produit"
-            monthly[month_key]=monthly.get(month_key,0.0)+amount
-            details_by_month.setdefault(month_key,[]).append({"date":sale.date,"supplier":supplier_label,"product":product,"quantity":quantity,"price":price,"amount":amount})
-    labels=sorted(monthly.keys(),reverse=True)
-    return [{"key":key,"label":key,"amount":monthly[key],"details":details_by_month.get(key,[])} for key in labels]
+            monthly[month_key]=monthly.get(month_key,0.0)+amount; details_by_month.setdefault(month_key,[]).append({"date":sale.date,"supplier":supplier_label,"product":product,"quantity":quantity,"price":price,"amount":amount})
+    return [{"key":key,"label":key,"amount":monthly[key],"details":details_by_month.get(key,[])} for key in sorted(monthly.keys(),reverse=True)]
 
 @admin_bp.route("/admin_dashboard",methods=["GET"])
 @login_required
 @roles_required("admin")
 def dashboard():
-    today=date.today(); revenue_by_month,revenue_by_division,revenue_by_commercial,current_month_by_division,total_revenue,total_sales_count,current_month_revenue=_aggregate_sales(); monthly_revenue_labels=sorted(revenue_by_month.keys()); monthly_revenue_data=[revenue_by_month[m] for m in monthly_revenue_labels]; division_kpis={}
-    for division in ("nasmedic","nasderm"):
-        monthly_target,annual_target=_division_targets(division,today); month_actual=current_month_by_division.get(division,0.0); annual_actual=_annual_revenue_for_division(division,today.year); month_target=float(monthly_target) if monthly_target is not None else None; year_target=float(annual_target) if annual_target is not None else None
-        division_kpis[division]={"month_actual":month_actual,"month_target":month_target,"month_pct":(month_actual/month_target*100) if month_target else None,"annual_actual":annual_actual,"annual_target":year_target,"annual_pct":(annual_actual/year_target*100) if year_target else None}
-    commerciaux=User.query.filter_by(role="commercial").order_by(User.username).all(); active_commercials_count=User.query.filter_by(role="commercial",is_active_account=True).count(); commercial_names={u.id:u.username for u in commerciaux}; commercial_zones={u.id:u.zone for u in commerciaux}; filtered_query=_filtered_prospections_query(); filtered_visit_counts=dict(filtered_query.with_entities(Prospection.commercial_id,func.count(Prospection.id)).group_by(Prospection.commercial_id).all()); total_filtered_visits=sum(filtered_visit_counts.values()); performance=[]
-    for commercial_id in set(list(revenue_by_commercial.keys())+list(filtered_visit_counts.keys())):
-        name=commercial_names.get(commercial_id)
-        if name: performance.append({"username":name,"revenue":revenue_by_commercial.get(commercial_id,0),"visits":filtered_visit_counts.get(commercial_id,0)})
-    top_revenue=sorted(performance,key=lambda p:p["revenue"],reverse=True)[:10]; top_prospections=[{"username":commercial_names[cid],"prospections":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:10] if cid in commercial_names]; top_5_commerciaux=[{"username":commercial_names[cid],"zone":commercial_zones.get(cid),"nombre_visites":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:5] if cid in commercial_names]; page=request.args.get("page",1,type=int); pagination=filtered_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); kpis={"total_revenue":total_revenue,"current_month_revenue":current_month_revenue,"total_visits":total_filtered_visits,"active_commercials":active_commercials_count,"monthly_avg":(total_revenue/len(monthly_revenue_labels)) if monthly_revenue_labels else 0,"months_with_sales":len(monthly_revenue_labels),"total_sales_count":total_sales_count}; active_suppliers={slug:s for slug,s in SUPPLIERS.items() if not s.get("archived")}
-    establishments_by_prospection = _establishments_by_prospection(pagination.items)
-    for row in pagination.items:
-        establishment = establishments_by_prospection.get(row.id)
-        if establishment and establishment.casefold() not in row.structure.casefold():
-            row.structure = f"{row.structure} — {establishment}"
-    return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_5_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection)
+    try:
+        today=date.today(); revenue_by_month,revenue_by_division,revenue_by_commercial,current_month_by_division,total_revenue,total_sales_count,current_month_revenue=_aggregate_sales(); monthly_revenue_labels=sorted(revenue_by_month.keys()); monthly_revenue_data=[revenue_by_month[m] for m in monthly_revenue_labels]; division_kpis={}
+        for division in ("nasmedic","nasderm"):
+            monthly_target,annual_target=_division_targets(division,today); month_actual=current_month_by_division.get(division,0.0); annual_actual=_annual_revenue_for_division(division,today.year); month_target=float(monthly_target) if monthly_target is not None else None; year_target=float(annual_target) if annual_target is not None else None
+            division_kpis[division]={"month_actual":month_actual,"month_target":month_target,"month_pct":(month_actual/month_target*100) if month_target else None,"annual_actual":annual_actual,"annual_target":year_target,"annual_pct":(annual_actual/year_target*100) if year_target else None}
+        commerciaux=User.query.filter_by(role="commercial").order_by(User.username).all(); active_commercials_count=User.query.filter_by(role="commercial",is_active_account=True).count(); commercial_names={u.id:u.username for u in commerciaux}; commercial_zones={u.id:u.zone for u in commerciaux}; filtered_query=_filtered_prospections_query(); filtered_visit_counts=dict(filtered_query.with_entities(Prospection.commercial_id,func.count(Prospection.id)).group_by(Prospection.commercial_id).all()); total_filtered_visits=sum(filtered_visit_counts.values()); performance=[]
+        for commercial_id in set(list(revenue_by_commercial.keys())+list(filtered_visit_counts.keys())):
+            name=commercial_names.get(commercial_id)
+            if name: performance.append({"username":name,"revenue":revenue_by_commercial.get(commercial_id,0),"visits":filtered_visit_counts.get(commercial_id,0)})
+        top_revenue=sorted(performance,key=lambda p:p["revenue"],reverse=True)[:10]; top_prospections=[{"username":commercial_names[cid],"prospections":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:10] if cid in commercial_names]; top_5_commerciaux=[{"username":commercial_names[cid],"zone":commercial_zones.get(cid),"nombre_visites":count} for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:5] if cid in commercial_names]; page=request.args.get("page",1,type=int); pagination=filtered_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); kpis={"total_revenue":total_revenue,"current_month_revenue":current_month_revenue,"total_visits":total_filtered_visits,"active_commercials":active_commercials_count,"monthly_avg":(total_revenue/len(monthly_revenue_labels)) if monthly_revenue_labels else 0,"months_with_sales":len(monthly_revenue_labels),"total_sales_count":total_sales_count}; active_suppliers={slug:s for slug,s in SUPPLIERS.items() if not s.get("archived")}; establishments_by_prospection=_establishments_by_prospection(pagination.items)
+        return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_5_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection)
+    except Exception:
+        db.session.rollback(); logger.exception("Erreur lors du chargement du tableau de bord Direction"); flash("Le tableau de bord est momentanément indisponible.","error"); return render_template("500.html"),500
 
 @admin_bp.route("/commercial_dashboard/<username>",methods=["GET","POST"])
 @login_required
@@ -131,8 +111,7 @@ def commercial_detail(username):
     if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
     commercial=User.query.filter_by(username=username).first()
     if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
-    prospection_query=Prospection.query.filter(Prospection.commercial_id==commercial.id); total_real_prospections=prospection_query.count(); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False)
-    form=DownloadExcelForm()
+    prospection_query=Prospection.query.filter(Prospection.commercial_id==commercial.id); total_real_prospections=prospection_query.count(); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
     try: sales_months=_commercial_sales_visualization(commercial.project,commercial.id)
     except Exception: db.session.rollback(); logger.exception("Erreur CA commercial %s",username); sales_months=[]; flash("Les données de CA ne sont momentanément pas disponibles.","error")
     if request.method=="POST" and "download_excel" in request.form:
