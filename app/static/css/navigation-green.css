@@ -1,8 +1,16 @@
-/* NASORA CRM — green navigation background */
+/* NASORA CRM — green navigation theme and readable typography */
 .site-nav{background:#1f6b45!important}
-.site-nav a,.site-nav button{color:#ffffff!important}
-.site-nav .nav-icon{color:#ffffff!important}
-.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2f7d55!important;color:#ffffff!important}
-.site-nav .nav-divider{background:rgba(255,255,255,.35)!important}
-.site-nav .nav-logout-form button{background:#ffffff!important;color:#1f6b45!important;border-color:rgba(255,255,255,.65)!important}
-.site-nav .nav-logout-form button .nav-icon{color:#1f6b45!important}
+.site-nav a,.site-nav button{color:#fff!important;font-family:Inter,sans-serif!important;font-weight:700!important;text-shadow:0 1px 1px rgba(0,0,0,.18)!important}
+.site-nav .nav-icon{color:#fff!important;font-size:1rem!important;font-weight:700!important;text-shadow:0 1px 2px rgba(0,0,0,.25)!important}
+.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2f7d55!important;color:#fff!important}
+.site-nav .nav-divider{background:rgba(255,255,255,.45)!important}
+.site-nav .nav-logout-form button{background:#fff!important;color:#1f6b45!important;border-color:rgba(255,255,255,.8)!important;text-shadow:none!important}
+.site-nav .nav-logout-form button .nav-icon{color:#1f6b45!important;text-shadow:none!important}
+@media (min-width:901px){
+.site-nav a,.site-nav button{font-size:.78rem!important;letter-spacing:.01em!important}
+.site-nav .nav-icon{width:23px!important;height:23px!important;min-width:23px!important;min-height:23px!important;font-size:.95rem!important}
+}
+@media (min-width:901px) and (max-width:1200px){
+.site-nav a,.site-nav button{font-size:.70rem!important;padding-left:6px!important;padding-right:6px!important}
+.site-nav .nav-icon{width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;font-size:.88rem!important}
+}
