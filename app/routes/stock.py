@@ -23,13 +23,28 @@ def _monday(value):
     return value - timedelta(days=value.weekday())
 
 
-def _products():
-    names = set()
-    for slugs in DIVISION_SUPPLIERS.values():
-        for slug in slugs:
-            model = SUPPLIERS[slug]["product_model"]
-            names.update(name for (name,) in model.query.filter_by(is_active=True).with_entities(model.name).all())
-    return sorted(names, key=str.casefold)
+def _allowed_divisions():
+    if current_user.role == "admin":
+        return ("nasmedic", "nasderm")
+    division = (current_user.project or "").strip().lower()
+    return (division,) if division in DIVISION_SUPPLIERS else ()
+
+
+def _catalog():
+    catalog = []
+    for division in _allowed_divisions():
+        for slug in DIVISION_SUPPLIERS.get(division, []):
+            supplier = SUPPLIERS[slug]
+            model = supplier["product_model"]
+            for product in model.query.filter_by(is_active=True).order_by(model.name).all():
+                catalog.append(
+                    {
+                        "division": division,
+                        "laboratory": supplier["label"],
+                        "product": product.name,
+                    }
+                )
+    return catalog
 
 
 def _status(quantity):
@@ -41,8 +56,16 @@ def _status(quantity):
 
 
 def _snapshot(week_start):
-    entries = StockEntry.query.filter_by(week_start=week_start).all()
-    return {(entry.wholesaler, entry.product_name): entry for entry in entries}
+    query = StockEntry.query.filter_by(week_start=week_start)
+    allowed = _allowed_divisions()
+    if allowed:
+        query = query.filter(StockEntry.division.in_(allowed))
+    else:
+        query = query.filter(sa.false())
+    return {
+        (entry.division, entry.laboratory, entry.wholesaler, entry.product_name): entry
+        for entry in query.all()
+    }
 
 
 @stock_bp.route("/disponible")
@@ -54,18 +77,29 @@ def available():
     except ValueError:
         selected = date.today()
     week_start = _monday(selected)
-    products = _products()
     entries = _snapshot(week_start)
-    rows = []
-    for product in products:
+    grouped = {}
+    for item in _catalog():
+        key = (item["division"], item["laboratory"])
+        row = grouped.setdefault(
+            key,
+            {"division": item["division"], "laboratory": item["laboratory"], "products": []},
+        )
         stocks = {}
         for slug in WHOLESALERS:
-            entry = entries.get((slug, product))
+            entry = entries.get((item["division"], item["laboratory"], slug, item["product"]))
             quantity = entry.quantity if entry else 0
             status, label = _status(quantity)
             stocks[slug] = {"quantity": quantity, "status": status, "label": label}
-        rows.append({"product": product, "stocks": stocks})
-    return render_template("stock_available.html", rows=rows, week_start=week_start, wholesalers=WHOLESALERS, is_admin=current_user.role == "admin")
+        row["products"].append({"product": item["product"], "stocks": stocks})
+    return render_template(
+        "stock_available.html",
+        groups=list(grouped.values()),
+        week_start=week_start,
+        wholesalers=WHOLESALERS,
+        is_admin=current_user.role == "admin",
+        allowed_divisions=_allowed_divisions(),
+    )
 
 
 @stock_bp.route("/saisie", methods=["GET", "POST"])
@@ -77,20 +111,33 @@ def entry():
         week_start = _monday(date.fromisoformat(raw_week)) if raw_week else _monday(date.today())
     except ValueError:
         week_start = _monday(date.today())
-    products = _products()
+    catalog = _catalog()
     if request.method == "POST":
         try:
             validate_csrf(request.form.get("csrf_token"))
-            for product in products:
+            for item in catalog:
                 for slug in WHOLESALERS:
-                    key = f"stock__{slug}__{product}"
+                    key = f"stock__{item['division']}__{item['laboratory']}__{slug}__{item['product']}"
                     raw = request.form.get(key, "0").strip()
                     quantity = max(0, int(raw or 0))
-                    item = StockEntry.query.filter_by(week_start=week_start, wholesaler=slug, product_name=product).first()
-                    if item is None:
-                        item = StockEntry(week_start=week_start, wholesaler=slug, product_name=product, created_by_id=current_user.id)
-                        db.session.add(item)
-                    item.quantity = quantity
+                    stock = StockEntry.query.filter_by(
+                        week_start=week_start,
+                        division=item["division"],
+                        laboratory=item["laboratory"],
+                        wholesaler=slug,
+                        product_name=item["product"],
+                    ).first()
+                    if stock is None:
+                        stock = StockEntry(
+                            week_start=week_start,
+                            division=item["division"],
+                            laboratory=item["laboratory"],
+                            wholesaler=slug,
+                            product_name=item["product"],
+                            created_by_id=current_user.id,
+                        )
+                        db.session.add(stock)
+                    stock.quantity = quantity
             db.session.commit()
             flash(f"Stocks de la semaine du {week_start.strftime('%d/%m/%Y')} enregistrés.", "success")
             return redirect(url_for("stock.available", week=week_start.isoformat()))
@@ -101,12 +148,19 @@ def entry():
             db.session.rollback()
             flash("Impossible d'enregistrer les stocks pour le moment.", "error")
     entries = _snapshot(week_start)
-    return render_template("stock_entry.html", products=products, wholesalers=WHOLESALERS, week_start=week_start, entries=entries)
+    return render_template("stock_entry.html", catalog=catalog, wholesalers=WHOLESALERS, week_start=week_start, entries=entries)
 
 
 @stock_bp.route("/historique")
 @login_required
 @roles_required("admin")
 def history():
-    weeks = [week for (week,) in db.session.query(StockEntry.week_start).distinct().order_by(StockEntry.week_start.desc()).all()]
+    weeks = [
+        week
+        for (week,) in db.session.query(StockEntry.week_start)
+        .filter(StockEntry.division.in_(_allowed_divisions()))
+        .distinct()
+        .order_by(StockEntry.week_start.desc())
+        .all()
+    ]
     return render_template("stock_history.html", weeks=weeks, wholesalers=WHOLESALERS)
