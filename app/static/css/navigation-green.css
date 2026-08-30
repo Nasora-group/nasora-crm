@@ -1,0 +1,8 @@
+/* NASORA CRM — green navigation background */
+.site-nav{background:#1f6b45!important}
+.site-nav a,.site-nav button{color:#ffffff!important}
+.site-nav .nav-icon{color:#ffffff!important}
+.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2f7d55!important;color:#ffffff!important}
+.site-nav .nav-divider{background:rgba(255,255,255,.35)!important}
+.site-nav .nav-logout-form button{background:#ffffff!important;color:#1f6b45!important;border-color:rgba(255,255,255,.65)!important}
+.site-nav .nav-logout-form button .nav-icon{color:#1f6b45!important}
