@@ -17,6 +17,7 @@ def create_app(config_object=None):
     _configure_logging(app)
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
     from app.models import User
+    from app.models_stock import StockEntry  # noqa: F401
     @login_manager.user_loader
     def load_user(user_id):
         user = db.session.get(User, int(user_id))
@@ -54,7 +55,8 @@ def _register_blueprints(app):
     from app.routes.clients_export import clients_export_bp
     from app.routes.prospections_export import prospections_export_bp
     from app.routes.vm_cockpit import vm_cockpit_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp)
+    from app.routes.stock import stock_bp
+    app.register_blueprint(auth_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
