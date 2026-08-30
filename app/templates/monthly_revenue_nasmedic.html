@@ -1,34 +1,24 @@
 {% extends "base.html" %}
 
+{% block title %}CA NASMEDIC — NASORA CRM{% endblock %}
 {% block content %}
-<h1>Chiffre d'Affaire Mensuel (NASMEDIC)</h1>
-
-{% include "_division_kpis.html" %}
-
-<table class="responsive-table">
-    <thead>
-        <tr>
-            <th>Mois</th>
-            {% for slug, label, sale_model, product_model in suppliers %}
-            <th>{{ label }} (€)</th>
-            {% endfor %}
-            <th>Total (€)</th>
-            <th>Détails</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in rows %}
-        <tr>
-            <td>{{ row.month }}</td>
-            {% for slug, label, sale_model, product_model in suppliers %}
-            <td>{{ "%.2f"|format(row.amounts.get(slug, 0)) }}</td>
-            {% endfor %}
-            <td>{{ "%.2f"|format(row.total) }}</td>
-            <td><a href="{{ url_for('revenue.monthly_revenue_detail_nasmedic', month=row.month) }}">Voir les détails</a></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="{{ suppliers|length + 3 }}">Aucune vente enregistrée pour le moment.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="page-hero crm-page-hero">
+  <span class="hero-eyebrow">NASORA CRM · PERFORMANCE</span>
+  <h1>CA mensuel · NASMEDIC</h1>
+  <p class="crm-subtitle">Suivi du chiffre d'affaires mensuel de la division NASMEDIC.</p>
+  <div class="dashboard-nav-actions">
+    <a href="{{ url_for('revenue.nasmedic_dashboard') }}" class="btn">NASMEDIC</a>
+    <a href="{{ url_for('revenue.nasderm_dashboard') }}" class="btn btn-outline">NASDERM</a>
+    <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn">CA NASMEDIC</a>
+    <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn btn-outline">CA NASDERM</a>
+  </div>
+</div>
+<section class="crm-surface" style="padding:20px;border-radius:16px;margin-bottom:20px;">
+  <div class="section-heading"><div><span class="crm-overline">INDICATEURS</span><h2>Performance NASMEDIC</h2></div></div>
+  {% include "_division_kpis.html" %}
+</section>
+<section class="crm-surface crm-table-card">
+<table class="responsive-table"><thead><tr><th>Mois</th>{% for slug, label, sale_model, product_model in suppliers %}<th>{{ label }} (€)</th>{% endfor %}<th>Total (€)</th><th>Détails</th></tr></thead>
+<tbody>{% for row in rows %}<tr><td><strong>{{ row.month }}</strong></td>{% for slug, label, sale_model, product_model in suppliers %}<td>{{ "%.2f"|format(row.amounts.get(slug, 0)) }} €</td>{% endfor %}<td><strong>{{ "%.2f"|format(row.total) }} €</strong></td><td><a class="btn btn-outline" href="{{ url_for('revenue.monthly_revenue_detail_nasmedic', month=row.month) }}">Voir les détails</a></td></tr>{% else %}<tr><td colspan="{{ suppliers|length + 3 }}">Aucune vente enregistrée pour le moment.</td></tr>{% endfor %}</tbody></table>
+</section>
 {% endblock %}
