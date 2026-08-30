@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Historique des stocks — NASORA CRM{% endblock %}
+{% block content %}
+<div class="crm-page-hero"><span class="crm-overline">ADMINISTRATION · STOCKS</span><h1>Historique hebdomadaire</h1><p class="crm-subtitle">Consultez les semaines de stocks déjà renseignées.</p></div>
+<div class="crm-table-card"><table class="responsive-table"><thead><tr><th>Semaine</th><th>Action</th></tr></thead><tbody>{% for week in weeks %}<tr><td><strong>Semaine du {{ week.strftime('%d/%m/%Y') }}</strong></td><td><a class="btn btn-outline" href="{{ url_for('stock.available', week=week.isoformat()) }}">Voir les stocks</a></td></tr>{% else %}<tr><td colspan="2">Aucun historique disponible.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
