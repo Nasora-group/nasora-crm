@@ -6,7 +6,6 @@ contains two generated weeks; week 3 repeats week 1 and week 4 repeats week 2.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 import random
