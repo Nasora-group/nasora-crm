@@ -1,103 +1,11 @@
 {% extends "base.html" %}
-
+{% block title %}NASMEDIC — NASORA CRM{% endblock %}
 {% block content %}
-<h1>Tableau de Bord NASMEDIC</h1>
-
-{% include "_division_kpis.html" %}
-
-<div class="sales-links">
-    {% for slug, label, sale_model, product_model in suppliers %}
-    <a href="{{ url_for('sales.' ~ slug) }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes {{ label }}</a>
-    {% endfor %}
-</div>
-
-<div class="chart-grid">
-    <div class="chart-card">
-        <h3>Évolution du CA mensuel total</h3>
-        {% if monthly_revenue_labels and monthly_revenue_data %}
-            <canvas id="salesChart"></canvas>
-        {% else %}
-            <p>Aucune donnée disponible pour afficher le graphique.</p>
-        {% endif %}
-    </div>
-</div>
-
-<script>
-Chart.defaults.font.family = "'Inter', sans-serif";
-Chart.defaults.color = '#5b6b5e';
-{% if monthly_revenue_labels and monthly_revenue_data %}
-new Chart(document.getElementById('salesChart'), {
-    type: 'line',
-    data: {
-        labels: {{ monthly_revenue_labels | tojson }},
-        datasets: [{
-            label: "CA mensuel total ({{ suppliers | map(attribute=1) | join(' + ') }})",
-            data: {{ monthly_revenue_data | tojson }},
-            backgroundColor: 'rgba(107, 142, 78, 0.15)',
-            borderColor: '#4a6741',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-        }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-});
-{% endif %}
-</script>
-
-<h2>Classement des Commerciaux (Top 5)</h2>
-{% if top_5_commerciaux %}
-    <table class="responsive-table">
-        <thead><tr><th>Rang</th><th>Nom</th><th>Zone</th><th>Nombre de Visites</th></tr></thead>
-        <tbody>
-            {% for commercial in top_5_commerciaux %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ commercial.username }}</td>
-                <td>{{ commercial.zone }}</td>
-                <td>{{ commercial.nombre_visites }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Aucun commercial trouvé.</p>
-{% endif %}
-
-<h2>Liste des Commerciaux (NASMEDIC)</h2>
-<table class="responsive-table">
-    <thead><tr><th>Nom</th><th>Zone</th></tr></thead>
-    <tbody>
-        {% for commercial in commerciaux %}
-        <tr>
-            <td><a href="{{ url_for('admin.commercial_detail', username=commercial.username) }}">{{ commercial.username }}</a></td>
-            <td>{{ commercial.zone }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<h2>Tableau Récapitulatif</h2>
-<table class="responsive-table">
-    <thead>
-        <tr>
-            <th>Date</th><th>Nom Client</th><th>Spécialité</th><th>Structure</th>
-            <th>Téléphone</th><th>Profils Prospect</th><th>Produits Présentés</th><th>Produits Prescrits</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for prospection in prospections %}
-        <tr>
-            <td>{{ prospection.date.strftime('%Y-%m-%d') }}</td>
-            <td>{{ prospection.nom_client }}</td>
-            <td>{{ prospection.specialite }}</td>
-            <td>{{ prospection.structure }}</td>
-            <td>{{ prospection.telephone }}</td>
-            <td>{{ prospection.profils_prospect }}</td>
-            <td>{{ prospection.produits_presentes }}</td>
-            <td>{{ prospection.produits_prescrits }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="page-hero crm-page-hero"><span class="hero-eyebrow">NASORA CRM · DIVISION</span><h1>Tableau de bord NASMEDIC</h1><p class="crm-subtitle">Pilotage des ventes, de l'activité terrain et de l'équipe NASMEDIC.</p><div class="dashboard-nav-actions"><a href="{{ url_for('revenue.nasmedic_dashboard') }}" class="btn">NASMEDIC</a><a href="{{ url_for('revenue.nasderm_dashboard') }}" class="btn btn-outline">NASDERM</a><a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn btn-outline">CA NASMEDIC</a><a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn btn-outline">CA NASDERM</a></div></div>
+<section class="crm-surface" style="padding:20px;border-radius:16px;margin-bottom:20px"><div class="section-heading"><div><span class="crm-overline">PERFORMANCE</span><h2>Indicateurs NASMEDIC</h2></div></div>{% include "_division_kpis.html" %}</section>
+<section class="crm-surface" style="padding:20px;border-radius:16px;margin-bottom:20px"><div class="section-heading"><div><span class="crm-overline">VENTES</span><h2>Accès ventes</h2></div></div><div class="quick-actions">{% for slug,label,sale_model,product_model in suppliers %}<a href="{{ url_for('sales.' ~ slug) }}" class="btn">{{ 'Saisir' if current_user.role == 'admin' else 'Voir' }} les ventes {{ label }}</a>{% endfor %}</div></section>
+<section class="chart-card crm-surface"><h3>📈 Évolution du CA mensuel</h3>{% if monthly_revenue_labels and monthly_revenue_data %}<canvas id="salesChart"></canvas>{% else %}<p>Aucune donnée disponible pour afficher le graphique.</p>{% endif %}</section>
+<div class="section-heading crm-section-title"><div><span class="crm-overline">ÉQUIPE</span><h2>Classement des commerciaux</h2></div></div>{% if top_5_commerciaux %}<div class="crm-table-card"><table class="responsive-table"><thead><tr><th>Rang</th><th>Nom</th><th>Zone</th><th>Prospections</th></tr></thead><tbody>{% for commercial in top_5_commerciaux %}<tr><td>{{ loop.index }}</td><td><strong>{{ commercial.username }}</strong></td><td>{{ commercial.zone }}</td><td>{{ commercial.nombre_visites }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p>Aucun commercial trouvé.</p>{% endif %}
+<div class="section-heading crm-section-title"><div><span class="crm-overline">PROSPECTIONS</span><h2>Tableau récapitulatif</h2></div></div><div class="crm-table-card"><table class="responsive-table"><thead><tr><th>Date</th><th>Nom Client</th><th>Spécialité</th><th>Structure</th><th>Téléphone</th><th>Profil</th><th>Produits présentés</th><th>Produits prescrits</th></tr></thead><tbody>{% for p in prospections %}<tr><td>{{ p.date.strftime('%Y-%m-%d') }}</td><td><strong>{{ p.nom_client }}</strong></td><td>{{ p.specialite }}</td><td>{{ p.structure }}</td><td>{{ p.telephone }}</td><td>{{ p.profils_prospect }}</td><td>{{ p.produits_presentes }}</td><td>{{ p.produits_prescrits }}</td></tr>{% else %}<tr><td colspan="8">Aucune prospection.</td></tr>{% endfor %}</tbody></table></div>
+<script>Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.color='#5b6b5e';{% if monthly_revenue_labels and monthly_revenue_data %}new Chart(document.getElementById('salesChart'),{type:'line',data:{labels:{{ monthly_revenue_labels|tojson }},datasets:[{label:'CA mensuel total',data:{{ monthly_revenue_data|tojson }},backgroundColor:'rgba(107,142,78,.15)',borderColor:'#4a6741',borderWidth:2,tension:.3,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});{% endif %}</script>
 {% endblock %}
