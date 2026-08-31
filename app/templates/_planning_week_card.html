@@ -13,7 +13,7 @@
         {% endif %}
     </div>
     <div class="planning-days-row">
-        {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
+        {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi')] %}
         {% set entries = planning[jour] | planning_entries %}
         <div class="planning-day-col">
             <div class="planning-day-col-label">{{ jour_label }}</div>
