@@ -1,0 +1,1 @@
+Planning business rule: commercial planning is generated only from Monday through Friday. Saturday and Sunday are never generated as working days. The four-week cycle remains S1, S2, S1, S2.

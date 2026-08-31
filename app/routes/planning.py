@@ -11,6 +11,9 @@ from app.utils import roles_required, encode_planning_slot, decode_planning_slot
 
 planning_bp = Blueprint("planning", __name__)
 
+WORKING_DAYS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
+NON_WORKING_DAYS = ("samedi", "dimanche")
+
 
 def _build_creneaux_from_form():
     """Lit les structures sélectionnées + noms précis postés dans le formulaire et les encode en JSON, un champ par jour."""
@@ -200,11 +203,13 @@ def admin_planning_generate(commercial_id):
 
     generated_entries = [planning_entries_for_week(week) for week in weeks]
     complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
+    empty_slot = encode_planning_slot([])
     for cycle_index, cycle_date in enumerate(dates):
-        fields = {
-            jour: encode_planning_slot(entries)
-            for jour, entries in complete_cycle[cycle_index].items()
-        }
+        # Hard business rule: generated planning contains visits only Monday-Friday.
+        # Saturday and Sunday are explicitly written empty so no redistribution or
+        # legacy/default value can populate them later.
+        fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
+        fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
         db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
 
     db.session.commit()
