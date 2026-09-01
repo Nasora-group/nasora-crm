@@ -56,6 +56,30 @@ def _prospection_specialites(query):
     return [{"label": (specialite or "Non renseignée"), "count": int(count or 0)} for specialite, count in rows]
 
 
+def _prospection_activity_stats(query):
+    """Calcule les KPI terrain à partir de la même requête filtrée."""
+    rows=query.order_by(Prospection.date.asc(), Prospection.id.asc()).all()
+    professional_keys=set(); structure_keys=set(); zone_counts={}; daily_counts={}
+    for row in rows:
+        phone="".join(ch for ch in (row.telephone or "") if ch.isdigit())
+        professional_key=f"phone:{phone}" if phone else f"name:{(row.nom_client or '').strip().casefold()}"
+        if professional_key.strip() not in {"phone:", "name:"}: professional_keys.add(professional_key)
+        structure=(row.establishment or row.structure or "").strip().casefold()
+        if structure: structure_keys.add(structure)
+        commercial=getattr(row,"commercial",None)
+        zone=(getattr(commercial,"zone",None) or "Non renseignée").strip()
+        zone_counts[zone]=zone_counts.get(zone,0)+1
+        if row.date:
+            key=row.date.isoformat()
+            daily_counts[key]=daily_counts.get(key,0)+1
+    return {
+        "professionnels": len(professional_keys),
+        "structures": len(structure_keys),
+        "zones": [{"label":k,"count":v} for k,v in sorted(zone_counts.items(), key=lambda item:(-item[1], item[0]))],
+        "daily": [{"label":k,"count":v} for k,v in sorted(daily_counts.items())],
+    }
+
+
 def _establishments_by_prospection(rows):
     establishments={}; clients=Client.query.all(); by_phone={}; by_owner_name={}
     for client in clients:
@@ -95,19 +119,6 @@ def _annual_revenue_for_division(division,year):
         value=db.session.query(func.coalesce(func.sum(amount_expr),0)).filter(sale_model.project==division,func.extract("year",sale_model.date)==year).scalar(); total+=float(value or 0)
     return total
 
-
-def _commercial_sales_visualization(division,commercial_id):
-    monthly={}; details_by_month={}
-    for supplier in SUPPLIERS.values():
-        if supplier.get("archived") or supplier.get("division")!=division: continue
-        sale_model=supplier["sale_model"]; supplier_label=supplier.get("label",sale_model.__name__)
-        rows=db.session.query(sale_model).filter(sale_model.project==division).filter(sale_model.commercial_id==commercial_id).order_by(sale_model.date.desc()).all()
-        for sale in rows:
-            if not sale.date: continue
-            month_key=sale.date.strftime("%Y-%m"); quantity=sale.quantity or 0; price=float(sale.price or 0); amount=float(quantity)*price; product=getattr(getattr(sale,"product",None),"name",None) or "Produit"
-            monthly[month_key]=monthly.get(month_key,0.0)+amount; details_by_month.setdefault(month_key,[]).append({"date":sale.date,"supplier":supplier_label,"product":product,"quantity":quantity,"price":price,"amount":amount})
-    return [{"key":key,"label":key,"amount":monthly[key],"details":details_by_month.get(key,[])} for key in sorted(monthly.keys(),reverse=True)]
-
 @admin_bp.route("/admin_dashboard",methods=["GET"])
 @login_required
 @roles_required("admin")
@@ -140,16 +151,15 @@ def commercial_detail(username):
     if date_end: prospection_query=prospection_query.filter(Prospection.date<=date_end)
     if specialite: prospection_query=prospection_query.filter(Prospection.specialite==specialite)
     if zone: prospection_query=prospection_query.filter(User.zone==zone)
-    total_real_prospections=prospection_query.count(); specialites_stats=_prospection_specialites(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
-    try: sales_months=_commercial_sales_visualization(commercial.project,commercial.id)
-    except Exception: db.session.rollback(); logger.exception("Erreur CA commercial %s",username); sales_months=[]; flash("Les données de CA ne sont momentanément pas disponibles.","error")
+    total_real_prospections=prospection_query.count(); specialites_stats=_prospection_specialites(prospection_query); activity_stats=_prospection_activity_stats(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
+    available_zones=[z for (z,) in User.query.filter(User.role=="commercial",User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
     if request.method=="POST" and "download_excel" in request.form:
         try:
             data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Nom de la structure":p.establishment or "","Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
             with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
             output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
-    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,form=form,delete_form=CSRFOnlyForm(),sales_months=sales_months,specialites_stats=specialites_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone)
+    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones)
 
 @admin_bp.route("/export_pdf/<username>")
 @login_required
