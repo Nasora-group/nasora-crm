@@ -5,12 +5,55 @@ Prospection est la source de vérité pour les KPI de visites ; ClientVisit est
 le miroir CRM utilisé pour l'historique professionnel.
 """
 
+import re
+import unicodedata
 from datetime import timedelta
 
 from sqlalchemy import func
 
 from app.extensions import db
 from app.models import Prospection
+
+
+def _normalize_text(value):
+    value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", value.lower()).strip())
+
+
+def _normalize_phone(value):
+    return re.sub(r"\D", "", value or "")
+
+
+def professional_key(prospection):
+    """Clé stable pour compter les professionnels distincts.
+
+    Un téléphone valide reste prioritaire. Lorsque le téléphone est absent ou
+    manifestement artificiel, on utilise nom + structure afin d'éviter de
+    fusionner des professionnels homonymes travaillant dans des structures
+    différentes. Le nom seul n'est utilisé qu'en dernier recours.
+    """
+    raw_phone = (prospection.telephone or "").strip().lower()
+    phone = _normalize_phone(raw_phone)
+    invalid_phone = (
+        not raw_phone
+        or raw_phone in {"na", "n/a", "nc", "non renseigne", "non renseigné", "0"}
+        or len(phone) < 6
+        or len(set(phone)) == 1
+    )
+    if not invalid_phone:
+        return f"phone:{phone}"
+
+    name = _normalize_text(prospection.nom_client)
+    structure = _normalize_text(
+        getattr(prospection, "establishment", None)
+        or getattr(prospection, "structure", None)
+        or ""
+    )
+    if name and structure:
+        return f"name_structure:{name}|{structure}"
+    if name:
+        return f"name:{name}"
+    return None
 
 
 def unique_visit_subquery(start_date=None, end_date=None, commercial_id=None):
