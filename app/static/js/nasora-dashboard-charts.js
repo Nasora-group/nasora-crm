@@ -31,6 +31,8 @@
     Chart.defaults.plugins.tooltip.padding = 10;
     Chart.defaults.plugins.tooltip.cornerRadius = 8;
     Chart.defaults.animation.duration = 0;
+    Chart.defaults.animation.animateRotate = false;
+    Chart.defaults.animation.animateScale = false;
 
     if (Chart.defaults.scale) {
       Chart.defaults.scale.grid.color = C.grid;
@@ -47,29 +49,31 @@
         var datasets = chart.data && chart.data.datasets ? chart.data.datasets : [];
         datasets.forEach(function (dataset, index) {
           var color = palette[index % palette.length];
-          if (chart.config.type === 'doughnut' || chart.config.type === 'pie' || chart.config.type === 'polarArea') {
-            if (!Array.isArray(dataset.backgroundColor)) {
+          var type = chart.config.type;
+
+          if (type === 'doughnut' || type === 'pie' || type === 'polarArea') {
+            if (!dataset.backgroundColor) {
               dataset.backgroundColor = palette.slice(0, Math.max(2, chart.data.labels ? chart.data.labels.length : 2));
             }
-            dataset.borderColor = '#ffffff';
-            dataset.borderWidth = 2;
-          } else if (chart.config.type === 'line') {
-            dataset.borderColor = color;
-            dataset.backgroundColor = index === 0 ? C.primarySoft : C.secondarySoft;
-            dataset.pointBackgroundColor = color;
-            dataset.pointBorderColor = '#ffffff';
-            dataset.pointBorderWidth = 2;
-            dataset.pointRadius = 3;
-            dataset.pointHoverRadius = 5;
-            dataset.borderWidth = 2.5;
-            dataset.tension = 0.28;
-            dataset.fill = index === 0;
+            if (!dataset.borderColor) dataset.borderColor = '#ffffff';
+            if (dataset.borderWidth == null) dataset.borderWidth = 2;
+          } else if (type === 'line') {
+            if (!dataset.borderColor) dataset.borderColor = color;
+            if (!dataset.backgroundColor) dataset.backgroundColor = index === 0 ? C.primarySoft : C.secondarySoft;
+            if (!dataset.pointBackgroundColor) dataset.pointBackgroundColor = dataset.borderColor;
+            if (!dataset.pointBorderColor) dataset.pointBorderColor = '#ffffff';
+            if (dataset.pointBorderWidth == null) dataset.pointBorderWidth = 2;
+            if (dataset.pointRadius == null) dataset.pointRadius = 3;
+            if (dataset.pointHoverRadius == null) dataset.pointHoverRadius = 5;
+            if (dataset.borderWidth == null) dataset.borderWidth = 2.5;
+            if (dataset.tension == null) dataset.tension = 0.28;
+            if (dataset.fill == null) dataset.fill = index === 0;
           } else {
-            dataset.backgroundColor = color;
-            dataset.borderColor = color;
-            dataset.borderWidth = 0;
-            dataset.borderRadius = 5;
-            dataset.borderSkipped = false;
+            if (!dataset.backgroundColor) dataset.backgroundColor = color;
+            if (!dataset.borderColor) dataset.borderColor = color;
+            if (dataset.borderWidth == null) dataset.borderWidth = 0;
+            if (dataset.borderRadius == null) dataset.borderRadius = 5;
+            if (dataset.borderSkipped == null) dataset.borderSkipped = false;
           }
         });
       }
