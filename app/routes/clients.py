@@ -57,45 +57,30 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
-    """Retourne uniquement les professionnels encore rattachés à une
-    prospection active du commercial connecté.
-
-    Les anciennes Client/ClientVisit restent conservées pour l'historique
-    Admin, mais ne doivent plus réapparaître dans "Mes professionnels" après
-    suppression de la dernière prospection correspondante.
-    """
+    """Retourne uniquement les professionnels du portefeuille du commercial connecté."""
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
     if not active_prospections:
         return Client.query.filter(False)
 
-    # Les clients issus des prospections récentes peuvent être retrouvés par
-    # téléphone ou, lorsque le téléphone est absent/non renseigné, par nom
-    # normalisé. On construit les IDs côté application pour conserver la
-    # compatibilité avec les anciennes données et éviter une comparaison SQL
-    # fragile sur les accents/espaces.
-    clients = Client.query.all()
+    # Ne jamais exposer à un commercial la fiche attribuée à un autre commercial,
+    # même si le téléphone ou le nom correspond à une ancienne prospection.
+    clients = Client.query.filter(
+        or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)
+    ).all()
     active_ids = set()
 
     for prospect in active_prospections:
         prospect_phone = _normalize_phone(prospect.telephone)
         prospect_name = _normalize_text(prospect.nom_client)
 
-        # Priorité au téléphone lorsqu'il est réellement renseigné.
         if prospect_phone and len(prospect_phone) >= 6:
             for client in clients:
                 if _normalize_phone(client.phone) == prospect_phone:
                     active_ids.add(client.id)
 
-        # Le nom permet de retrouver les anciennes fiches sans téléphone.
         if prospect_name:
-            same_name = [
-                client for client in clients
-                if _normalize_text(client.name) == prospect_name
-            ]
-            for client in same_name:
-                # On privilégie la fiche du commercial, mais on garde aussi
-                # les fiches non attribuées correspondant à la prospection.
-                if client.owner_id in (None, current_user.id):
+            for client in clients:
+                if _normalize_text(client.name) == prospect_name:
                     active_ids.add(client.id)
 
     if not active_ids:
@@ -111,12 +96,7 @@ def _commercial_can_access_client(client):
 
 
 def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
-    """Détecte uniquement une visite strictement identique.
-
-    Deux visites le même jour chez le même professionnel restent autorisées
-    si leur contenu diffère. Cela évite de casser les visites légitimes tout en
-    empêchant un double enregistrement identique.
-    """
+    """Détecte uniquement une visite strictement identique."""
     return ClientVisit.query.filter_by(
         client_id=client_id,
         commercial_id=commercial_id,
@@ -211,29 +191,11 @@ def new_visit(client_id):
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
 
-            # Protection des nouvelles données : on bloque seulement un
-            # enregistrement strictement identique. Des visites distinctes
-            # chez le même professionnel le même jour restent possibles.
-            if _exact_visit_exists(
-                client.id,
-                current_user.id,
-                visit_date_obj,
-                products_presented,
-                products_prescribed,
-                report,
-            ):
+            if _exact_visit_exists(client.id, current_user.id, visit_date_obj, products_presented, products_prescribed, report):
                 flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=client.id))
 
-            v = ClientVisit(
-                client_id=client.id,
-                commercial_id=current_user.id,
-                date=visit_date_obj,
-                products_presented=products_presented,
-                products_prescribed=products_prescribed,
-                report=report,
-                next_visit=date.fromisoformat(next_visit) if next_visit else None,
-            )
+            v = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=date.fromisoformat(next_visit) if next_visit else None)
             db.session.add(v)
             client.last_visit = v.date
             client.next_visit = v.next_visit
