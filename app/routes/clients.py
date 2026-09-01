@@ -233,6 +233,10 @@ def new_visit(client_id):
             visit_date = request.form.get("date") or date.today().isoformat()
             next_visit = request.form.get("next_visit") or None
             visit_date_obj = date.fromisoformat(visit_date)
+            next_visit_obj = date.fromisoformat(next_visit) if next_visit else None
+            if next_visit_obj and next_visit_obj < visit_date_obj:
+                flash("La prochaine visite ne peut pas être antérieure à la date de la visite.", "warning")
+                return render_template("client_visit_form.html", client=client, today=visit_date)
             products_presented = request.form.get("products_presented", "").strip() or None
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
@@ -244,10 +248,12 @@ def new_visit(client_id):
             if _exact_visit_exists(client.id, attributed_commercial_id, visit_date_obj, products_presented, products_prescribed, report):
                 flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=client.id))
-            v = ClientVisit(client_id=client.id, commercial_id=attributed_commercial_id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=date.fromisoformat(next_visit) if next_visit else None)
+            v = ClientVisit(client_id=client.id, commercial_id=attributed_commercial_id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=next_visit_obj)
             db.session.add(v)
-            client.last_visit = v.date
-            client.next_visit = v.next_visit
+            previous_last_visit = client.last_visit
+            if previous_last_visit is None or v.date >= previous_last_visit:
+                client.last_visit = v.date
+                client.next_visit = v.next_visit
             db.session.commit()
             flash("Visite enregistrée avec succès.", "success")
             return redirect(url_for("clients.client_detail", client_id=client.id))
