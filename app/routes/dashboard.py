@@ -148,20 +148,12 @@ def _sync_professional_from_prospection(prospection, establishment=None, existin
         visit.products_prescribed = pr
         visit.report = report
 
-    # Keep the persisted summary aligned with the most recent prospection/visit.
-    latest_prospection_date = db.session.query(func.max(Prospection.date)).filter(
-        Prospection.commercial_id == prospection.commercial_id,
-    ).scalar()
+    # Recalcul uniquement à partir des visites de ce professionnel.
     latest_client_visit_date = db.session.query(func.max(ClientVisit.date)).filter(
         ClientVisit.client_id == client.id,
         ClientVisit.is_duplicate.is_(False),
     ).scalar()
-    latest_date = max(
-        [d for d in (latest_prospection_date, latest_client_visit_date) if d is not None],
-        default=None,
-    )
-    if latest_date is not None:
-        client.last_visit = latest_date
+    client.last_visit = latest_client_visit_date or prospection.date
 
 
 def _sync_professional_from_existing_prospection(prospection, establishment=None, existing_client=None, previous_payload=None):
@@ -291,7 +283,6 @@ def edit_prospection(prospection_id):
         form.nom_structure.data = (prospection.establishment or (client.establishment if client else "")) or ""
     if form.validate_on_submit():
         try:
-            # Capture the original CRM visit before changing the prospection.
             linked_visit = ClientVisit.query.filter_by(
                 prospection_id=prospection.id,
                 is_duplicate=False,
