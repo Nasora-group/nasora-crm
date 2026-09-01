@@ -1,0 +1,38 @@
+:root{
+  --nasora-chart-primary:#167a56;
+  --nasora-chart-primary-soft:rgba(22,122,86,.14);
+  --nasora-chart-secondary:#3b7f72;
+  --nasora-chart-secondary-soft:rgba(59,127,114,.14);
+  --nasora-chart-accent:#8b6f47;
+  --nasora-chart-warning:#c98518;
+  --nasora-chart-danger:#b94a48;
+  --nasora-chart-grid:rgba(31,51,44,.09);
+  --nasora-chart-text:#24352f;
+}
+
+/* Couche visuelle commune aux graphiques : sobre, stable et lisible. */
+.chart-card{
+  position:relative;
+  background:linear-gradient(180deg,#fff 0%,#fbfdfc 100%);
+  border:1px solid rgba(22,122,86,.10);
+  box-shadow:0 8px 24px rgba(24,50,42,.06);
+}
+.chart-card h3{color:var(--nasora-chart-text);font-weight:700;letter-spacing:-.01em}
+.chart-card canvas{image-rendering:auto}
+
+/* KPI : accents discrets, sans effet multicolore. */
+.kpi-card{border-color:rgba(22,122,86,.10)}
+.kpi-icon{color:var(--nasora-chart-primary);background:var(--nasora-chart-primary-soft)}
+
+/* Progression : la couleur est réservée à l'état métier. */
+.direction-progress .progress-track{background:#e9efec}
+.direction-progress .progress-track>span{background:var(--nasora-chart-primary);transition:none!important}
+.status-good{color:var(--nasora-chart-primary)!important}
+.status-warning{color:var(--nasora-chart-warning)!important}
+
+/* Badges de classement cohérents avec les graphiques. */
+.ranking-status.good{background:rgba(22,122,86,.11);color:#126247}
+.ranking-status.warning{background:rgba(201,133,24,.12);color:#9a6512}
+.ranking-status.bad{background:rgba(185,74,72,.11);color:#9b3f3d}
+
+@media (prefers-reduced-motion:reduce){.direction-progress .progress-track>span{transition:none!important}}
