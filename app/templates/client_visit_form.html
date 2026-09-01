@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Nouvelle visite — {{ client.name }}{% endblock %}
+{% block title %}{{ 'Modifier la visite' if visit else 'Nouvelle visite' }} — {{ client.name }}{% endblock %}
 {% block content %}
 <div class="page-hero">
     <div>
-        <h1>Nouvelle visite</h1>
+        <h1>{{ 'Modifier la visite' if visit else 'Nouvelle visite' }}</h1>
         <p>{{ client.name }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p>
     </div>
     <div class="hero-actions">
@@ -21,27 +21,27 @@
         </div>
         <div>
             <label>Prochaine visite</label>
-            <input class="form-input" type="date" name="next_visit">
+            <input class="form-input" type="date" name="next_visit" value="{{ visit.next_visit.isoformat() if visit and visit.next_visit else '' }}">
         </div>
     </div>
 
     <div>
         <label>Produits présentés</label>
-        <textarea class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM..."></textarea>
+        <textarea class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM...">{{ visit.products_presented if visit else '' }}</textarea>
     </div>
 
     <div>
         <label>Produits prescrits / demandés</label>
-        <textarea class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes..."></textarea>
+        <textarea class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes...">{{ visit.products_prescribed if visit else '' }}</textarea>
     </div>
 
     <div>
         <label>Compte-rendu de visite</label>
-        <textarea class="form-input" name="report" rows="6" placeholder="Besoins, objections, concurrence, engagement, prochaine action..."></textarea>
+        <textarea class="form-input" name="report" rows="6" placeholder="Besoins, objections, concurrence, engagement, prochaine action...">{{ visit.report if visit else '' }}</textarea>
     </div>
 
     <div class="quick-actions">
-        <button class="btn" type="submit">✓ Enregistrer la visite</button>
+        <button class="btn" type="submit">✓ {{ 'Enregistrer les modifications' if visit else 'Enregistrer la visite' }}</button>
         <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">Annuler</a>
     </div>
 </form>
