@@ -55,6 +55,11 @@ def _track_changed_client_visits(session, flush_context, instances):
     """Collect clients whose visit rows are about to change."""
     client_ids = set()
     changed = list(session.new) + list(session.dirty) + list(session.deleted)
+    prospection_changes = {
+        prospection.id
+        for prospection in list(session.dirty) + list(session.deleted)
+        if prospection.__class__.__name__ == "Prospection" and prospection.id is not None
+    }
     for visit in changed:
         if not isinstance(visit, ClientVisit):
             continue
@@ -65,6 +70,9 @@ def _track_changed_client_visits(session, flush_context, instances):
             for old_id in history.deleted:
                 if old_id is not None:
                     client_ids.add(old_id)
+        if visit.prospection_id is not None and visit.prospection_id not in prospection_changes:
+            if visit in session.deleted or visit in session.dirty:
+                raise ValueError("Une visite liée à une prospection doit être gérée depuis la prospection.")
         if visit in session.deleted:
             continue
         client = session.get(Client, visit.client_id) if visit.client_id is not None else None
