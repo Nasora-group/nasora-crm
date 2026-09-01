@@ -25,6 +25,7 @@
 {% if current_user.is_authenticated %}
 {% if current_user.role == 'admin' %}
 <a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span>Tableau de bord</a>
+<a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span>Activité terrain</a>
 <a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span>Extraction prospections</a>
 <a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span>Plannings</a>
 <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span>Base de données NASORA</a>
