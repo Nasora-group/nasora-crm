@@ -1,49 +1,77 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>{{ 'Nouvelle référence' if mode == 'create' else 'Modifier ' ~ product.name }} — {{ supplier.label }}</h1>
+<style>
+.product-form-page{max-width:820px;margin:0 auto;padding:8px 0 30px}
+.product-form-hero{padding:24px 26px;margin-bottom:18px;border-radius:18px;background:linear-gradient(135deg,#0f766e,#15803d);color:#fff;box-shadow:0 12px 28px rgba(15,118,110,.16)}
+.product-form-hero h1{margin:0 0 6px;font-size:clamp(1.25rem,2vw,1.7rem);line-height:1.2}
+.product-form-hero p{margin:0;color:rgba(255,255,255,.84);font-size:.88rem}
+.product-form-card{background:var(--surface,#fff);border:1px solid rgba(15,118,110,.1);border-radius:18px;padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+.product-form-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+.product-field{margin-bottom:18px}.product-field.full{grid-column:1/-1}
+.product-field .form-label{display:block;margin-bottom:7px;font-size:.8rem;font-weight:750;color:var(--ink)}
+.product-field .form-input{width:100%;box-sizing:border-box;border:1px solid #dce5df;border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font-size:.88rem;outline:none;transition:.2s ease}
+.product-field .form-input:focus{border-color:#16803d;box-shadow:0 0 0 3px rgba(22,128,61,.1)}
+.product-status{display:flex;align-items:center;gap:9px;padding:12px 14px;border:1px solid #e3ebe5;border-radius:11px;background:#f8fbf9}
+.product-status input{width:16px;height:16px;accent-color:#16803d}.product-status label{margin:0;font-size:.84rem;font-weight:700;color:var(--ink)}
+.product-errors{margin:0 0 18px;padding:12px 15px;border-radius:11px;background:#fff4f2;border:1px solid #ffd7d0;color:#a33a2b;font-size:.82rem}
+.product-errors ul{margin:0;padding-left:18px}
+.product-actions{display:flex;gap:9px;align-items:center;margin-top:4px;padding-top:18px;border-top:1px solid #edf1ee}
+.product-actions .btn,.product-actions .btn-submit{padding:9px 14px;border-radius:10px;font-size:.8rem;font-weight:750}
+@media(max-width:650px){.product-form-card{padding:18px}.product-form-grid{grid-template-columns:1fr;gap:0}.product-field.full{grid-column:auto}.product-actions{flex-direction:column;align-items:stretch}.product-actions>*{width:100%;box-sizing:border-box;text-align:center}.product-form-hero{padding:20px}}
+</style>
 
-<div class="form-container">
-    <form method="POST">
-        {{ form.hidden_tag() }}
+<div class="product-form-page">
+    <section class="product-form-hero">
+        <h1>{{ 'Nouvelle référence' if mode == 'create' else 'Modifier ' ~ product.name }} — {{ supplier.label }}</h1>
+        <p>Renseignez les informations de la référence et son statut de disponibilité.</p>
+    </section>
 
-        <div class="form-group">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-input") }}
-        </div>
+    <section class="product-form-card">
+        <form method="POST">
+            {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.reference.label(class="form-label") }}
-            {{ form.reference(class="form-input", placeholder="ex : NP-2026-014 (facultatif)") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.default_price.label(class="form-label") }}
-            {{ form.default_price(class="form-input", step="0.01") }}
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">
-                {{ form.is_active() }} {{ form.is_active.label.text }}
-            </label>
-        </div>
-
-        {% if form.errors %}
-            <div class="flash flash-error">
-                <ul style="margin:0; padding-left:18px;">
-                    {% for field, errors in form.errors.items() %}
-                        {% for error in errors %}
-                            <li>{{ form[field].label.text }} : {{ error }}</li>
+            {% if form.errors %}
+                <div class="product-errors">
+                    <ul>
+                        {% for field, errors in form.errors.items() %}
+                            {% for error in errors %}
+                                <li>{{ form[field].label.text }} : {{ error }}</li>
+                            {% endfor %}
                         {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
 
-        <div class="form-group">
-            {{ form.submit(class="btn-submit") }}
-            <a href="{{ url_for('products.list_products', slug=slug) }}" class="btn btn-outline">Annuler</a>
-        </div>
-    </form>
+            <div class="product-form-grid">
+                <div class="product-field">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-input") }}
+                </div>
+
+                <div class="product-field">
+                    {{ form.reference.label(class="form-label") }}
+                    {{ form.reference(class="form-input", placeholder="ex : NP-2026-014 (facultatif)") }}
+                </div>
+
+                <div class="product-field">
+                    {{ form.default_price.label(class="form-label") }}
+                    {{ form.default_price(class="form-input", step="0.01") }}
+                </div>
+
+                <div class="product-field full">
+                    <div class="product-status">
+                        {{ form.is_active() }}
+                        {{ form.is_active.label(class="form-label") }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-actions">
+                {{ form.submit(class="btn-submit") }}
+                <a href="{{ url_for('products.list_products', slug=slug) }}" class="btn btn-outline">Annuler</a>
+            </div>
+        </form>
+    </section>
 </div>
 {% endblock %}
