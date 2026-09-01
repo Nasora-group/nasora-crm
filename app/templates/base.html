@@ -52,7 +52,8 @@
 {% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span>Connexion</a>{% endif %}</div></nav>
 <div class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
-{% if messages %}<div class="flash-messages">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endif %}</div>{% endwith %}
+{% if messages %}<div class="flash-messages">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
 {% block content %}{% endblock %}
 </div>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
