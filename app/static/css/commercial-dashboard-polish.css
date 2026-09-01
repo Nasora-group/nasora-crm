@@ -1,0 +1,36 @@
+/* NASORA CRM — Fiche commerciale : finition visuelle */
+.commercial-sheet{max-width:1280px!important;padding:18px 0 48px!important}
+.commercial-sheet .crm-page-hero{position:relative;overflow:hidden;padding:24px 28px!important;margin-bottom:18px;border:1px solid var(--nasora-border);border-radius:16px;background:linear-gradient(135deg,var(--nasora-green-pale),#fff 72%);box-shadow:var(--nasora-shadow)}
+.commercial-sheet .crm-page-hero:after{content:"";position:absolute;right:-42px;top:-58px;width:150px;height:150px;border-radius:50%;background:var(--nasora-green-soft);opacity:.75}
+.commercial-sheet .crm-page-hero h1{position:relative;z-index:1;font-size:1.7rem!important;letter-spacing:-.025em}
+.commercial-sheet .crm-page-hero .crm-overline{position:relative;z-index:1;color:var(--nasora-green)!important;font-size:.68rem;font-weight:800;letter-spacing:.12em}
+.commercial-sheet .summary-card{border-radius:14px!important}
+.commercial-sheet .section-heading{gap:14px}
+.commercial-sheet .filter-form{grid-template-columns:repeat(4,minmax(150px,1fr)) auto!important;gap:10px!important;padding:2px!important}
+.commercial-sheet .filter-form label{font-size:.72rem!important;color:var(--nasora-muted)!important;text-transform:uppercase;letter-spacing:.035em}
+.commercial-sheet .filter-form .form-input{min-height:40px!important}
+.commercial-sheet .quick-actions{gap:7px!important}
+.commercial-sheet .crm-kpi-grid{gap:12px!important;margin-top:16px!important}
+.commercial-sheet .crm-kpi-grid .kpi-card{position:relative;overflow:hidden;padding:17px!important;border-radius:14px!important}
+.commercial-sheet .crm-kpi-grid .kpi-card:after{content:"";position:absolute;right:-22px;bottom:-30px;width:82px;height:82px;border-radius:50%;background:var(--nasora-green-soft);opacity:.8}
+.commercial-sheet .crm-kpi-grid .kpi-icon,.commercial-sheet .crm-kpi-grid .kpi-body{position:relative;z-index:1}
+.commercial-sheet .crm-kpi-grid .kpi-value{font-size:1.55rem!important}
+.commercial-sheet .crm-kpi-grid .kpi-sub{font-size:.72rem!important}
+.commercial-sheet .crm-chart-grid{gap:14px!important;margin-top:14px!important}
+.commercial-sheet .chart-card{border-radius:14px!important}
+.commercial-sheet .chart-box{height:300px!important}
+.commercial-sheet .objective-item{border:1px solid var(--nasora-border)!important;background:var(--nasora-green-pale)!important}
+.commercial-sheet .objective-number{color:var(--nasora-ink)!important;font-size:1.55rem!important}
+.commercial-sheet .crm-table-card{overflow:hidden;border-radius:14px!important;border:1px solid var(--nasora-border)!important;box-shadow:var(--nasora-shadow)!important}
+.commercial-sheet .table-scroll{border-radius:0!important}
+.commercial-sheet table{min-width:1120px!important}
+.commercial-sheet tbody tr{transition:background-color .14s ease}
+.commercial-sheet td[data-label="Date"] strong{color:var(--nasora-green-dark)}
+.commercial-sheet td[data-label="Professionnel"]{font-weight:700;color:var(--nasora-ink)}
+.commercial-sheet td[data-label="Téléphone"]{font-variant-numeric:tabular-nums;white-space:nowrap}
+.commercial-sheet .crm-pagination{gap:7px!important}
+.commercial-sheet .crm-pagination .btn{min-width:110px}
+.commercial-sheet .empty-state{border:1px dashed var(--nasora-border-strong)!important;text-align:center;padding:34px!important}
+@media(max-width:1050px){.commercial-sheet{padding-left:12px!important;padding-right:12px!important}.commercial-sheet .filter-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}.commercial-sheet .quick-actions{grid-column:1/-1}.commercial-sheet .crm-chart-grid{grid-template-columns:1fr!important}}
+@media(max-width:760px){.commercial-sheet{padding-left:8px!important;padding-right:8px!important}.commercial-sheet .crm-page-hero{padding:20px!important}.commercial-sheet .crm-page-hero h1{font-size:1.4rem!important}.commercial-sheet .filter-form{grid-template-columns:1fr!important}.commercial-sheet .quick-actions{grid-column:auto}.commercial-sheet .quick-actions .btn{flex:1}.commercial-sheet .crm-kpi-grid{grid-template-columns:1fr!important}.commercial-sheet .chart-box{height:260px!important}.commercial-sheet .objective-grid{grid-template-columns:1fr!important}.commercial-sheet .crm-pagination{flex-wrap:wrap}.commercial-sheet .crm-pagination .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){.commercial-sheet tbody tr{transition:none}}
