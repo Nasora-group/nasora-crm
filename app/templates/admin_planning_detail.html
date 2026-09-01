@@ -1,14 +1,22 @@
 {% extends "base.html" %}
-
+{% block title %}Planning de {{ commercial.username }} — NASORA CRM{% endblock %}
 {% block content %}
-<h1>Planning de {{ commercial.username }}</h1>
-<a href="{{ url_for('planning.admin_plannings') }}" class="btn btn-outline">&laquo; Retour à la liste</a>
+<div class="planning-page planning-detail-page">
+    <div class="planning-detail-head">
+        <div>
+            <span class="planning-kicker">NASORA CRM · PLANNING</span>
+            <h1>Planning de {{ commercial.username }}</h1>
+            <p>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</p>
+        </div>
+        <a href="{{ url_for('planning.admin_plannings') }}" class="btn btn-outline">← Retour aux plannings</a>
+    </div>
 
-{% if plannings %}
-    {% for planning in plannings %}
-        {% include "_planning_week_card.html" %}
-    {% endfor %}
-{% else %}
-    <p>Aucun planning saisi pour ce commercial.</p>
-{% endif %}
+    {% if plannings %}
+        {% for planning in plannings %}
+            {% include "_planning_week_card.html" %}
+        {% endfor %}
+    {% else %}
+        <section class="planning-empty-card"><div class="planning-empty-icon">□</div><h2>Aucun planning</h2><p>Aucun planning saisi pour ce commercial.</p><a href="{{ url_for('planning.admin_plannings') }}" class="btn">Générer un cycle</a></section>
+    {% endif %}
+</div>
 {% endblock %}
