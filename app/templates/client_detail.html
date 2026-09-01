@@ -1,12 +1,57 @@
 {% extends "base.html" %}
 {% block title %}{{ client.name }} — NASORA CRM{% endblock %}
 {% block content %}
-<div class="page-hero"><div><h1>{{ client.name }}</h1><p>{{ client.specialty or 'Professionnel de santé' }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p></div><div class="hero-actions"><a class="btn" href="{{ url_for('clients.new_visit', client_id=client.id) }}">+ Nouvelle visite</a><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">← Base clients</a></div></div>
-<div class="dashboard-summary"><div class="summary-card"><h3>👤 Fiche client</h3><p><strong>Zone :</strong> {{ client.zone or '—' }}<br><strong>Téléphone :</strong> {{ client.phone or '—' }}<br><strong>Email :</strong> {{ client.email or '—' }}<br><strong>Adresse :</strong> {{ client.address or '—' }}<br><strong>Commercial :</strong> {{ client.owner.username if client.owner else 'Non attribué' }}</p></div><div class="summary-card"><h3>⭐ Potentiel</h3><p style="font-size:1.6rem">{% for _ in range(client.potential) %}★{% endfor %}</p><p><strong>Dernière visite :</strong> {{ client.last_visit.strftime('%d/%m/%Y') if client.last_visit else 'Aucune' }}<br><strong>Prochaine visite :</strong> {{ client.next_visit.strftime('%d/%m/%Y') if client.next_visit else 'À planifier' }}</p></div></div>
-<div class="section-heading"><h2>📊 Activité commerciale</h2><span class="muted">Historique CRM + anciennes prospections</span></div>
-<div class="kpi-grid"><div class="kpi-card"><div class="kpi-icon">✓</div><div class="kpi-body"><span class="kpi-label">Visites CRM</span><span class="kpi-value">{{ visits|length }}</span><span class="kpi-sub">Nouvelles visites</span></div></div><div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><span class="kpi-label">Produits présentés</span><span class="kpi-value">{{ presented_count }}</span><span class="kpi-sub">Mentions enregistrées</span></div></div><div class="kpi-card"><div class="kpi-icon">📝</div><div class="kpi-body"><span class="kpi-label">Prescriptions</span><span class="kpi-value">{{ prescribed_count }}</span><span class="kpi-sub">Mentions enregistrées</span></div></div></div>
-<div class="chart-card"><h3>📝 Notes commerciales</h3><p>{{ client.notes or 'Aucune note enregistrée.' }}</p></div>
-<div class="section-heading"><h2>🕘 Visites CRM</h2></div>
-<div class="responsive-table"><table><thead><tr><th>Date</th><th>Commercial</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte-rendu</th><th>Prochaine visite</th></tr></thead><tbody>{% for visit in visits %}<tr><td><strong>{{ visit.date.strftime('%d/%m/%Y') }}</strong></td><td>{{ visit.commercial.username }}</td><td>{{ visit.products_presented or '—' }}</td><td>{{ visit.products_prescribed or '—' }}</td><td>{{ visit.report or '—' }}</td><td>{{ visit.next_visit.strftime('%d/%m/%Y') if visit.next_visit else '—' }}</td></tr>{% else %}<tr><td colspan="6">Aucune visite CRM enregistrée. <a href="{{ url_for('clients.new_visit', client_id=client.id) }}">Enregistrer la première visite</a>.</td></tr>{% endfor %}</tbody></table></div>
-<div class="section-heading"><h2>🗂️ Historique des anciennes prospections</h2></div><div class="responsive-table"><table><thead><tr><th>Date</th><th>Commercial</th><th>Spécialité</th><th>Produits présentés</th><th>Produits prescrits</th><th>Profil</th></tr></thead><tbody>{% for visit in history %}<tr><td>{{ visit.date.strftime('%d/%m/%Y') }}</td><td>{{ visit.commercial.username }}</td><td>{{ visit.specialite }}</td><td>{{ visit.produits_presentes or '—' }}</td><td>{{ visit.produits_prescrits or '—' }}</td><td>{{ visit.profils_prospect or '—' }}</td></tr>{% else %}<tr><td colspan="6">Aucune ancienne prospection liée.</td></tr>{% endfor %}</tbody></table></div>
+<style>
+.client-detail-page{max-width:1220px;margin:0 auto}.client-detail-hero{margin-bottom:18px}.client-detail-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--nasora-green)}.client-detail-title{display:flex;align-items:center;gap:12px}.client-detail-avatar{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-size:1rem;font-weight:900}.client-detail-title h1{margin:0;font-size:1.7rem;letter-spacing:-.025em}.client-detail-hero p{margin:5px 0 0;color:var(--nasora-muted);font-size:.86rem}.client-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.client-info-grid{display:grid;grid-template-columns:1.35fr .85fr;gap:14px;margin-bottom:16px}.client-info-card{background:var(--nasora-white);border:1px solid var(--nasora-border);border-radius:15px;padding:18px;box-shadow:0 7px 24px rgba(15,23,42,.045)}.client-info-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.client-info-icon{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900}.client-info-head h2{margin:0;font-size:.98rem}.client-info-grid-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.client-detail-label{display:block;margin-bottom:3px;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:var(--nasora-muted)}.client-detail-value{font-size:.84rem;font-weight:700;word-break:break-word}.client-potential{font-size:1.35rem;color:#a15c00;letter-spacing:2px}.client-date-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--nasora-border);font-size:.8rem;line-height:1.8}.client-note{margin-top:12px;padding:12px 13px;border-radius:10px;background:#f8faf9;color:var(--nasora-text);font-size:.82rem;line-height:1.55;white-space:pre-wrap}.client-section{margin-top:18px}.client-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:10px}.client-section-head h2{margin:0;font-size:1.05rem}.client-section-head .muted{font-size:.76rem}.client-kpis{margin-bottom:16px}.client-table-wrap{overflow-x:auto}.client-table{min-width:900px}.client-table th{white-space:nowrap}.client-table td{vertical-align:top;font-size:.8rem}.client-table td:first-child{white-space:nowrap}.client-empty{text-align:center!important;padding:32px!important;color:var(--nasora-muted)}.client-history{margin-top:18px}.client-history .client-table{min-width:980px}@media(max-width:850px){.client-info-grid{grid-template-columns:1fr}}@media(max-width:600px){.client-detail-title h1{font-size:1.35rem}.client-detail-avatar{width:40px;height:40px}.client-detail-actions{width:100%}.client-detail-actions .btn{flex:1}.client-info-grid-data{grid-template-columns:1fr}.client-info-card{padding:15px}.client-section-head{align-items:flex-start;flex-direction:column}}
+</style>
+
+<div class="client-detail-page">
+  <div class="page-hero client-detail-hero">
+    <div>
+      <div class="client-detail-kicker">◈ Base NASORA</div>
+      <div class="client-detail-title"><span class="client-detail-avatar">{{ client.name[:1]|upper }}</span><div><h1>{{ client.name }}</h1><p>{{ client.specialty or 'Professionnel de santé' }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p></div></div>
+    </div>
+    <div class="hero-actions client-detail-actions"><a class="btn" href="{{ url_for('clients.new_visit', client_id=client.id) }}">＋ Nouvelle visite</a><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">← Base clients</a></div>
+  </div>
+
+  <div class="client-info-grid">
+    <div class="client-info-card">
+      <div class="client-info-head"><span class="client-info-icon">👤</span><h2>Informations professionnelles</h2></div>
+      <div class="client-info-grid-data">
+        <div><span class="client-detail-label">Structure</span><span class="client-detail-value">{{ client.structure }}</span></div>
+        <div><span class="client-detail-label">Établissement</span><span class="client-detail-value">{{ client.establishment or '—' }}</span></div>
+        <div><span class="client-detail-label">Zone</span><span class="client-detail-value">{{ client.zone or '—' }}</span></div>
+        <div><span class="client-detail-label">Commercial</span><span class="client-detail-value">{{ client.owner.username if client.owner else 'Non attribué' }}</span></div>
+        <div><span class="client-detail-label">Téléphone</span><span class="client-detail-value">{{ client.phone or '—' }}</span></div>
+        <div><span class="client-detail-label">Email</span><span class="client-detail-value">{{ client.email or '—' }}</span></div>
+        <div class="full"><span class="client-detail-label">Adresse</span><span class="client-detail-value">{{ client.address or '—' }}</span></div>
+      </div>
+      {% if client.notes %}<div class="client-note">{{ client.notes }}</div>{% endif %}
+    </div>
+    <div class="client-info-card">
+      <div class="client-info-head"><span class="client-info-icon">★</span><h2>Potentiel & suivi</h2></div>
+      <div class="client-potential" aria-label="Potentiel {{ client.potential }} sur 5">{% for _ in range(client.potential) %}★{% endfor %}</div>
+      <div class="client-date-list"><strong>Dernière visite :</strong> {{ client.last_visit.strftime('%d/%m/%Y') if client.last_visit else 'Aucune' }}<br><strong>Prochaine visite :</strong> {{ client.next_visit.strftime('%d/%m/%Y') if client.next_visit else 'À planifier' }}</div>
+    </div>
+  </div>
+
+  <div class="client-section">
+    <div class="client-section-head"><div><h2>📊 Activité commerciale</h2><span class="muted">Historique CRM et anciennes prospections</span></div></div>
+    <div class="kpi-grid client-kpis">
+      <div class="kpi-card"><div class="kpi-icon">✓</div><div class="kpi-body"><span class="kpi-label">Visites CRM</span><span class="kpi-value">{{ visits|length }}</span><span class="kpi-sub">Nouvelles visites</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><span class="kpi-label">Produits présentés</span><span class="kpi-value">{{ presented_count }}</span><span class="kpi-sub">Mentions enregistrées</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon">📝</div><div class="kpi-body"><span class="kpi-label">Prescriptions</span><span class="kpi-value">{{ prescribed_count }}</span><span class="kpi-sub">Mentions enregistrées</span></div></div>
+    </div>
+  </div>
+
+  <div class="client-section">
+    <div class="client-section-head"><div><h2>🕘 Visites CRM</h2><span class="muted">Suivi récent du professionnel</span></div><a class="btn btn-outline" href="{{ url_for('clients.new_visit', client_id=client.id) }}">＋ Ajouter</a></div>
+    <div class="panel client-table-wrap"><table class="client-table"><thead><tr><th>Date</th><th>Commercial</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte-rendu</th><th>Prochaine visite</th></tr></thead><tbody>{% for visit in visits %}<tr><td><strong>{{ visit.date.strftime('%d/%m/%Y') }}</strong></td><td>{{ visit.commercial.username }}</td><td>{{ visit.products_presented or '—' }}</td><td>{{ visit.products_prescribed or '—' }}</td><td>{{ visit.report or '—' }}</td><td>{{ visit.next_visit.strftime('%d/%m/%Y') if visit.next_visit else '—' }}</td></tr>{% else %}<tr><td colspan="6" class="client-empty">Aucune visite CRM enregistrée. <a href="{{ url_for('clients.new_visit', client_id=client.id) }}">Enregistrer la première visite</a>.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+
+  <div class="client-section client-history">
+    <div class="client-section-head"><div><h2>🗂️ Anciennes prospections</h2><span class="muted">Historique rattaché à cette fiche</span></div></div>
+    <div class="panel client-table-wrap"><table class="client-table"><thead><tr><th>Date</th><th>Commercial</th><th>Spécialité</th><th>Produits présentés</th><th>Produits prescrits</th><th>Profil</th></tr></thead><tbody>{% for visit in history %}<tr><td>{{ visit.date.strftime('%d/%m/%Y') }}</td><td>{{ visit.commercial.username }}</td><td>{{ visit.specialite }}</td><td>{{ visit.produits_presentes or '—' }}</td><td>{{ visit.produits_prescrits or '—' }}</td><td>{{ visit.profils_prospect or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="client-empty">Aucune ancienne prospection liée.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
 {% endblock %}
