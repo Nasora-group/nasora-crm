@@ -1,45 +1,46 @@
 {% extends "base.html" %}
-
+{% block title %}Plannings — NASORA CRM{% endblock %}
 {% block content %}
-<h1>Plannings des commerciaux</h1>
+<div class="planning-page">
+    <section class="planning-hero">
+        <div>
+            <span class="planning-kicker">NASORA CRM · ORGANISATION</span>
+            <h1>Plannings des commerciaux</h1>
+            <p>Générez et consultez les cycles de visites sur les jours ouvrés, du lundi au vendredi.</p>
+        </div>
+    </section>
 
-<div class="card" style="margin-bottom:1.5rem; padding:1rem;">
-    <h2>Génération intelligente — cycle de 4 semaines</h2>
-    <p style="margin-bottom:1rem;">
-        Le système génère deux semaines originales à partir des établissements
-        réellement saisis par le commercial, puis applique automatiquement
-        <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.
-    </p>
+    <section class="planning-info-card">
+        <div class="planning-info-icon">✦</div>
+        <div>
+            <h2>Génération intelligente · cycle de 4 semaines</h2>
+            <p>Le système génère deux semaines originales à partir des établissements réellement saisis par le commercial, puis applique automatiquement <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.</p>
+            <div class="planning-rules"><span>✓ Lundi → Vendredi</span><span>✓ S3 = S1</span><span>✓ S4 = S2</span><span>✓ Week-end exclu</span></div>
+        </div>
+    </section>
+
+    <section class="planning-section-head">
+        <div><h2>Équipe commerciale</h2><p>Choisissez une date de départ et le nombre de visites quotidiennes.</p></div>
+    </section>
+
+    <div class="planning-admin-list">
+    {% for commercial in commerciaux %}
+        <article class="planning-admin-card">
+            <div class="planning-commercial">
+                <div class="planning-avatar">{{ commercial.username[:1]|upper }}</div>
+                <div><strong>{{ commercial.username }}</strong><span>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</span></div>
+            </div>
+            <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" class="planning-generate-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label><span>Début du cycle</span><input type="date" name="start_date" required></label>
+                <label><span>Visites / jour</span><input type="number" name="visits_per_day" value="5" min="1" max="20" required></label>
+                <button type="submit" class="btn" onclick="return confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.');">Générer le cycle IA</button>
+            </form>
+            <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Voir le planning <span>→</span></a>
+        </article>
+    {% else %}
+        <div class="planning-empty">Aucun commercial disponible.</div>
+    {% endfor %}
+    </div>
 </div>
-
-<table class="responsive-table">
-    <thead>
-        <tr><th>Commercial</th><th>Division</th><th>Génération</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-        {% for commercial in commerciaux %}
-        <tr>
-            <td>{{ commercial.username }}</td>
-            <td>{{ commercial.project|upper }}</td>
-            <td>
-                <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label>
-                        Début
-                        <input type="date" name="start_date" required>
-                    </label>
-                    <label>
-                        Visites/jour
-                        <input type="number" name="visits_per_day" value="5" min="1" max="20" required>
-                    </label>
-                    <button type="submit" onclick="return confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.');">
-                        Générer le cycle IA
-                    </button>
-                </form>
-            </td>
-            <td><a href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Voir le planning</a></td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 {% endblock %}
