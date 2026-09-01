@@ -183,7 +183,11 @@ def test_prospection_cannot_attach_to_another_commercial_client(app):
         db.session.add(prospect)
         db.session.commit()
 
-        assert _find_client_for_prospection(prospect) is None
+        client = _find_client_for_prospection(prospect)
+        assert client is not None
+        assert client.id != foreign_client.id
+        assert client.owner_id == first.id
+        assert Client.query.filter_by(id=foreign_client.id, owner_id=second.id).one().phone == "775555555"
 
 
 def test_linked_visit_cannot_be_modified_or_deleted_directly(app):
