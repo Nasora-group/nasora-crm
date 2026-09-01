@@ -14,6 +14,7 @@ from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
 from app.models_clients import Client
 from app.utils import roles_required
+from app.visit_metrics import professional_key
 
 logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
@@ -68,9 +69,8 @@ def _prospection_activity_stats(query):
     rows=query.order_by(Prospection.date.asc(), Prospection.id.asc()).all()
     professional_keys=set(); structure_keys=set(); zone_counts={}; daily_counts={}
     for row in rows:
-        phone="".join(ch for ch in (row.telephone or "") if ch.isdigit())
-        professional_key=f"phone:{phone}" if phone else f"name:{(row.nom_client or '').strip().casefold()}"
-        if professional_key.strip() not in {"phone:", "name:"}: professional_keys.add(professional_key)
+        key=professional_key(row)
+        if key: professional_keys.add(key)
         structure=(row.establishment or row.structure or "").strip().casefold()
         if structure: structure_keys.add(structure)
         commercial=getattr(row,"commercial",None); zone=(getattr(commercial,"zone",None) or "Non renseignée").strip(); zone_counts[zone]=zone_counts.get(zone,0)+1
