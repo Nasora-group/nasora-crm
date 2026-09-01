@@ -1,69 +1,23 @@
 {% extends "base.html" %}
-
-{% block title %}Ventes {{ supplier.label }} - CRM NASORA-GROUP{% endblock %}
-
+{% block title %}Saisie des ventes — {{ supplier.label }}{% endblock %}
 {% block content %}
-<h1>Ventes {{ supplier.label }}</h1>
-
-{% if not read_only %}
-<div class="dashboard-links">
-    <a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Historique &amp; correction des ventes</a>
-</div>
-{% endif %}
-
-{% if read_only %}
-    <p class="read-only-banner">Mode consultation : seul l'administrateur peut saisir des ventes.</p>
-{% endif %}
-
+<div class="sales-page">
+<section class="sales-hero">
+  <div class="sales-hero-copy"><p class="sales-eyebrow">Gestion commerciale · Ventes</p><h1>{{ supplier.label }}</h1><p>Saisie des ventes et mise à jour des stocks grossistes depuis un écran unique.</p></div>
+  {% if not read_only %}<div class="sales-hero-actions"><a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Historique des ventes</a></div>{% endif %}
+</section>
+{% if read_only %}<div class="sales-readonly">Mode consultation : seul l'administrateur peut saisir des ventes.</div>{% endif %}
 <form method="POST">
-    {{ form.hidden_tag() }}
-
-    <div class="form-group">
-        {{ form.sale_date.label(class="form-label") }}
-        {{ form.sale_date(class="form-input", **{"required": true, "disabled": read_only}) }}
-    </div>
-
-    <table class="responsive-table">
-        <thead>
-            <tr>
-                <th>Produit</th>
-                <th>Prix HT (€)</th>
-                <th>Quantité vendue</th>
-                <th>Stock DUOPHARM</th>
-                <th>Stock UBIPHARM</th>
-                <th>Stock LABOREX</th>
-                <th>Stock SODIPHARM</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for product in products %}
-            <tr>
-                <td>{{ product.name }}</td>
-                <td>
-                    <input type="number" name="price_{{ product.id }}" value="{{ product.default_price }}" step="0.01" min="0" {% if read_only %}disabled{% endif %}>
-                </td>
-                <td>
-                    <input type="number" name="quantity_{{ product.id }}" min="0" value="0" {% if read_only %}disabled{% endif %}>
-                </td>
-                <td>
-                    <input type="number" name="stock_duopharm_{{ product.id }}" min="0" value="{{ product.stock_duopharm }}" {% if read_only %}disabled{% endif %}>
-                </td>
-                <td>
-                    <input type="number" name="stock_ubipharm_{{ product.id }}" min="0" value="{{ product.stock_ubipharm }}" {% if read_only %}disabled{% endif %}>
-                </td>
-                <td>
-                    <input type="number" name="stock_laborex_{{ product.id }}" min="0" value="{{ product.stock_laborex }}" {% if read_only %}disabled{% endif %}>
-                </td>
-                <td>
-                    <input type="number" name="stock_sodipharm_{{ product.id }}" min="0" value="{{ product.stock_sodipharm }}" {% if read_only %}disabled{% endif %}>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    {% if not read_only %}
-        <button type="submit" class="btn-submit">Enregistrer les ventes</button>
-    {% endif %}
+{{ form.hidden_tag() }}
+<div class="sales-date-card"><div><label for="sale_date">Date de saisie</label>{{ form.sale_date(class="form-input", required=true, disabled=read_only) }}</div><div class="sales-date-note">Les quantités à 0 ne créent aucune ligne de vente.</div></div>
+<div class="sales-table-card"><div class="sales-table-wrap"><table class="sales-table"><thead><tr><th>Produit</th><th>Prix HT</th><th>Qté vendue</th><th class="sales-stock-head">DUOPHARM</th><th class="sales-stock-head">UBIPHARM</th><th class="sales-stock-head">LABOREX</th><th class="sales-stock-head">SODIPHARM</th></tr></thead><tbody>
+{% for product in products %}<tr><td class="sales-product">{{ product.name }}</td><td><input class="sales-input" type="number" name="price_{{ product.id }}" value="{{ product.default_price }}" step="0.01" min="0" {% if read_only %}disabled{% endif %}></td><td><input class="sales-input" type="number" name="quantity_{{ product.id }}" min="0" value="0" {% if read_only %}disabled{% endif %}></td><td><input class="sales-input" type="number" name="stock_duopharm_{{ product.id }}" min="0" value="{{ product.stock_duopharm }}" {% if read_only %}disabled{% endif %}></td><td><input class="sales-input" type="number" name="stock_ubipharm_{{ product.id }}" min="0" value="{{ product.stock_ubipharm }}" {% if read_only %}disabled{% endif %}></td><td><input class="sales-input" type="number" name="stock_laborex_{{ product.id }}" min="0" value="{{ product.stock_laborex }}" {% if read_only %}disabled{% endif %}></td><td><input class="sales-input" type="number" name="stock_sodipharm_{{ product.id }}" min="0" value="{{ product.stock_sodipharm }}" {% if read_only %}disabled{% endif %}></td></tr>
+{% else %}<tr><td colspan="7" class="sales-empty">Aucun produit actif pour ce fournisseur.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% if not read_only %}<div class="sales-submit"><span class="sales-submit-note">Vérifiez la date, les quantités et les stocks avant validation.</span><button type="submit" class="btn-submit">Enregistrer les ventes</button></div>{% endif %}
 </form>
+</div>
+<style>
+.sales-page{display:flex;flex-direction:column;gap:22px}.sales-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 26px;border:1px solid #dfe8df;border-radius:18px;background:linear-gradient(135deg,#fff,#f3f8f1);box-shadow:0 8px 28px rgba(30,55,38,.07)}.sales-eyebrow{margin:0 0 5px;color:#6b8e4e;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.sales-hero h1{margin:0;font-size:1.65rem}.sales-hero p:not(.sales-eyebrow){margin:7px 0 0;color:#6c7971;font-size:.9rem}.sales-date-card,.sales-table-card{border:1px solid #dfe8df;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(30,55,38,.055)}.sales-date-card{padding:17px 20px;display:flex;align-items:end;justify-content:space-between;gap:18px}.sales-date-card label{display:block;margin-bottom:6px;color:#526158;font-size:.75rem;font-weight:800;text-transform:uppercase}.sales-date-card .form-input{min-width:210px}.sales-date-note,.sales-submit-note{color:#6b7870;font-size:.78rem}.sales-table-wrap{overflow:auto;border-radius:16px}.sales-table{width:100%;min-width:1050px;border-collapse:separate;border-spacing:0}.sales-table th{padding:12px 13px;background:#f0f5ee;color:#526158;font-size:.72rem;font-weight:800;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid #dfe8df}.sales-table td{padding:10px 13px;border-bottom:1px solid #edf1ed;color:#27342c;font-size:.82rem}.sales-table tbody tr:hover td{background:#fbfdfb}.sales-product{font-weight:750}.sales-input{width:105px;min-height:38px;padding:7px 9px;border:1px solid #d9e3d8;border-radius:8px;background:#fbfcfb;font:600 .82rem Inter,sans-serif;color:#253229;box-sizing:border-box}.sales-input:focus{border-color:#8baa78;background:#fff;outline:3px solid rgba(107,142,78,.15)}.sales-submit{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 18px;border:1px solid #dfe8df;border-radius:14px;background:#f7faf6}.sales-submit .btn-submit{margin:0;min-height:44px;padding:0 20px;border:0;border-radius:9px;background:linear-gradient(135deg,#3d6f49,#5f8348);color:#fff;font-weight:750;cursor:pointer}.sales-readonly{padding:12px 15px;border:1px solid #eadfbd;border-radius:11px;background:#fffaf0;color:#79653a;font-size:.82rem;font-weight:650}.sales-empty{text-align:center!important;padding:34px!important;color:#77847c!important}@media(max-width:800px){.sales-hero,.sales-date-card,.sales-submit{align-items:stretch;flex-direction:column}.sales-date-card .form-input{min-width:0;width:100%}.sales-hero h1{font-size:1.4rem}}
+</style>
 {% endblock %}

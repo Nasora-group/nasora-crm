@@ -1,99 +1,15 @@
 {% extends "base.html" %}
-
+{% block title %}Historique des ventes — {{ supplier.label }}{% endblock %}
 {% block content %}
-<h1>Historique des ventes — {{ supplier.label }}</h1>
-<p style="color:var(--ink-soft);">Consulte et corrige les ventes déjà saisies, mois par mois.</p>
-
-<div class="supplier-tabs">
-    {% for s_slug, s in suppliers.items() %}
-        {% if not s.get('archived') %}
-        <a href="{{ url_for('sales.sales_history', slug=s_slug) }}" class="{{ 'active' if s_slug == slug else '' }}">{{ s.label }}</a>
-        {% endif %}
-    {% endfor %}
+<div class="sales-page">
+<section class="sales-hero"><div class="sales-hero-copy"><p class="sales-eyebrow">Contrôle & extraction · Ventes</p><h1>Historique des ventes</h1><p>{{ supplier.label }} · Consultez, filtrez et corrigez les ventes enregistrées.</p></div><div class="sales-hero-actions"><a href="{{ url_for('sales.' ~ slug) }}" class="btn btn-outline">Nouvelle saisie</a></div></section>
+<div class="sales-tabs">{% for s_slug,s in suppliers.items() %}{% if not s.get('archived') %}<a href="{{ url_for('sales.sales_history', slug=s_slug) }}" class="{{ 'active' if s_slug == slug else '' }}">{{ s.label }}</a>{% endif %}{% endfor %}</div>
+<form method="GET" class="sales-filter-card"><div><label for="month">Période</label><select id="month" name="month" class="form-input" onchange="this.form.submit()"><option value="">Toutes les périodes</option>{% for m in available_months %}<option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></div><div class="sales-filter-actions">{% if selected_month %}<a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Réinitialiser</a>{% endif %}</div></form>
+<div class="sales-kpis"><div class="sales-kpi"><span class="sales-kpi-label">Ventes affichées</span><span class="sales-kpi-value">{{ total_count }}</span></div><div class="sales-kpi"><span class="sales-kpi-label">Montant {{ 'du mois' if selected_month else 'total' }}</span><span class="sales-kpi-value positive">{{ "%.2f"|format(total_amount) }} €</span></div></div>
+<div class="sales-table-card"><div class="sales-table-wrap"><table class="sales-table sales-history-table"><thead><tr><th>Date</th><th>Produit</th><th>Quantité</th><th>Prix HT</th><th>Total</th><th>Saisi par</th><th>Actions</th></tr></thead><tbody>{% for sale in sales %}<tr><td class="sales-date">{{ sale.date.strftime('%d/%m/%Y') }}</td><td class="sales-product">{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>{{ "%.2f"|format(sale.price) }} €</td><td class="sales-amount">{{ "%.2f"|format(sale.quantity * sale.price) }} €</td><td class="sales-user">{{ sale.commercial.username if sale.commercial else '—' }}</td><td><div class="sales-actions"><a href="{{ url_for('sales.edit_sale', slug=slug, sale_id=sale.id) }}" class="btn btn-outline">Modifier</a><form method="POST" action="{{ url_for('sales.delete_sale', slug=slug, sale_id=sale.id) }}">{{ delete_form.hidden_tag() }}<button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer définitivement cette vente ({{ sale.product.name }}, {{ sale.date.strftime('%d/%m/%Y') }}) ?');">Supprimer</button></form></div></td></tr>{% else %}<tr><td colspan="7" class="sales-empty">Aucune vente {{ 'pour ce mois' if selected_month else 'enregistrée pour le moment' }}.</td></tr>{% endfor %}</tbody></table></div></div>
+{% if total_pages > 1 %}<div class="sales-pagination">{% if page > 1 %}<a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page-1) }}">&laquo; Précédent</a>{% else %}<span class="disabled">&laquo; Précédent</span>{% endif %}<span class="active">Page {{ page }} / {{ total_pages }}</span>{% if page < total_pages %}<a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page+1) }}">Suivant &raquo;</a>{% else %}<span class="disabled">Suivant &raquo;</span>{% endif %}</div>{% endif %}
 </div>
-
-<form method="GET" class="filter-form">
-    <div>
-        <label for="month">Filtrer par mois</label>
-        <select id="month" name="month" class="form-input" onchange="this.form.submit()">
-            <option value="">Tous les mois</option>
-            {% for m in available_months %}
-                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    {% if selected_month %}
-    <div>
-        <a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Réinitialiser</a>
-    </div>
-    {% endif %}
-</form>
-
-<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-    <div class="kpi-card">
-        <div class="kpi-body">
-            <span class="kpi-label">Ventes affichées</span>
-            <span class="kpi-value">{{ total_count }}</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-body">
-            <span class="kpi-label">Montant total {{ 'du mois' if selected_month else '(toutes périodes)' }}</span>
-            <span class="kpi-value">{{ "%.2f"|format(total_amount) }} €</span>
-        </div>
-    </div>
-</div>
-
-<table class="responsive-table">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Produit</th>
-            <th>Quantité</th>
-            <th>Prix HT unitaire</th>
-            <th>Total</th>
-            <th>Saisi par</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for sale in sales %}
-        <tr>
-            <td>{{ sale.date.strftime('%d/%m/%Y') }}</td>
-            <td>{{ sale.product.name }}</td>
-            <td>{{ sale.quantity }}</td>
-            <td>{{ "%.2f"|format(sale.price) }} €</td>
-            <td>{{ "%.2f"|format(sale.quantity * sale.price) }} €</td>
-            <td>{{ sale.commercial.username if sale.commercial else '—' }}</td>
-            <td>
-                <a href="{{ url_for('sales.edit_sale', slug=slug, sale_id=sale.id) }}" class="btn btn-outline">Modifier</a>
-                <form method="POST" action="{{ url_for('sales.delete_sale', slug=slug, sale_id=sale.id) }}" style="display:inline;">
-                    {{ delete_form.hidden_tag() }}
-                    <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer définitivement cette vente ({{ sale.product.name }}, {{ sale.date.strftime('%d/%m/%Y') }}) ?');">
-                        Supprimer
-                    </button>
-                </form>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7">Aucune vente {{ 'pour ce mois' if selected_month else 'enregistrée pour le moment' }}.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-{% if total_pages > 1 %}
-<div class="pagination">
-    {% if page > 1 %}
-        <a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page-1) }}">&laquo; Précédent</a>
-    {% else %}
-        <span class="disabled">&laquo; Précédent</span>
-    {% endif %}
-    <span class="active">Page {{ page }} / {{ total_pages }}</span>
-    {% if page < total_pages %}
-        <a href="{{ url_for('sales.sales_history', slug=slug, month=selected_month, page=page+1) }}">Suivant &raquo;</a>
-    {% else %}
-        <span class="disabled">Suivant &raquo;</span>
-    {% endif %}
-</div>
-{% endif %}
+<style>
+.sales-page{display:flex;flex-direction:column;gap:20px}.sales-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 26px;border:1px solid #dfe8df;border-radius:18px;background:linear-gradient(135deg,#fff,#f3f8f1);box-shadow:0 8px 28px rgba(30,55,38,.07)}.sales-eyebrow{margin:0 0 5px;color:#6b8e4e;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.sales-hero h1{margin:0;font-size:1.65rem}.sales-hero p:not(.sales-eyebrow){margin:7px 0 0;color:#6c7971;font-size:.9rem}.sales-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:6px;border:1px solid #dfe8df;border-radius:13px;background:#f7faf6}.sales-tabs a{padding:9px 13px;border-radius:9px;color:#56645b;text-decoration:none;font-size:.78rem;font-weight:750}.sales-tabs a:hover{background:#edf4ea}.sales-tabs a.active{background:#3d6f49;color:#fff}.sales-filter-card{padding:15px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:15px;border:1px solid #dfe8df;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(30,55,38,.05)}.sales-filter-card label{display:block;margin-bottom:6px;color:#526158;font-size:.73rem;font-weight:800;text-transform:uppercase}.sales-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sales-kpi{padding:16px 18px;border:1px solid #dfe8df;border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(30,55,38,.05)}.sales-kpi-label{display:block;color:#6d7b72;font-size:.7rem;font-weight:800;text-transform:uppercase}.sales-kpi-value{display:block;margin-top:5px;color:#213027;font-size:1.35rem;font-weight:800}.sales-kpi-value.positive{color:#3d6f49}.sales-table-card{border:1px solid #dfe8df;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(30,55,38,.055)}.sales-table-wrap{overflow:auto;border-radius:16px}.sales-table{width:100%;min-width:900px;border-collapse:separate;border-spacing:0}.sales-table th{padding:12px 13px;background:#f0f5ee;color:#526158;font-size:.72rem;font-weight:800;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid #dfe8df}.sales-table td{padding:11px 13px;border-bottom:1px solid #edf1ed;color:#27342c;font-size:.82rem;vertical-align:middle}.sales-table tbody tr:hover td{background:#fbfdfb}.sales-table tr:last-child td{border-bottom:0}.sales-product{font-weight:750}.sales-date{white-space:nowrap;color:#5f6c64}.sales-amount{font-weight:800;color:#315d3d}.sales-user{color:#637068}.sales-actions{display:flex;gap:7px;align-items:center;white-space:nowrap}.sales-actions form{margin:0}.sales-empty{text-align:center!important;padding:34px!important;color:#77847c!important}.sales-pagination{display:flex;justify-content:center;align-items:center;gap:7px}.sales-pagination a,.sales-pagination span{padding:8px 12px;border:1px solid #dce6dc;border-radius:8px;background:#fff;color:#526158;text-decoration:none;font-size:.75rem;font-weight:700}.sales-pagination .active{background:#3d6f49;color:#fff;border-color:#3d6f49}.sales-pagination .disabled{opacity:.45}@media(max-width:800px){.sales-hero,.sales-filter-card{align-items:stretch;flex-direction:column}.sales-kpis{grid-template-columns:1fr}.sales-tabs{overflow-x:auto;flex-wrap:nowrap}.sales-tabs a{white-space:nowrap}.sales-hero h1{font-size:1.4rem}}
+</style>
 {% endblock %}
