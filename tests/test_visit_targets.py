@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import inspect
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -64,3 +65,17 @@ def test_visit_target_requires_admin(app):
 
     response = client.post(f"/admin/visit-objectives/{commercial.id}", data={"target": "120"})
     assert response.status_code == 403
+
+
+def test_visit_target_read_does_not_create_table(app):
+    flask_app, admin, _commercial = app
+    client = flask_app.test_client()
+    login(client, admin.username)
+
+    assert not inspect(db.engine).has_table("visit_objective")
+
+    response = client.get("/admin/visit-objectives")
+
+    assert response.status_code == 200
+    assert response.get_json() == {}
+    assert not inspect(db.engine).has_table("visit_objective")
