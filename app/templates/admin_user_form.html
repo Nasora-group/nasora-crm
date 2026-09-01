@@ -1,64 +1,92 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>{{ 'Nouveau compte' if mode == 'create' else 'Modifier ' ~ user.username }}</h1>
+<style>
+    .user-form-page{max-width:900px;margin:0 auto;padding:8px 0 34px}
+    .user-form-hero{padding:24px 26px;margin-bottom:18px;border-radius:18px;background:linear-gradient(135deg,#0f5132,#198754);color:#fff;box-shadow:0 10px 28px rgba(15,81,50,.16)}
+    .user-form-hero h1{margin:0 0 6px;font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
+    .user-form-hero p{margin:0;font-size:.9rem;opacity:.9}
+    .user-form-card{padding:24px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.05)}
+    .user-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .user-form-group{margin:0}
+    .user-form-group.full{grid-column:1/-1}
+    .user-form-label{display:block;margin:0 0 7px;color:#334155;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+    .user-form-input{box-sizing:border-box;width:100%;min-height:43px;padding:10px 12px;border:1px solid #dbe2e8;border-radius:9px;background:#f8fafc;color:#172033;font-size:.9rem;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+    .user-form-input:focus{border-color:#198754;background:#fff;box-shadow:0 0 0 3px rgba(25,135,84,.11)}
+    .user-form-help{display:block;margin-top:6px;color:#64748b;font-size:.75rem;line-height:1.4}
+    .user-active{display:flex;align-items:center;gap:10px;min-height:43px;padding:0 12px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#334155;font-size:.86rem;font-weight:650}
+    .user-active input{width:17px;height:17px;accent-color:#198754}
+    .user-errors{margin-bottom:18px;padding:12px 14px;border:1px solid #f1b8bd;border-radius:10px;background:#fff4f4;color:#842029;font-size:.84rem}
+    .user-errors ul{margin:0;padding-left:18px}
+    .user-form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px;padding-top:18px;border-top:1px solid #edf0f2}
+    .user-form-btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:9px 15px;border:0;border-radius:9px;background:#198754;color:#fff!important;text-decoration:none;font-size:.84rem;font-weight:800;cursor:pointer}
+    .user-form-btn:hover{text-decoration:none;filter:brightness(.96)}
+    .user-form-btn.secondary{background:#eef2f5;color:#334155!important}
+    @media(max-width:700px){.user-form-grid{grid-template-columns:1fr}.user-form-group.full{grid-column:auto}.user-form-card{padding:18px}.user-form-hero{padding:20px}.user-form-actions{flex-direction:column-reverse}.user-form-btn{width:100%}}
+</style>
 
-<div class="form-container">
-    <form method="POST">
-        {{ form.hidden_tag() }}
+<div class="user-form-page">
+    <section class="user-form-hero">
+        <h1>{{ 'Nouveau compte' if mode == 'create' else 'Modifier ' ~ user.username }}</h1>
+        <p>{{ 'Créez un compte utilisateur et définissez ses accès.' if mode == 'create' else 'Mettez à jour les informations du compte sans modifier ses données métier.' }}</p>
+    </section>
 
-        <div class="form-group">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-input") }}
-        </div>
+    <section class="user-form-card">
+        <form method="POST">
+            {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.role.label(class="form-label") }}
-            {{ form.role(class="form-input") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.project.label(class="form-label") }}
-            {{ form.project(class="form-input") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.zone.label(class="form-label") }}
-            {{ form.zone(class="form-input", placeholder="ex : CENTRE VILLE") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-input", placeholder="8 caractères minimum" if mode == 'create' else "Laisser vide pour ne pas changer") }}
-            {% if mode == 'create' %}
-                <small>Obligatoire à la création.</small>
-            {% else %}
-                <small>Laisse ce champ vide si tu ne veux pas changer le mot de passe.</small>
-            {% endif %}
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">
-                {{ form.is_active_account() }} {{ form.is_active_account.label.text }}
-            </label>
-        </div>
-
-        {% if form.errors %}
-            <div class="flash flash-error">
-                <ul style="margin:0; padding-left:18px;">
+            {% if form.errors %}
+            <div class="user-errors">
+                <ul>
                     {% for field, errors in form.errors.items() %}
-                        {% for error in errors %}
-                            <li>{{ form[field].label.text }} : {{ error }}</li>
-                        {% endfor %}
+                        {% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}
                     {% endfor %}
                 </ul>
             </div>
-        {% endif %}
+            {% endif %}
 
-        <div class="form-group">
-            {{ form.submit(class="btn-submit") }}
-            <a href="{{ url_for('users.list_users') }}" class="btn">Annuler</a>
-        </div>
-    </form>
+            <div class="user-form-grid">
+                <div class="user-form-group">
+                    {{ form.username.label(class="user-form-label") }}
+                    {{ form.username(class="user-form-input", autocomplete="username") }}
+                </div>
+
+                <div class="user-form-group">
+                    {{ form.role.label(class="user-form-label") }}
+                    {{ form.role(class="user-form-input") }}
+                </div>
+
+                <div class="user-form-group">
+                    {{ form.project.label(class="user-form-label") }}
+                    {{ form.project(class="user-form-input") }}
+                </div>
+
+                <div class="user-form-group">
+                    {{ form.zone.label(class="user-form-label") }}
+                    {{ form.zone(class="user-form-input", placeholder="ex : CENTRE VILLE") }}
+                </div>
+
+                <div class="user-form-group full">
+                    {{ form.password.label(class="user-form-label") }}
+                    {{ form.password(class="user-form-input", placeholder="8 caractères minimum" if mode == 'create' else "Laisser vide pour ne pas changer", autocomplete="new-password") }}
+                    {% if mode == 'create' %}
+                    <small class="user-form-help">Obligatoire à la création du compte.</small>
+                    {% else %}
+                    <small class="user-form-help">Laissez ce champ vide si vous ne souhaitez pas modifier le mot de passe.</small>
+                    {% endif %}
+                </div>
+
+                <div class="user-form-group full">
+                    <label class="user-form-label">Statut du compte</label>
+                    <label class="user-active">{{ form.is_active_account() }} <span>{{ form.is_active_account.label.text }}</span></label>
+                </div>
+            </div>
+
+            <div class="user-form-actions">
+                <a href="{{ url_for('users.list_users') }}" class="user-form-btn secondary">Annuler</a>
+                {{ form.submit(class="user-form-btn") }}
+            </div>
+        </form>
+    </section>
 </div>
 {% endblock %}
