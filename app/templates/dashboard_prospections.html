@@ -1,7 +1,103 @@
 {% extends "base.html" %}
 {% block title %}Mes prospections — NASORA CRM{% endblock %}
 {% block content %}
-<div class="crm-page-hero"><div><span class="crm-overline">ESPACE COMMERCIAL · ACTIVITÉ TERRAIN</span><h1>Mes prospections</h1><p class="crm-subtitle">Retrouvez, modifiez et contrôlez vos visites enregistrées.</p></div><div class="hero-actions"><a href="{{ url_for('dashboard.index') }}#nouvelle-prospection" class="btn">＋ Nouvelle prospection</a></div></div>
-<div class="crm-surface crm-list-header"><div><span class="crm-overline">SUIVI</span><h2>{{ prospections|length }} prospection(s)</h2></div><span class="muted">Les plus récentes apparaissent en premier</span></div>
-<div class="crm-table-card">{% if prospections %}<div class="table-responsive"><table class="data-table responsive-table"><thead><tr><th>Date</th><th>Statut planning</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead><tbody>{% for p in prospections %}<tr><td><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td><td>{% if planning_statuses.get(p.id) == 'Planifiée' %}<span class="badge">✓ Planifiée</span>{% else %}<span class="badge">＋ Hors planning</span>{% endif %}</td><td>{{ p.nom_client }}</td><td>{{ p.specialite or '—' }}</td><td>{{ p.structure or '—' }}</td><td>{{ establishments_by_prospection.get(p.id) or '—' }}</td><td>{{ p.telephone or '—' }}</td><td>{{ p.produits_presentes or '—' }}</td><td>{{ p.produits_prescrits or '—' }}</td><td><div class="table-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><div class="empty-state-icon">📋</div><h2>Aucune prospection</h2><p>Vos prochaines prospections apparaîtront ici.</p><a href="{{ url_for('dashboard.index') }}#nouvelle-prospection" class="btn">＋ Saisir une prospection</a></div>{% endif %}</div>
+<div class="crm-page-hero">
+  <div>
+    <span class="crm-overline">ESPACE COMMERCIAL · ACTIVITÉ TERRAIN</span>
+    <h1>Mes prospections</h1>
+    <p class="crm-subtitle">Retrouvez, modifiez et contrôlez vos visites enregistrées.</p>
+  </div>
+  <div class="hero-actions"><a href="{{ url_for('dashboard.index') }}#nouvelle-prospection" class="btn">＋ Nouvelle prospection</a></div>
+</div>
+
+<div class="crm-surface crm-list-header">
+  <div><span class="crm-overline">SUIVI</span><h2><span id="prospection-visible-count">{{ prospections|length }}</span> prospection(s)</h2></div>
+  <span class="muted">Les plus récentes apparaissent en premier</span>
+</div>
+
+{% if prospections %}
+<div class="crm-surface" style="margin-bottom:16px;">
+  <div style="display:grid;grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) auto;gap:12px;align-items:end;">
+    <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
+      Rechercher
+      <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, produit…" autocomplete="off">
+    </label>
+    <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
+      Date
+      <input id="prospection-date" type="date" class="form-control">
+    </label>
+    <button id="prospection-reset" type="button" class="btn btn-outline">Réinitialiser</button>
+  </div>
+  <div id="prospection-no-result" class="muted" style="display:none;margin-top:12px;">Aucune prospection ne correspond aux critères.</div>
+</div>
+{% endif %}
+
+<div class="crm-table-card">
+{% if prospections %}
+  <div class="table-responsive">
+    <table class="data-table responsive-table" id="prospection-table">
+      <thead><tr><th>Date</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for p in prospections %}
+        <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.produits_presentes, p.produits_prescrits]|join(' ')|lower }}">
+          <td><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
+          <td>{{ p.nom_client }}</td>
+          <td>{{ p.specialite or '—' }}</td>
+          <td>{{ p.structure or '—' }}</td>
+          <td>{{ establishments_by_prospection.get(p.id) or '—' }}</td>
+          <td>{{ p.telephone or '—' }}</td>
+          <td>{{ p.produits_presentes or '—' }}</td>
+          <td>{{ p.produits_prescrits or '—' }}</td>
+          <td><div class="table-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state"><div class="empty-state-icon">📋</div><h2>Aucune prospection</h2><p>Vos prochaines prospections apparaîtront ici.</p><a href="{{ url_for('dashboard.index') }}#nouvelle-prospection" class="btn">＋ Saisir une prospection</a></div>
+{% endif %}
+</div>
+
+{% if prospections %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const search = document.getElementById('prospection-search');
+  const date = document.getElementById('prospection-date');
+  const reset = document.getElementById('prospection-reset');
+  const table = document.getElementById('prospection-table');
+  const count = document.getElementById('prospection-visible-count');
+  const noResult = document.getElementById('prospection-no-result');
+  if (!search || !date || !reset || !table) return;
+
+  function normalize(value) {
+    return (value || '').toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function applyFilters() {
+    const needle = normalize(search.value.trim());
+    const selectedDate = date.value;
+    let visible = 0;
+    table.querySelectorAll('tbody tr').forEach(function (row) {
+      const matchesText = !needle || normalize(row.dataset.search).includes(needle);
+      const matchesDate = !selectedDate || row.dataset.date === selectedDate;
+      const show = matchesText && matchesDate;
+      row.style.display = show ? '' : 'none';
+      if (show) visible += 1;
+    });
+    count.textContent = visible;
+    noResult.style.display = visible ? 'none' : '';
+  }
+
+  search.addEventListener('input', applyFilters);
+  date.addEventListener('change', applyFilters);
+  reset.addEventListener('click', function () {
+    search.value = '';
+    date.value = '';
+    applyFilters();
+    search.focus();
+  });
+});
+</script>
+{% endif %}
 {% endblock %}
