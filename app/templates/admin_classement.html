@@ -1,27 +1,36 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-header-row">
-    <div><h1>🏆 Classement des commerciaux</h1></div>
+<div class="eval-page">
+    <section class="eval-hero">
+        <div><span class="eval-kicker">Performance · Classement</span><h1>🏆 Classement des commerciaux</h1><p>Comparez les performances évaluées pour {{ mois_label }} {{ year }}.</p></div>
+    </section>
+
+    <form method="GET" class="filter-form eval-filter">
+        <div><label for="month">Mois</label><select id="month" name="month" class="form-input">{% for m, label in mois_labels.items() %}<option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label for="year">Année</label><input type="number" id="year" name="year" class="form-input eval-year" value="{{ year }}"></div>
+        <div><button type="submit" class="btn">Afficher</button></div>
+    </form>
+
+    <div class="eval-live-kpis ranking-kpis">
+        <div class="eval-live-card"><span>Commerciaux évalués</span><strong>{{ evalues|length }}</strong><small>sur la période</small></div>
+        <div class="eval-live-card"><span>Score moyen</span><strong>{{ "%.1f"|format(average) if average is not none else '—' }}<em>/ 100</em></strong><small>performance équipe</small></div>
+        <div class="eval-live-card"><span>Excellent</span><strong>{{ excellent_count }}</strong><small>90 à 100 / 100</small></div>
+        <div class="eval-live-card"><span>Bon</span><strong>{{ bon_count }}</strong><small>75 à 89,9 / 100</small></div>
+    </div>
+
+    {% if evalues %}
+    <section class="eval-panel ranking-panel">
+        <div class="eval-panel-head"><div><span>Top performance</span><h2>Performance du mois</h2><p>Classement par score d'évaluation.</p></div></div>
+        <div class="responsive-table ranking-table"><table><thead><tr><th>Rang</th><th>Commercial</th><th>Division</th><th>Score</th><th>Niveau</th><th>Visites</th><th>Évolution</th><th>Détail</th></tr></thead>
+        <tbody>{% for row in evalues %}<tr class="{% if loop.index == 1 %}ranking-first{% endif %}"><td><span class="ranking-position {% if loop.index <= 3 %}ranking-top{% endif %}">{{ loop.index }}</span>{% if loop.index == 1 %}<span class="ranking-trophy">🏆</span>{% endif %}</td><td><strong>{{ row.commercial.username }}</strong></td><td>{{ row.commercial.project|upper }}</td><td><strong class="ranking-score">{{ "%.1f"|format(row.score) }}</strong> <span class="ranking-score-max">/100</span></td><td><span class="eval-status {{ 'eval-status-good' if row.niveau in ['Bon', 'Excellent'] else 'eval-status-mid' }}">{{ row.niveau }}</span></td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.commercial_history', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn btn-outline">Voir évolution</a></td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn btn-outline">Détail</a></td></tr>{% endfor %}</tbody></table></div>
+        <div class="ranking-winner">🏆 <span>Commercial du mois</span> <strong>{{ evalues[0].commercial.username }}</strong> <b>{{ "%.1f"|format(evalues[0].score) }}/100</b></div>
+    </section>
+    {% else %}<div class="eval-empty eval-alert"><div class="eval-empty-icon">!</div><h2>Aucune évaluation enregistrée</h2><p>Pour {{ mois_label }} {{ year }}.</p></div>{% endif %}
+
+    {% if non_evalues %}
+    <section class="eval-panel ranking-unrated"><div class="eval-panel-head"><div><span>À compléter</span><h2>Commerciaux non évalués</h2><p>Les commerciaux suivants n'ont pas encore d'évaluation sur cette période.</p></div></div>
+    <div class="responsive-table"><table><thead><tr><th>Commercial</th><th>Division</th><th>Visites</th><th>Action</th></tr></thead><tbody>{% for row in non_evalues %}<tr><td><strong>{{ row.commercial.username }}</strong></td><td>{{ row.commercial.project|upper }}</td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn">Évaluer</a></td></tr>{% endfor %}</tbody></table></div></section>
+    {% endif %}
 </div>
-<form method="GET" class="filter-form">
-    <div><label for="month">Mois</label><select id="month" name="month" class="form-input">{% for m, label in mois_labels.items() %}<option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-    <div><label for="year">Année</label><input type="number" id="year" name="year" class="form-input" value="{{ year }}" style="width:110px;"></div>
-    <div><button type="submit" class="btn">Afficher</button></div>
-</form>
-<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
-    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Évalués</span><span class="kpi-value">{{ evalues|length }}</span></div></div>
-    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Score moyen</span><span class="kpi-value">{{ "%.1f"|format(average) if average is not none else '—' }}</span></div></div>
-    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Excellent</span><span class="kpi-value">{{ excellent_count }}</span></div></div>
-    <div class="kpi-card"><div class="kpi-body"><span class="kpi-label">Bon</span><span class="kpi-value">{{ bon_count }}</span></div></div>
-</div>
-{% if evalues %}
-<div class="panel" style="margin-top:20px;">
-    <h2 style="margin-top:0;">Performance du mois</h2>
-    <table class="responsive-table"><thead><tr><th>Rang</th><th>Commercial</th><th>Division</th><th>Score</th><th>Niveau</th><th>Visites</th><th>Progression</th><th></th></tr></thead>
-    <tbody>{% for row in evalues %}<tr {% if loop.index == 1 %}style="background:var(--sage-pale);"{% endif %}><td><strong>{{ loop.index }}</strong>{% if loop.index == 1 %} 🏆{% endif %}</td><td>{{ row.commercial.username }}</td><td>{{ row.commercial.project|upper }}</td><td><strong>{{ "%.1f"|format(row.score) }}</strong> / 100</td><td><span class="badge {{ 'badge-active' if row.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ row.niveau }}</span></td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.commercial_history', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn btn-outline">Voir évolution</a></td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn btn-outline">Détail</a></td></tr>{% endfor %}</tbody></table>
-    <p class="read-only-banner">🏆 Commercial du mois : <strong>{{ evalues[0].commercial.username }}</strong> — {{ "%.1f"|format(evalues[0].score) }}/100.</p>
-</div>
-{% else %}<div class="flash flash-error">Aucune évaluation enregistrée pour {{ mois_label }} {{ year }}.</div>{% endif %}
-{% if non_evalues %}<h2>Commerciaux non évalués</h2><table class="responsive-table"><thead><tr><th>Commercial</th><th>Division</th><th>Visites</th><th></th></tr></thead><tbody>{% for row in non_evalues %}<tr><td>{{ row.commercial.username }}</td><td>{{ row.commercial.project|upper }}</td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn">Évaluer</a></td></tr>{% endfor %}</tbody></table>{% endif %}
 {% endblock %}
