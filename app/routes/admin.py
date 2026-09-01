@@ -22,8 +22,11 @@ SALE_MODELS = [s["sale_model"] for s in SUPPLIERS.values() if not s.get("archive
 
 
 def _month_expression(sale_model):
-    if db.engine.dialect.name == "sqlite":
+    dialect = db.engine.dialect.name
+    if dialect == "sqlite":
         return func.strftime("%Y-%m", sale_model.date)
+    if dialect == "mysql":
+        return func.date_format(sale_model.date, "%Y-%m")
     return func.to_char(sale_model.date, "YYYY-MM")
 
 
@@ -104,10 +107,12 @@ def _aggregate_sales():
         month_expr=_month_expression(sale_model); amount_expr=func.coalesce(sale_model.quantity,0)*func.coalesce(sale_model.price,0)
         rows=db.session.query(month_expr.label("month"),sale_model.project,sale_model.commercial_id,func.sum(amount_expr).label("revenue"),func.count(sale_model.id).label("sales_count")).group_by(month_expr,sale_model.project,sale_model.commercial_id).all()
         for month,project,commercial_id,revenue,sales_count in rows:
-            amount=float(revenue or 0); count=int(sales_count or 0); revenue_by_month[month]=revenue_by_month.get(month,0.0)+amount; revenue_by_division[project]=revenue_by_division.get(project,0.0)+amount
+            month_key=str(month)[:7] if month is not None else None
+            amount=float(revenue or 0); count=int(sales_count or 0); revenue_by_month[month_key]=revenue_by_month.get(month_key,0.0)+amount; revenue_by_division[project]=revenue_by_division.get(project,0.0)+amount
             if commercial_id is not None: revenue_by_commercial[commercial_id]=revenue_by_commercial.get(commercial_id,0.0)+amount
             total_revenue+=amount; total_sales_count+=count
-            if month==current_month_key: current_month_revenue+=amount; current_month_by_division[project]=current_month_by_division.get(project,0.0)+amount
+            if month_key==current_month_key: current_month_revenue+=amount; current_month_by_division[project]=current_month_by_division.get(project,0.0)+amount
+    revenue_by_month.pop(None,None)
     return revenue_by_month,revenue_by_division,revenue_by_commercial,current_month_by_division,total_revenue,total_sales_count,current_month_revenue
 
 
@@ -135,12 +140,10 @@ def dashboard():
         top_10_commerciaux=[]
         for cid,count in sorted(filtered_visit_counts.items(),key=lambda x:x[1],reverse=True)[:10]:
             if cid in commercial_names:
-                target=_visit_target_for_commercial(cid)
-                rate=round(count*100/target,1) if target else 0
-                status="Objectif atteint" if rate>=100 else ("À surveiller" if rate>=80 else "Insuffisant")
+                target=_visit_target_for_commercial(cid); rate=round(count*100/target,1) if target else 0; status="Objectif atteint" if rate>=100 else ("À surveiller" if rate>=80 else "Insuffisant")
                 top_10_commerciaux.append({"username":commercial_names[cid],"zone":commercial_zones.get(cid),"division":commercial_divisions.get(cid),"nombre_visites":count,"objectif_visites":target,"taux_visites":rate,"statut_visites":status})
-        page=request.args.get("page",1,type=int); pagination=filtered_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); kpis={"total_revenue":total_revenue,"current_month_revenue":current_month_revenue,"total_visits":total_filtered_visits,"active_commercials":active_commercials_count,"monthly_avg":(total_revenue/len(monthly_revenue_labels)) if monthly_revenue_labels else 0,"months_with_sales":len(monthly_revenue_labels),"total_sales_count":total_sales_count}; active_suppliers={slug:s for slug,s in SUPPLIERS.items() if not s.get("archived")}; establishments_by_prospection=_establishments_by_prospection(pagination.items)
-        return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_10_commerciaux,top_10_commerciaux=top_10_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection)
+        page=request.args.get("page",1,type=int); pagination=filtered_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); kpis={"total_revenue":total_revenue,"current_month_revenue":current_month_revenue,"total_visits":sum(filtered_visit_counts.values()),"active_commercials":active_commercials_count,"monthly_avg":(total_revenue/len(monthly_revenue_labels)) if monthly_revenue_labels else 0,"months_with_sales":len(monthly_revenue_labels),"total_sales_count":total_sales_count}; active_suppliers={slug:s for slug,s in SUPPLIERS.items() if not s.get("archived")}; establishments_by_prospection=_establishments_by_prospection(pagination.items); specialites=[item["label"] for item in _prospection_specialites(filtered_query)]; recent_prospections=pagination.items
+        return render_template("admin_dashboard.html",commerciaux=commerciaux,prospections=pagination.items,pagination=pagination,top_5_commerciaux=top_10_commerciaux,top_10_commerciaux=top_10_commerciaux,monthly_revenue_labels=monthly_revenue_labels,monthly_revenue_data=monthly_revenue_data,kpis=kpis,revenue_by_division=revenue_by_division,division_kpis=division_kpis,top_revenue=top_revenue,top_prospections=top_prospections,active_suppliers=active_suppliers,establishments_by_prospection=establishments_by_prospection,specialites=specialites,recent_prospections=recent_prospections)
     except Exception:
         db.session.rollback(); logger.exception("Erreur lors du chargement du tableau de bord Direction"); flash("Le tableau de bord est momentanément indisponible.","error"); return render_template("500.html"),500
 
@@ -151,7 +154,6 @@ def commercial_detail(username):
     if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
     commercial=User.query.filter_by(username=username).first()
     if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
-
     date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
     prospection_query=Prospection.query.join(User).filter(Prospection.commercial_id==commercial.id)
     if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
