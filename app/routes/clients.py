@@ -84,6 +84,24 @@ def _commercial_can_access_client(client):
     return client.owner_id in (None, current_user.id)
 
 
+def _find_duplicate_client(phone, name, structure, exclude_id=None):
+    normalized_phone = _normalize_phone(phone)
+    normalized_name = _normalize_text(name)
+    normalized_structure = _normalize_text(structure)
+    query = Client.query
+    if exclude_id is not None:
+        query = query.filter(Client.id != exclude_id)
+    candidates = query.all()
+    for client in candidates:
+        client_phone = _normalize_phone(client.phone)
+        if normalized_phone and len(normalized_phone) >= 6 and client_phone and client_phone == normalized_phone:
+            return client, "téléphone"
+        if normalized_name and normalized_structure:
+            if _normalize_text(client.name) == normalized_name and _normalize_text(client.structure) == normalized_structure:
+                return client, "nom + structure"
+    return None, None
+
+
 def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
     return ClientVisit.query.filter_by(client_id=client_id, commercial_id=commercial_id, date=visit_date, products_presented=products_presented, products_prescribed=products_prescribed, report=report, is_duplicate=False).first() is not None
 
@@ -119,12 +137,18 @@ def list_clients():
 def new_client():
     if request.method == "POST":
         try:
+            name = request.form.get("name", "").strip()
+            structure = request.form.get("structure", "").strip()
+            if not name or not structure:
+                flash("Le nom et la structure sont obligatoires.", "error")
+                return render_template("client_form.html", client=None, structure_choices=[s[0] for s in STRUCTURES], commerciaux=User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all())
+            duplicate, match_type = _find_duplicate_client(request.form.get("phone", ""), name, structure)
+            if duplicate:
+                flash(f"Un professionnel existe déjà avec ce {match_type}. Consultez sa fiche avant d'en créer une nouvelle.", "warning")
+                return redirect(url_for("clients.client_detail", client_id=duplicate.id))
             potential = max(1, min(5, int(request.form.get("potential", 3))))
             owner_id = current_user.id if current_user.role == "commercial" else (request.form.get("owner_id", type=int) or None)
-            c = Client(name=request.form.get("name", "").strip(), specialty=request.form.get("specialty", "").strip() or None, structure=request.form.get("structure", "").strip(), establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id)
-            if not c.name or not c.structure:
-                flash("Le nom et la structure sont obligatoires.", "error")
-                return render_template("client_form.html", client=c, structure_choices=[s[0] for s in STRUCTURES], commerciaux=User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all())
+            c = Client(name=name, specialty=request.form.get("specialty", "").strip() or None, structure=structure, establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id)
             db.session.add(c); db.session.commit(); flash("Professionnel ajouté à la base CRM.", "success"); return redirect(url_for("clients.client_detail", client_id=c.id))
         except Exception:
             db.session.rollback(); flash("Impossible d'enregistrer le professionnel.", "error")
@@ -144,6 +168,10 @@ def edit_client(client_id):
             structure = request.form.get("structure", "").strip()
             if not name or not structure:
                 flash("Le nom et la structure sont obligatoires.", "error")
+                return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+            duplicate, match_type = _find_duplicate_client(request.form.get("phone", ""), name, structure, exclude_id=client.id)
+            if duplicate:
+                flash(f"Modification bloquée : un autre professionnel existe déjà avec ce {match_type}.", "warning")
                 return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
             client.name = name
             client.specialty = request.form.get("specialty", "").strip() or None
