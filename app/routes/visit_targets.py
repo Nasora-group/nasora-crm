@@ -1,12 +1,11 @@
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from flask_login import current_user, login_required
 from sqlalchemy import text
 
 from app.extensions import db
 from app.models import User
-from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
 visit_targets_bp = Blueprint("visit_targets", __name__, url_prefix="/admin/visit-objectives")
@@ -27,10 +26,26 @@ def _ensure_table():
     db.session.commit()
 
 
+def _admin_only():
+    """Return a real 403 for authenticated non-admin users.
+
+    This endpoint changes persistent visit objectives and must never redirect a
+    commercial to the home page: callers and tests need an explicit forbidden
+    response so the authorization contract is unambiguous.
+    """
+    if not current_user.is_authenticated:
+        return None
+    if current_user.role != "admin":
+        return render_template("403.html"), 403
+    return None
+
+
 @visit_targets_bp.route("", methods=["GET"])
 @login_required
-@roles_required("admin")
 def list_targets():
+    forbidden = _admin_only()
+    if forbidden is not None:
+        return forbidden
     _ensure_table()
     rows = db.session.execute(text("SELECT commercial_id, target FROM visit_objective")).mappings().all()
     values = {str(row["commercial_id"]): int(row["target"]) for row in rows}
@@ -39,8 +54,11 @@ def list_targets():
 
 @visit_targets_bp.route("/<int:commercial_id>", methods=["POST"])
 @login_required
-@roles_required("admin")
 def update_target(commercial_id):
+    forbidden = _admin_only()
+    if forbidden is not None:
+        return forbidden
+
     commercial = User.query.filter_by(id=commercial_id, role="commercial").first()
     if commercial is None:
         return jsonify({"ok": False, "error": "Commercial introuvable."}), 404
