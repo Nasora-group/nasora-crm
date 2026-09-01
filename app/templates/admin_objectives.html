@@ -1,22 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Objectifs de vente — {{ division_label }}</h1>
-<div class="supplier-tabs">
-    <a href="{{ url_for('objectives.edit_objectives', division='nasderm', year=year) }}" class="{{ 'active' if division == 'nasderm' else '' }}">NASDERM</a>
-    <a href="{{ url_for('objectives.edit_objectives', division='nasmedic', year=year) }}" class="{{ 'active' if division == 'nasmedic' else '' }}">NASMEDIC</a>
-</div>
-<div class="filter-form">
-    <div><label for="year-select">Année</label><select id="year-select" class="form-input" onchange="window.location.href='{{ url_for('objectives.edit_objectives', division=division) }}?year=' + this.value">{% for y in range(year - 2, year + 3) %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
-</div>
-<div class="form-container">
-    <form method="POST">
+<div class="objective-page">
+    <section class="objective-hero">
+        <div>
+            <span class="objective-kicker">Pilotage commercial · Objectifs</span>
+            <h1>Objectifs de vente — {{ division_label }}</h1>
+            <p>Définissez l'objectif annuel et répartissez-le mois par mois pour piloter la performance.</p>
+        </div>
+        <div class="objective-year-badge">{{ year }}</div>
+    </section>
+
+    <nav class="objective-tabs" aria-label="Division commerciale">
+        <a href="{{ url_for('objectives.edit_objectives', division='nasderm', year=year) }}" class="{{ 'active' if division == 'nasderm' else '' }}">NASDERM</a>
+        <a href="{{ url_for('objectives.edit_objectives', division='nasmedic', year=year) }}" class="{{ 'active' if division == 'nasmedic' else '' }}">NASMEDIC</a>
+    </nav>
+
+    <section class="objective-toolbar">
+        <div><span>Exercice</span><strong>Année {{ year }}</strong><small>Choisissez l'année à piloter</small></div>
+        <label for="year-select">Année<select id="year-select" class="form-input" onchange="window.location.href='{{ url_for('objectives.edit_objectives', division=division) }}?year=' + this.value">{% for y in range(year - 2, year + 3) %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></label>
+    </section>
+
+    <form method="POST" class="objective-form">
         {{ form.hidden_tag() }}
-        <div class="form-group">{{ form.annual_target.label(class="form-label") }}{{ form.annual_target(class="form-input", step="0.01", placeholder="ex : 500000") }}</div>
-        <h3>Objectifs mensuels {{ year }}</h3>
-        <div class="chart-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">{% for field_name in month_fields %}<div class="form-group" style="margin-bottom:0;">{{ form[field_name].label(class="form-label") }}{{ form[field_name](class="form-input", step="0.01", placeholder="0.00") }}</div>{% endfor %}</div>
-        {% if form.errors %}<div class="flash flash-error" style="margin-top:16px;"><ul style="margin:0; padding-left:18px;">{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>{% endif %}
-        <div class="form-group" style="margin-top:20px;">{{ form.submit(class="btn-submit") }}</div>
+        <section class="objective-card objective-annual">
+            <div class="objective-card-head"><div><span>01 · Objectif global</span><h2>Objectif annuel {{ year }}</h2><p>Montant cible à atteindre sur l'ensemble de l'exercice.</p></div><div class="objective-icon">🎯</div></div>
+            <div class="objective-annual-field">{{ form.annual_target.label(class="form-label") }}{{ form.annual_target(class="form-input", step="0.01", placeholder="ex : 500000") }}<small>Montant de référence en FCFA</small></div>
+        </section>
+
+        <section class="objective-card">
+            <div class="objective-card-head"><div><span>02 · Répartition</span><h2>Objectifs mensuels {{ year }}</h2><p>Définissez une cible pour chacun des 12 mois.</p></div><div class="objective-month-count">12 mois</div></div>
+            <div class="objective-month-grid">
+                {% for field_name in month_fields %}
+                <div class="objective-month-field"><div class="objective-month-number">{{ loop.index|string|zfill(2) }}</div>{{ form[field_name].label(class="form-label") }}{{ form[field_name](class="form-input", step="0.01", placeholder="0.00") }}</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if form.errors %}
+        <div class="flash flash-error objective-errors"><ul>{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>
+        {% endif %}
+
+        <div class="objective-actions">{{ form.submit(class="btn-submit") }}<span>Les objectifs seront enregistrés pour <strong>{{ division_label }}</strong> · {{ year }}.</span></div>
     </form>
 </div>
 {% endblock %}
