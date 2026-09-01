@@ -1,23 +1,42 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h1>Modifier la prospection — {{ prospection.nom_client }}</h1>
+{% block title %}Modifier une prospection — NASORA CRM{% endblock %}
 
-<div class="form-container">
+{% block content %}
+<div class="crm-page-hero commercial-hero">
+    <div>
+        <span class="crm-overline">ACTIVITÉ TERRAIN</span>
+        <h1>Modifier la prospection</h1>
+        <p class="crm-subtitle">Mettez à jour les informations de {{ prospection.nom_client }}.</p>
+    </div>
+    <a href="{{ url_for('dashboard.prospections') }}" class="btn btn-outline">← Mes prospections</a>
+</div>
+
+<div class="form-container prospection-panel crm-surface">
+    <div class="panel-heading">
+        <div>
+            <span class="crm-overline">PROSPECTION #{{ prospection.id }}</span>
+            <h2>Informations de la visite</h2>
+        </div>
+    </div>
+
     <form method="POST" class="prospection-form">
         {{ form.hidden_tag() }}
         <div class="form-group">{{ form.date.label(class="form-label") }}{{ form.date(class="form-input") }}</div>
         <div class="form-group">{{ form.structure.label(class="form-label") }}{{ form.structure(class="form-input") }}</div>
-        <div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input") }}</div>
+        <div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input", placeholder="Ex. Hôpital Principal, Pharmacie X, Clinique Y") }}</div>
         <div class="form-group">{{ form.nom_client.label(class="form-label") }}{{ form.nom_client(class="form-input") }}</div>
         <div class="form-group">{{ form.specialite.label(class="form-label") }}{{ form.specialite(class="form-input") }}</div>
-        <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input") }}</div>
+        <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel") }}</div>
         <div class="form-group">{{ form.profils_prospect.label(class="form-label") }}{{ form.profils_prospect(class="form-input") }}</div>
         <div class="form-group">{{ form.produits_presentes.label(class="form-label") }}{{ form.produits_presentes(class="form-input select2-products", multiple=true) }}</div>
         <div class="form-group">{{ form.produits_prescrits.label(class="form-label") }}{{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}</div>
         {% if form.errors %}<div class="flash flash-error"><ul style="margin:0; padding-left:18px;">{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>{% endif %}
-        <div class="form-group">{{ form.submit(class="btn-submit") }} <a href="{{ url_for('dashboard.prospections') }}" class="btn btn-outline">Annuler</a></div>
+        <div class="form-group form-submit-row">{{ form.submit(class="btn-submit") }} <a href="{{ url_for('dashboard.prospections') }}" class="btn btn-outline">Annuler</a></div>
     </form>
 </div>
-<script>$(document).ready(function() { $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' }); });</script>
+
+<script>
+$(document).ready(function() { $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' }); });
+</script>
 {% endblock %}
