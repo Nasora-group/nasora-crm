@@ -57,73 +57,35 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
-    """Retourne uniquement les professionnels rattachés au commercial connecté.
-
-    Les anciennes Client/ClientVisit restent conservées pour l'historique
-    Admin, mais ne doivent pas permettre à un commercial d'afficher la fiche
-    d'un autre commercial.
-    """
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
     if not active_prospections:
         return Client.query.filter(False)
-
-    # Pour un commercial, on ne considère que ses fiches propriétaires ou les
-    # fiches encore non attribuées. Une correspondance téléphone ne doit jamais
-    # faire remonter la fiche d'un autre commercial.
-    clients = Client.query.filter(
-        or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)
-    ).all()
+    clients = Client.query.filter(or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)).all()
     active_ids = set()
-
     for prospect in active_prospections:
         prospect_phone = _normalize_phone(prospect.telephone)
         prospect_name = _normalize_text(prospect.nom_client)
-
-        # Priorité au téléphone lorsqu'il est réellement renseigné.
         if prospect_phone and len(prospect_phone) >= 6:
             for client in clients:
                 if _normalize_phone(client.phone) == prospect_phone:
                     active_ids.add(client.id)
-
-        # Le nom permet de retrouver les anciennes fiches sans téléphone.
         if prospect_name:
-            same_name = [
-                client for client in clients
-                if _normalize_text(client.name) == prospect_name
-            ]
-            for client in same_name:
-                active_ids.add(client.id)
-
+            for client in clients:
+                if _normalize_text(client.name) == prospect_name:
+                    active_ids.add(client.id)
     if not active_ids:
         return Client.query.filter(False)
-
     return Client.query.filter(Client.id.in_(active_ids))
 
 
 def _commercial_can_access_client(client):
     if current_user.role != "commercial":
         return True
-    # Une fiche attribuée à un autre commercial reste strictement privée.
-    # Les fiches non attribuées peuvent être prises en charge par le commercial.
     return client.owner_id in (None, current_user.id)
 
 
 def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
-    """Détecte uniquement une visite strictement identique.
-
-    Deux visites le même jour chez le même professionnel restent autorisées
-    si leur contenu diffère. Cela évite de casser les visites légitimes tout en
-    empêchant un double enregistrement identique.
-    """
-    return ClientVisit.query.filter_by(
-        client_id=client_id,
-        commercial_id=commercial_id,
-        date=visit_date,
-        products_presented=products_presented,
-        products_prescribed=products_prescribed,
-        report=report,
-        is_duplicate=False,
-    ).first() is not None
+    return ClientVisit.query.filter_by(client_id=client_id, commercial_id=commercial_id, date=visit_date, products_presented=products_presented, products_prescribed=products_prescribed, report=report, is_duplicate=False).first() is not None
 
 
 @clients_bp.route("/admin/clients")
@@ -169,6 +131,39 @@ def new_client():
     return render_template("client_form.html", client=None, structure_choices=[s[0] for s in STRUCTURES], commerciaux=User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all())
 
 
+@clients_bp.route("/admin/clients/<int:client_id>/modifier", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "commercial")
+def edit_client(client_id):
+    client = Client.query.get_or_404(client_id)
+    if not _commercial_can_access_client(client):
+        return render_template("403.html"), 403
+    if request.method == "POST":
+        try:
+            name = request.form.get("name", "").strip()
+            structure = request.form.get("structure", "").strip()
+            if not name or not structure:
+                flash("Le nom et la structure sont obligatoires.", "error")
+                return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+            client.name = name
+            client.specialty = request.form.get("specialty", "").strip() or None
+            client.structure = structure
+            client.establishment = request.form.get("establishment", "").strip() or None
+            client.phone = request.form.get("phone", "").strip() or None
+            client.email = request.form.get("email", "").strip() or None
+            client.zone = request.form.get("zone", "").strip() or None
+            client.address = request.form.get("address", "").strip() or None
+            client.potential = max(1, min(5, int(request.form.get("potential", 3))))
+            client.notes = request.form.get("notes", "").strip() or None
+            db.session.commit()
+            flash("Fiche professionnel mise à jour avec succès.", "success")
+            return redirect(url_for("clients.client_detail", client_id=client.id))
+        except Exception:
+            db.session.rollback()
+            flash("Impossible de mettre à jour le professionnel.", "error")
+    return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+
+
 @clients_bp.route("/admin/clients/<int:client_id>")
 @login_required
 @roles_required("admin", "commercial")
@@ -208,30 +203,10 @@ def new_visit(client_id):
             products_presented = request.form.get("products_presented", "").strip() or None
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
-
-            # Protection des nouvelles données : on bloque seulement un
-            # enregistrement strictement identique. Des visites distinctes
-            # chez le même professionnel le même jour restent possibles.
-            if _exact_visit_exists(
-                client.id,
-                current_user.id,
-                visit_date_obj,
-                products_presented,
-                products_prescribed,
-                report,
-            ):
+            if _exact_visit_exists(client.id, current_user.id, visit_date_obj, products_presented, products_prescribed, report):
                 flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=client.id))
-
-            v = ClientVisit(
-                client_id=client.id,
-                commercial_id=current_user.id,
-                date=visit_date_obj,
-                products_presented=products_presented,
-                products_prescribed=products_prescribed,
-                report=report,
-                next_visit=date.fromisoformat(next_visit) if next_visit else None,
-            )
+            v = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=date.fromisoformat(next_visit) if next_visit else None)
             db.session.add(v)
             client.last_visit = v.date
             client.next_visit = v.next_visit
