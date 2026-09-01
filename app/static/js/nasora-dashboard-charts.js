@@ -6,14 +6,14 @@
 
     var C = {
       primary: '#167a56',
-      primarySoft: 'rgba(22,122,86,0.16)',
-      secondary: '#3b7f72',
-      secondarySoft: 'rgba(59,127,114,0.16)',
-      accent: '#8b6f47',
-      warning: '#c98518',
-      danger: '#b94a48',
+      primarySoft: 'rgba(22,122,86,0.14)',
+      secondary: '#356f8a',
+      secondarySoft: 'rgba(53,111,138,0.14)',
+      accent: '#806548',
+      warning: '#b87916',
+      danger: '#b34d4b',
       neutral: '#87958f',
-      grid: 'rgba(31,51,44,0.09)',
+      grid: 'rgba(31,51,44,0.08)',
       text: '#53645e'
     };
 
@@ -22,7 +22,7 @@
     Chart.defaults.font.size = 12;
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.boxWidth = 8;
-    Chart.defaults.plugins.legend.labels.padding = 18;
+    Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.plugins.tooltip.backgroundColor = '#20352d';
     Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
     Chart.defaults.plugins.tooltip.bodyColor = '#eef5f1';
@@ -30,6 +30,7 @@
     Chart.defaults.plugins.tooltip.borderWidth = 1;
     Chart.defaults.plugins.tooltip.padding = 10;
     Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.plugins.tooltip.displayColors = true;
     Chart.defaults.animation.duration = 0;
     Chart.defaults.animation.animateRotate = false;
     Chart.defaults.animation.animateScale = false;
