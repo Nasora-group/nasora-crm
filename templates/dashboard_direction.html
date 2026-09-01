@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Activité terrain — NASORA CRM{% endblock %}
+{% block content %}
+<style>
+/* Activité terrain — UI stable, compacte et professionnelle */
+.terrain-page{max-width:1480px;margin:0 auto;padding:24px 0 42px}
+.terrain-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:22px;padding:24px 28px;border-radius:18px;background:linear-gradient(135deg,#f4faf6 0%,#fff 68%);border:1px solid #dfeae2;box-shadow:0 8px 24px rgba(31,61,42,.06)}
+.terrain-kicker{display:block;margin-bottom:6px;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#4d8060}
+.terrain-hero h1{margin:0;font-size:1.65rem;line-height:1.2;color:#183225}
+.terrain-hero p{margin:7px 0 0;color:#6c7971;font-size:.9rem}
+.terrain-filter{margin-bottom:22px;padding:18px;border:1px solid #e0e8e2;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(30,55,39,.05)}
+.terrain-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) auto;gap:12px;align-items:end}
+.terrain-field label{display:block;margin:0 0 6px;font-size:.76rem;font-weight:700;color:#526158}
+.terrain-field input,.terrain-field select{width:100%;height:42px;padding:0 11px;border:1px solid #d5dfd8;border-radius:9px;background:#fbfdfb;color:#24342b;font:500 .84rem Inter,Arial,sans-serif;box-sizing:border-box}
+.terrain-field input:focus,.terrain-field select:focus{outline:0;border-color:#6fa482;box-shadow:0 0 0 3px rgba(72,129,91,.12)}
+.terrain-filter-actions{display:flex;gap:8px}.terrain-filter-actions .btn{height:42px;white-space:nowrap}
+.terrain-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.terrain-kpi{position:relative;overflow:hidden;min-width:0;padding:17px 18px;border:1px solid #e0e8e2;border-radius:15px;background:#fff;box-shadow:0 5px 16px rgba(30,55,39,.045)}
+.terrain-kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#4f8b62}
+.terrain-kpi-label{display:block;font-size:.76rem;font-weight:600;color:#748078}.terrain-kpi-value{display:block;margin-top:5px;font-size:1.65rem;line-height:1.15;font-weight:700;color:#193529}
+.terrain-section-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:26px 2px 12px}.terrain-section-title h2{margin:0;font-size:1.08rem;color:#213a2d}.terrain-section-title p{margin:3px 0 0;color:#7a857e;font-size:.78rem}
+.terrain-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.terrain-chart-card{min-width:0;padding:18px;border:1px solid #e0e8e2;border-radius:15px;background:#fff;box-shadow:0 5px 16px rgba(30,55,39,.045)}
+.terrain-chart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.terrain-chart-head h3{margin:0;font-size:.92rem;font-weight:700;color:#284234}
+.terrain-chart-box{position:relative;width:100%;height:290px;min-height:290px}.terrain-chart-box canvas{display:block!important;width:100%!important;height:100%!important;max-width:100%!important}
+.terrain-empty{display:flex;align-items:center;justify-content:center;height:100%;min-height:220px;color:#87928b;font-size:.84rem;background:#fafcfb;border-radius:10px}
+.terrain-table-card{overflow:hidden;border:1px solid #e0e8e2;border-radius:15px;background:#fff;box-shadow:0 5px 16px rgba(30,55,39,.045)}.terrain-table-wrap{overflow-x:auto}
+.terrain-table{width:100%;min-width:760px;margin:0;border-collapse:collapse;font-size:.83rem}.terrain-table th{padding:12px 15px;text-align:left;white-space:nowrap;background:#f5f9f6;color:#617068;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid #e2e9e4}.terrain-table td{padding:12px 15px;border-bottom:1px solid #edf1ee;color:#34443b;vertical-align:middle}.terrain-table tbody tr:last-child td{border-bottom:0}.terrain-table tbody tr:hover{background:#fbfdfb}
+.terrain-status{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.7rem;font-weight:700;white-space:nowrap}.terrain-status.success{background:#e8f5eb;color:#28713e}.terrain-status.warning{background:#fff4d9;color:#8a6515}.terrain-status.danger{background:#fde9e7;color:#a23b32}.terrain-rate{font-weight:700;color:#244c34}
+.terrain-target-editor{display:flex;align-items:center;gap:7px;min-width:145px}.terrain-target-input{width:86px;height:36px;padding:0 9px;border:1px solid #d5dfd8;border-radius:8px;background:#fbfdfb;color:#193529;font:700 .84rem Inter,Arial,sans-serif;box-sizing:border-box}.terrain-target-input:focus{outline:0;border-color:#6fa482;box-shadow:0 0 0 3px rgba(72,129,91,.12)}.terrain-target-save{height:36px;padding:0 10px!important;font-size:.76rem!important}.terrain-target-save.is-saving{opacity:.65;pointer-events:none}.terrain-target-feedback{display:block;margin-top:4px;font-size:.68rem;color:#6f7c74}.terrain-target-feedback.error{color:#a23b32}
+@media(max-width:1050px){.terrain-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.terrain-filter-actions{grid-column:span 3}.terrain-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.terrain-page{padding:15px 0 30px}.terrain-hero{padding:19px;align-items:flex-start}.terrain-hero h1{font-size:1.35rem}.terrain-filter-grid{grid-template-columns:1fr}.terrain-filter-actions{grid-column:auto}.terrain-filter-actions .btn{flex:1}.terrain-chart-grid{grid-template-columns:1fr}.terrain-chart-box{height:250px;min-height:250px}.terrain-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.terrain-kpi{padding:14px}.terrain-kpi-value{font-size:1.4rem}}
+@media(max-width:480px){.terrain-kpis{grid-template-columns:1fr 1fr}.terrain-kpi-label{font-size:.7rem}.terrain-kpi-value{font-size:1.25rem}.terrain-hero{border-radius:13px}.terrain-filter,.terrain-chart-card,.terrain-table-card{border-radius:12px}}
+</style>
+
+<div class="terrain-page">
+  <section class="terrain-hero"><div><span class="terrain-kicker">NASORA CRM · DIRECTION</span><h1>Activité terrain</h1><p>Pilotage des prospections, visites, couverture et spécialités.</p></div></section>
+
+  <form method="get" class="terrain-filter"><div class="terrain-filter-grid">
+    <div class="terrain-field"><label for="terrain-date-start">Du</label><input id="terrain-date-start" type="date" name="date_start" value="{{ filters.date_start }}"></div>
+    <div class="terrain-field"><label for="terrain-date-end">Au</label><input id="terrain-date-end" type="date" name="date_end" value="{{ filters.date_end }}"></div>
+    <div class="terrain-field"><label for="terrain-commercial">Commercial</label><select id="terrain-commercial" name="commercial_id"><option value="">Tous</option>{% for c in commercials %}<option value="{{ c.id }}" {% if filters.commercial_id|string == c.id|string %}selected{% endif %}>{{ c.username }}</option>{% endfor %}</select></div>
+    <div class="terrain-field"><label for="terrain-zone">Zone</label><select id="terrain-zone" name="zone"><option value="">Toutes</option>{% for z in zones %}<option value="{{ z }}" {% if filters.zone == z %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></div>
+    <div class="terrain-field"><label for="terrain-specialite">Spécialité</label><select id="terrain-specialite" name="specialite"><option value="">Toutes</option>{% for s in specialites %}<option value="{{ s }}" {% if filters.specialite == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+    <div class="terrain-filter-actions"><button type="submit" class="btn">Filtrer</button><a href="{{ url_for('dashboard.direction') }}" class="btn btn-outline">↺</a></div>
+  </div></form>
+
+  <section class="terrain-kpis" aria-label="Indicateurs terrain">{% for kpi in kpis %}<article class="terrain-kpi"><span class="terrain-kpi-label">{{ kpi.label }}</span><strong class="terrain-kpi-value">{{ kpi.value }}</strong></article>{% endfor %}</section>
+
+  <div class="terrain-section-title"><div><h2>Analyse de l'activité</h2><p>Les graphiques suivent les filtres sélectionnés.</p></div></div>
+  <section class="terrain-chart-grid">
+    <article class="terrain-chart-card"><div class="terrain-chart-head"><h3>Spécialités visitées</h3></div><div class="terrain-chart-box">{% if charts.specialites.labels %}<canvas id="specialitesChart" aria-label="Spécialités visitées"></canvas>{% else %}<div class="terrain-empty">Aucune donnée pour les filtres sélectionnés.</div>{% endif %}</div></article>
+    <article class="terrain-chart-card"><div class="terrain-chart-head"><h3>Évolution des prospections</h3></div><div class="terrain-chart-box">{% if charts.evolution.labels %}<canvas id="evolutionChart" aria-label="Évolution des prospections"></canvas>{% else %}<div class="terrain-empty">Aucune donnée pour les filtres sélectionnés.</div>{% endif %}</div></article>
+    <article class="terrain-chart-card"><div class="terrain-chart-head"><h3>Prospections par zone</h3></div><div class="terrain-chart-box">{% if charts.zones.labels %}<canvas id="zonesChart" aria-label="Prospections par zone"></canvas>{% else %}<div class="terrain-empty">Aucune donnée pour les filtres sélectionnés.</div>{% endif %}</div></article>
+    <article class="terrain-chart-card"><div class="terrain-chart-head"><h3>Activité par commercial</h3></div><div class="terrain-chart-box">{% if charts.commercials.labels %}<canvas id="commercialsChart" aria-label="Activité par commercial"></canvas>{% else %}<div class="terrain-empty">Aucune donnée pour les filtres sélectionnés.</div>{% endif %}</div></article>
+  </section>
+
+  <div class="terrain-section-title"><div><h2>Suivi des objectifs d'activité</h2><p>Objectif de visites configurable individuellement pour chaque commercial.</p></div></div>
+  <section class="terrain-table-card"><div class="terrain-table-wrap"><table class="terrain-table"><thead><tr><th>Commercial</th><th>Objectif de visites</th><th>Réalisé</th><th>Taux</th><th>Statut</th><th>Action</th></tr></thead><tbody>
+    {% for row in objectifs %}<tr class="terrain-objective-row" data-commercial-name="{{ row.name }}" data-realise="{{ row.realise }}"><td><strong>{{ row.name }}</strong></td><td><div class="terrain-target-editor"><input class="terrain-target-input" type="number" min="0" max="10000" step="1" value="{{ row.objectif }}" aria-label="Objectif de visites de {{ row.name }}"><small class="terrain-target-feedback"></small></div></td><td>{{ row.realise }}</td><td class="terrain-rate">{{ row.taux }} %</td><td><span class="terrain-status {{ 'success' if row.taux >= 100 else ('warning' if row.taux >= 80 else 'danger') }}">{{ row.statut }}</span></td><td><button type="button" class="btn terrain-target-save">Enregistrer</button></td></tr>{% else %}<tr><td colspan="6" style="text-align:center;color:#87928b;padding:24px">Aucune donnée</td></tr>{% endfor %}
+  </tbody></table></div></section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const charts = {{ charts|tojson }};
+  const commercialMap = { {% for c in commercials %}{{ c.username|tojson }}: {{ c.id }},{% endfor %} };
+  const csrfToken = {{ csrf_token()|tojson }};
+  const common = {responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false},ticks:{color:'#68756d',font:{size:10},maxRotation:45,minRotation:0}},y:{beginAtZero:true,grid:{color:'rgba(70,95,80,.10)'},ticks:{color:'#68756d',font:{size:10},precision:0}}}};
+  function make(id, config){ const el=document.getElementById(id); if(!el) return; new Chart(el, config); }
+  make('specialitesChart',{type:'bar',data:{labels:charts.specialites.labels,datasets:[{data:charts.specialites.values,borderRadius:6,barThickness:'flex',maxBarThickness:28}]},options:{...common,plugins:{legend:{display:false}}}});
+  make('evolutionChart',{type:'line',data:{labels:charts.evolution.labels,datasets:[{data:charts.evolution.values,tension:.25,fill:false,borderWidth:2,pointRadius:3,pointHoverRadius:5}]},options:{...common}});
+  make('zonesChart',{type:'bar',data:{labels:charts.zones.labels,datasets:[{data:charts.zones.values,borderRadius:6,maxBarThickness:30}]},options:{...common}});
+  make('commercialsChart',{type:'bar',data:{labels:charts.commercials.labels,datasets:[{data:charts.commercials.values,borderRadius:6,maxBarThickness:24}]},options:{...common,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'rgba(70,95,80,.10)'},ticks:{precision:0,font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+  function applyTarget(row, target){
+    const realise = Number(row.dataset.realise || 0);
+    const rateCell = row.querySelector('.terrain-rate');
+    const status = row.querySelector('.terrain-status');
+    const feedback = row.querySelector('.terrain-target-feedback');
+    const rate = target > 0 ? (realise * 100 / target) : 0;
+    rateCell.textContent = rate.toFixed(1) + ' %';
+    status.className = 'terrain-status ' + (rate >= 100 ? 'success' : (rate >= 80 ? 'warning' : 'danger'));
+    status.textContent = rate >= 100 ? 'Objectif atteint' : (rate >= 80 ? 'À surveiller' : 'Insuffisant');
+    if(feedback) feedback.textContent = '';
+  }
+
+  function loadTargets(){
+    fetch('{{ url_for("visit_targets.list_targets") }}', {headers:{'Accept':'application/json'}, credentials:'same-origin'})
+      .then(function(response){ if(!response.ok) throw new Error('load'); return response.json(); })
+      .then(function(targets){
+        document.querySelectorAll('.terrain-objective-row').forEach(function(row){
+          const id = commercialMap[row.dataset.commercialName];
+          if(id && Object.prototype.hasOwnProperty.call(targets, String(id))){
+            const target = Number(targets[String(id)]);
+            row.querySelector('.terrain-target-input').value = target;
+            applyTarget(row, target);
+          }
+        });
+      }).catch(function(){ /* La valeur 100 affichée côté serveur reste un fallback visuel. */ });
+  }
+
+  document.querySelectorAll('.terrain-objective-row').forEach(function(row){
+    const input = row.querySelector('.terrain-target-input');
+    const button = row.querySelector('.terrain-target-save');
+    const feedback = row.querySelector('.terrain-target-feedback');
+    const id = commercialMap[row.dataset.commercialName];
+    input.addEventListener('input', function(){
+      const value = Number(input.value);
+      if(Number.isInteger(value) && value >= 0 && value <= 10000) applyTarget(row, value);
+    });
+    button.addEventListener('click', function(){
+      if(!id) return;
+      const value = Number(input.value);
+      feedback.classList.remove('error');
+      if(!Number.isInteger(value) || value < 0 || value > 10000){ feedback.textContent='Valeur entre 0 et 10 000.'; feedback.classList.add('error'); return; }
+      button.classList.add('is-saving'); button.textContent='Enregistrement…';
+      const body = new URLSearchParams(); body.set('target', String(value)); body.set('csrf_token', csrfToken);
+      fetch('{{ url_for("visit_targets.update_target", commercial_id=0) }}'.replace('/0','/'+id), {method:'POST',headers:{'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),credentials:'same-origin'})
+        .then(function(response){ return response.json().then(function(data){ if(!response.ok || !data.ok) throw new Error(data.error || 'save'); return data; }); })
+        .then(function(data){ input.value=data.target; applyTarget(row, data.target); feedback.textContent='Objectif enregistré'; feedback.classList.remove('error'); })
+        .catch(function(error){ feedback.textContent=error.message || 'Erreur lors de l’enregistrement.'; feedback.classList.add('error'); })
+        .finally(function(){ button.classList.remove('is-saving'); button.textContent='Enregistrer'; });
+    });
+  });
+  loadTargets();
+});
+</script>
+{% endblock %}
