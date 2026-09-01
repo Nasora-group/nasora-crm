@@ -1,10 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Stocks disponibles — NASORA CRM{% endblock %}
 {% block content %}
-<div class="crm-page-hero"><span class="crm-overline">STOCKS DISPONIBLES</span><h1>État des stocks</h1><p class="crm-subtitle">Disponibilité des produits chez les quatre grossistes · semaine du {{ week_start.strftime('%d/%m/%Y') }}.</p><div class="dashboard-nav-actions"><form method="get" action="{{ url_for('stock.available') }}" class="stock-week-filter"><label for="week">Semaine</label><input id="week" name="week" type="date" value="{{ week_start.isoformat() }}"><button class="btn" type="submit">Afficher</button></form>{% if is_admin %}<a class="btn btn-outline" href="{{ url_for('stock.entry', week_start=week_start.isoformat()) }}">✏️ Saisir / modifier</a><a class="btn btn-outline" href="{{ url_for('stock.history') }}">🕐 Historique</a>{% endif %}</div></div>
-<div class="stock-legend"><span><i class="stock-dot available"></i> Disponible &gt; 10</span><span><i class="stock-dot low"></i> Stock faible 1–10</span><span><i class="stock-dot out"></i> Rupture 0</span></div>
+<div class="crm-page-hero stock-page-hero">
+  <span class="crm-overline">STOCKS · DISPONIBILITÉ</span>
+  <h1>État des stocks</h1>
+  <p class="crm-subtitle">Disponibilité des produits chez les quatre grossistes · semaine du {{ week_start.strftime('%d/%m/%Y') }}.</p>
+  <div class="dashboard-nav-actions stock-toolbar">
+    <form method="get" action="{{ url_for('stock.available') }}" class="stock-week-filter">
+      <label for="week">Semaine</label>
+      <input id="week" name="week" type="date" value="{{ week_start.isoformat() }}">
+      <button class="btn" type="submit">Afficher</button>
+    </form>
+    {% if is_admin %}
+    <a class="btn btn-outline" href="{{ url_for('stock.entry', week_start=week_start.isoformat()) }}">✏️ Saisir / modifier</a>
+    <a class="btn btn-outline" href="{{ url_for('stock.history') }}">🕐 Historique</a>
+    {% endif %}
+  </div>
+</div>
+<div class="stock-legend">
+  <span><i class="stock-dot available"></i> Disponible &gt; 10</span>
+  <span><i class="stock-dot low"></i> Stock faible 1–10</span>
+  <span><i class="stock-dot out"></i> Rupture 0</span>
+</div>
 {% for group in groups %}
-<section class="crm-table-card stock-table-wrap stock-group"><div class="stock-group-header"><div><span class="crm-overline">{{ group.division|upper }}</span><h2>{{ group.laboratory }}</h2></div></div><table class="responsive-table stock-table"><thead><tr><th>Produit</th>{% for slug,label in wholesalers.items() %}<th>{{ label }}</th>{% endfor %}</tr></thead><tbody>{% for row in group.products %}<tr><td><strong>{{ row.product }}</strong></td>{% for slug in wholesalers %}{% set stock=row.stocks[slug] %}<td><div class="stock-cell"><strong>{{ stock.quantity }}</strong><span class="stock-status {{ stock.status }}">{{ stock.label }}</span></div></td>{% endfor %}</tr>{% endfor %}</tbody></table></section>
-{% else %}<section class="crm-table-card"><div class="empty-state">Aucun produit actif à afficher pour cette semaine.</div></section>{% endfor %}
-<style>.stock-week-filter{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.stock-week-filter label{display:block;font-size:.75rem;font-weight:700}.stock-week-filter input{min-height:42px;border:1px solid #d8e0da;border-radius:9px;padding:0 10px}.stock-legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0;font-size:.8rem}.stock-dot{width:9px;height:9px;display:inline-block;border-radius:50%;margin-right:5px}.stock-dot.available{background:#4a8f63}.stock-dot.low{background:#d18b2d}.stock-dot.out{background:#c54b4b}.stock-table-wrap{overflow:auto}.stock-group{margin-bottom:18px}.stock-group-header{padding:16px 18px 4px}.stock-group-header h2{margin:3px 0 8px;font-size:1.05rem}.stock-table{min-width:850px}.stock-cell{display:flex;flex-direction:column;gap:5px}.stock-status{display:inline-flex;width:max-content;padding:3px 7px;border-radius:999px;font-size:.68rem;font-weight:700}.stock-status.disponible{background:#e7f3e9;color:#28633d}.stock-status.faible{background:#fff1d9;color:#895c15}.stock-status.rupture{background:#fde8e8;color:#9d3030}@media(max-width:600px){.stock-week-filter{width:100%}.stock-week-filter input,.stock-week-filter button{flex:1}.stock-legend{gap:9px;flex-direction:column}}</style>
+<section class="crm-table-card stock-table-wrap stock-group">
+  <div class="stock-group-header">
+    <div><span class="crm-overline">{{ group.division|upper }}</span><h2>{{ group.laboratory }}</h2></div>
+    <span class="stock-group-count">{{ group.products|length }} produit{{ 's' if group.products|length != 1 else '' }}</span>
+  </div>
+  <table class="responsive-table stock-table">
+    <thead><tr><th>Produit</th>{% for slug,label in wholesalers.items() %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in group.products %}
+    <tr>
+      <td><div class="stock-product"><span class="stock-product-icon">◇</span><strong>{{ row.product }}</strong></div></td>
+      {% for slug in wholesalers %}{% set stock=row.stocks[slug] %}
+      <td><div class="stock-cell"><strong class="stock-quantity">{{ stock.quantity }}</strong><span class="stock-status {{ stock.status }}">{{ stock.label }}</span></div></td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% else %}
+<section class="crm-table-card"><div class="empty-state stock-empty-state"><div class="stock-empty-icon">▣</div><strong>Aucun produit actif</strong><span>Aucun stock n'est disponible pour cette semaine.</span></div></section>
+{% endfor %}
+<style>
+.stock-page-hero{position:relative;overflow:hidden;padding:24px 28px!important;border-radius:16px!important;background:linear-gradient(135deg,var(--nasora-green-pale),#fff 72%);border:1px solid var(--nasora-border);box-shadow:var(--nasora-shadow)}
+.stock-page-hero:after{content:"";position:absolute;right:-45px;top:-60px;width:155px;height:155px;border-radius:50%;background:var(--nasora-green-soft);opacity:.8;pointer-events:none}.stock-page-hero>*{position:relative;z-index:1}.stock-page-hero h1{font-size:1.7rem!important;letter-spacing:-.025em}.stock-toolbar{margin-top:16px;display:flex;gap:8px;align-items:end;flex-wrap:wrap}.stock-week-filter{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.stock-week-filter label{display:block;font-size:.72rem;font-weight:800;color:var(--nasora-muted);text-transform:uppercase;letter-spacing:.04em}.stock-week-filter input{min-height:40px;border:1px solid var(--nasora-border);border-radius:9px;padding:0 10px;background:#fff}.stock-legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 16px;padding:11px 14px;border:1px solid var(--nasora-border);border-radius:11px;background:#fff;box-shadow:var(--nasora-shadow);font-size:.78rem;color:var(--nasora-text)}.stock-dot{width:9px;height:9px;display:inline-block;border-radius:50%;margin-right:5px}.stock-dot.available{background:#4a8f63}.stock-dot.low{background:#d18b2d}.stock-dot.out{background:#c54b4b}.stock-group{margin-bottom:18px;overflow:hidden}.stock-group-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 20px 12px;background:linear-gradient(180deg,var(--nasora-green-pale),#fff)}.stock-group-header h2{margin:3px 0 0;font-size:1.05rem;color:var(--nasora-ink)}.stock-group-count{padding:5px 9px;border-radius:999px;background:var(--nasora-green-soft);color:var(--nasora-green);font-size:.7rem;font-weight:800;white-space:nowrap}.stock-table-wrap{overflow:auto}.stock-table{min-width:850px}.stock-table thead th{white-space:nowrap}.stock-table tbody tr{transition:background-color .14s ease}.stock-table tbody tr:hover{background:var(--nasora-green-pale)}.stock-product{display:flex;align-items:center;gap:9px;min-width:190px}.stock-product-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900}.stock-cell{display:flex;flex-direction:column;gap:5px}.stock-quantity{font-size:1rem;color:var(--nasora-ink);font-variant-numeric:tabular-nums}.stock-status{display:inline-flex;width:max-content;padding:4px 8px;border-radius:999px;font-size:.67rem;font-weight:800}.stock-status.disponible{background:#e7f3e9;color:#28633d}.stock-status.faible{background:#fff1d9;color:#895c15}.stock-status.rupture{background:#fde8e8;color:#9d3030}.stock-empty-state{text-align:center!important;padding:42px 20px!important;display:flex;flex-direction:column;align-items:center;gap:4px}.stock-empty-icon{font-size:1.8rem;color:var(--nasora-green);margin-bottom:3px}.stock-empty-state strong{color:var(--nasora-ink)}
+@media(max-width:760px){.stock-page-hero{padding:20px!important}.stock-page-hero h1{font-size:1.4rem!important}.stock-toolbar{align-items:stretch}.stock-week-filter{width:100%}.stock-week-filter input,.stock-week-filter button{flex:1}.stock-toolbar>.btn{flex:1}.stock-legend{flex-direction:column;gap:7px}.stock-group-header{padding:15px}.stock-table{min-width:780px}}
+@media(prefers-reduced-motion:reduce){.stock-table tbody tr{transition:none}}
+</style>
 {% endblock %}
