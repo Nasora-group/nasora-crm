@@ -58,16 +58,20 @@ def _find_client_for_prospection(prospection):
     normalized_phone = _normalize_phone(phone)
     normalized_name = _normalize_text(name)
     if normalized_phone and not _invalid_phone(phone):
-        for client in Client.query.filter(Client.phone.isnot(None)).all():
+        candidates = Client.query.filter(
+            Client.phone.isnot(None),
+            (Client.owner_id.is_(None) | (Client.owner_id == prospection.commercial_id)),
+        ).all()
+        for client in candidates:
             if _normalize_phone(client.phone) == normalized_phone:
                 return client
     if not normalized_name:
         return None
     same_name = [c for c in Client.query.filter(Client.name.isnot(None)).all() if _normalize_text(c.name) == normalized_name]
-    owned = [c for c in same_name if c.owner_id == prospection.commercial_id]
+    owned = [c for c in same_name if c.owner_id in (None, prospection.commercial_id)]
     if owned:
-        return sorted(owned, key=lambda c: c.id)[0]
-    return same_name[0] if len(same_name) == 1 else None
+        return sorted(owned, key=lambda c: (c.owner_id is not None, c.id))[0]
+    return None
 
 
 def _sync_client_fields(prospection, client, establishment=None):
@@ -148,7 +152,6 @@ def _sync_professional_from_prospection(prospection, establishment=None, existin
         visit.products_prescribed = pr
         visit.report = report
 
-    # Recalcul uniquement à partir des visites de ce professionnel.
     latest_client_visit_date = db.session.query(func.max(ClientVisit.date)).filter(
         ClientVisit.client_id == client.id,
         ClientVisit.is_duplicate.is_(False),
@@ -166,7 +169,6 @@ def _sync_professional_from_existing_prospection(prospection, establishment=None
 
 
 def _delete_linked_records_for_prospection(prospection):
-    # New records have an unambiguous link: delete only that exact visit.
     visit = ClientVisit.query.filter_by(
         prospection_id=prospection.id,
         is_duplicate=False,
@@ -175,7 +177,6 @@ def _delete_linked_records_for_prospection(prospection):
         db.session.delete(visit)
         return
 
-    # For legacy rows without a link, delete only an exact payload match.
     client = _find_client_for_prospection(prospection)
     if client is None:
         return
