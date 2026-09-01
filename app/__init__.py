@@ -23,6 +23,8 @@ def create_app(config_object=None):
         user = db.session.get(User, int(user_id))
         return user if user and user.is_active_account else None
     _register_blueprints(app)
+    from app.visit_objectives_readonly import install_readonly_objective_reader
+    install_readonly_objective_reader()
     from app import visit_sync  # noqa: F401
     _register_error_handlers(app)
     @app.context_processor
