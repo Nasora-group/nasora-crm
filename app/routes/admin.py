@@ -135,7 +135,7 @@ def commercial_detail(username):
     if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
 
     date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
-    prospection_query=Prospection.query.filter(Prospection.commercial_id==commercial.id)
+    prospection_query=Prospection.query.join(User).filter(Prospection.commercial_id==commercial.id)
     if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
     if date_end: prospection_query=prospection_query.filter(Prospection.date<=date_end)
     if specialite: prospection_query=prospection_query.filter(Prospection.specialite==specialite)
