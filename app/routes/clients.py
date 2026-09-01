@@ -204,16 +204,21 @@ def client_detail(client_id):
     if current_user.role == "commercial":
         visits = visits.filter(ClientVisit.commercial_id == current_user.id)
     visits = visits.order_by(ClientVisit.date.desc()).all()
-    if legacy_history and (not client.last_visit or legacy_history[0].date > client.last_visit):
-        client.last_visit = legacy_history[0].date
-        db.session.commit()
+
+    # Une simple consultation de la fiche ne doit jamais écrire en base.
+    # Les champs persistés restent alimentés lors de l'enregistrement d'une visite.
+    display_last_visit = client.last_visit
+    if legacy_history and (not display_last_visit or legacy_history[0].date > display_last_visit):
+        display_last_visit = legacy_history[0].date
+
+    display_next_visit = client.next_visit
     latest_crm_next = next((v.next_visit for v in visits if v.next_visit), None)
-    if latest_crm_next and (not client.next_visit or latest_crm_next != client.next_visit):
-        client.next_visit = latest_crm_next
-        db.session.commit()
+    if latest_crm_next and (not display_next_visit or latest_crm_next != display_next_visit):
+        display_next_visit = latest_crm_next
+
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for v in legacy_history if (v.produits_presentes or "").strip())
     prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for v in legacy_history if (v.produits_prescrits or "").strip())
-    return render_template("client_detail.html", client=client, history=legacy_history, visits=visits, presented_count=presented_count, prescribed_count=prescribed_count)
+    return render_template("client_detail.html", client=client, history=legacy_history, visits=visits, presented_count=presented_count, prescribed_count=prescribed_count, display_last_visit=display_last_visit, display_next_visit=display_next_visit)
 
 
 @clients_bp.route("/admin/clients/<int:client_id>/visits/new", methods=["GET", "POST"])
