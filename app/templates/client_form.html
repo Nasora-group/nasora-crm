@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Nouveau professionnel — NASORA CRM{% endblock %}
+{% block title %}{{ 'Modifier le professionnel' if client else 'Nouveau professionnel' }} — NASORA CRM{% endblock %}
 {% block content %}
 <style>
 .client-form-page{max-width:1120px;margin:0 auto}.client-form-hero{margin-bottom:20px}.client-form-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--nasora-green)}.client-form-hero h1{margin:0;font-size:1.75rem;letter-spacing:-.025em}.client-form-hero p{margin:5px 0 0;color:var(--nasora-muted);font-size:.88rem}.client-form-card{background:var(--nasora-white);border:1px solid var(--nasora-border);border-radius:16px;box-shadow:0 8px 28px rgba(15,23,42,.05);overflow:hidden}.client-form-section{padding:20px 22px;border-bottom:1px solid var(--nasora-border)}.client-form-section:last-of-type{border-bottom:0}.client-form-section-head{display:flex;align-items:center;gap:10px;margin-bottom:15px}.client-form-section-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900}.client-form-section h2{margin:0;font-size:1rem}.client-form-section p{margin:2px 0 0;color:var(--nasora-muted);font-size:.78rem}.client-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.client-form-field.full{grid-column:1/-1}.client-form-field label{display:block;margin-bottom:6px;font-size:.76rem;font-weight:800;color:var(--nasora-text)}.client-form-field label span{color:var(--nasora-muted);font-weight:600}.client-form-field .form-input{width:100%;box-sizing:border-box}.client-form-field textarea{min-height:120px;resize:vertical}.client-form-actions{display:flex;justify-content:space-between;gap:10px;padding:16px 22px;background:#fafcfb;border-top:1px solid var(--nasora-border)}.client-form-actions .btn{min-width:150px}@media(max-width:700px){.client-form-grid{grid-template-columns:1fr}.client-form-field.full{grid-column:auto}.client-form-actions{flex-direction:column-reverse}.client-form-actions .btn{width:100%}.client-form-hero h1{font-size:1.45rem}.client-form-section{padding:17px}}
@@ -9,10 +9,10 @@
   <div class="page-hero client-form-hero">
     <div>
       <div class="client-form-kicker">◈ Base NASORA</div>
-      <h1>Nouveau professionnel</h1>
-      <p>Créez une fiche claire et exploitable par toute la force de vente.</p>
+      <h1>{{ 'Modifier le professionnel' if client else 'Nouveau professionnel' }}</h1>
+      <p>{{ 'Mettez à jour les informations de cette fiche sans la recréer.' if client else 'Créez une fiche claire et exploitable par toute la force de vente.' }}</p>
     </div>
-    <div class="hero-actions"><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">← Retour à la base</a></div>
+    <div class="hero-actions"><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) if client else url_for('clients.list_clients') }}">← {{ 'Retour à la fiche' if client else 'Retour à la base' }}</a></div>
   </div>
 
   <form method="post" class="client-form-card">
@@ -43,7 +43,7 @@
       <div class="client-form-field"><textarea class="form-input" name="notes" rows="5" placeholder="Informations, habitudes, remarques…">{{ client.notes if client else '' }}</textarea></div>
     </section>
 
-    <div class="client-form-actions"><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">Annuler</a><button class="btn" type="submit">Enregistrer le professionnel</button></div>
+    <div class="client-form-actions"><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) if client else url_for('clients.list_clients') }}">Annuler</a><button class="btn" type="submit">{{ 'Enregistrer les modifications' if client else 'Enregistrer le professionnel' }}</button></div>
   </form>
 </div>
 {% endblock %}
