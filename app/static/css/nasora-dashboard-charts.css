@@ -1,38 +1,103 @@
 :root{
   --nasora-chart-primary:#167a56;
   --nasora-chart-primary-soft:rgba(22,122,86,.14);
-  --nasora-chart-secondary:#3b7f72;
-  --nasora-chart-secondary-soft:rgba(59,127,114,.14);
-  --nasora-chart-accent:#8b6f47;
-  --nasora-chart-warning:#c98518;
-  --nasora-chart-danger:#b94a48;
-  --nasora-chart-grid:rgba(31,51,44,.09);
+  --nasora-chart-secondary:#356f8a;
+  --nasora-chart-secondary-soft:rgba(53,111,138,.14);
+  --nasora-chart-accent:#806548;
+  --nasora-chart-warning:#b87916;
+  --nasora-chart-danger:#b34d4b;
+  --nasora-chart-grid:rgba(31,51,44,.08);
   --nasora-chart-text:#24352f;
+  --nasora-chart-muted:#68766f;
 }
 
-/* Couche visuelle commune aux graphiques : sobre, stable et lisible. */
+/* Présentation dashboard : profondeur légère, surfaces propres et contraste net. */
 .chart-card{
   position:relative;
-  background:linear-gradient(180deg,#fff 0%,#fbfdfc 100%);
-  border:1px solid rgba(22,122,86,.10);
-  box-shadow:0 8px 24px rgba(24,50,42,.06);
+  background:linear-gradient(180deg,#fff 0%,#fbfdfc 100%)!important;
+  border:1px solid #dbe5df!important;
+  box-shadow:0 6px 20px rgba(24,50,42,.055)!important;
+  overflow:hidden;
 }
-.chart-card h3{color:var(--nasora-chart-text);font-weight:700;letter-spacing:-.01em}
+.chart-card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto;
+  height:3px;
+  background:linear-gradient(90deg,var(--nasora-chart-primary),var(--nasora-chart-secondary));
+}
+.chart-card h3{
+  color:var(--nasora-chart-text)!important;
+  font-weight:700;
+  letter-spacing:-.01em;
+}
 .chart-card canvas{image-rendering:auto}
 
-/* KPI : accents discrets, sans effet multicolore. */
-.kpi-card{border-color:rgba(22,122,86,.10)}
-.kpi-icon{color:var(--nasora-chart-primary);background:var(--nasora-chart-primary-soft)}
+/* KPI : hiérarchie visuelle plus forte sans surcharge. */
+.kpi-card{
+  position:relative;
+  border-color:#dbe5df!important;
+  background:#fff!important;
+  box-shadow:0 4px 16px rgba(24,50,42,.05)!important;
+}
+.kpi-card::after{
+  content:"";
+  position:absolute;
+  left:0;
+  top:14px;
+  bottom:14px;
+  width:3px;
+  border-radius:0 3px 3px 0;
+  background:var(--nasora-chart-primary);
+}
+.kpi-icon{
+  color:var(--nasora-chart-primary)!important;
+  background:var(--nasora-chart-primary-soft)!important;
+  border:1px solid rgba(22,122,86,.12);
+}
+.kpi-value{color:#14241c!important;font-weight:800}
+.kpi-label{color:#53635b!important;font-weight:600}
+.kpi-sub{color:var(--nasora-chart-muted)!important}
 
-/* Progression : la couleur est réservée à l'état métier. */
-.direction-progress .progress-track{background:#e9efec}
-.direction-progress .progress-track>span{background:var(--nasora-chart-primary);transition:none!important}
+/* Progression : état métier lisible et stable. */
+.direction-progress .progress-track{background:#e7eeea!important}
+.direction-progress .progress-track>span{background:var(--nasora-chart-primary)!important;transition:none!important}
 .status-good{color:var(--nasora-chart-primary)!important}
 .status-warning{color:var(--nasora-chart-warning)!important}
 
 /* Badges de classement cohérents avec les graphiques. */
 .ranking-status.good{background:rgba(22,122,86,.11);color:#126247}
-.ranking-status.warning{background:rgba(201,133,24,.12);color:#9a6512}
-.ranking-status.bad{background:rgba(185,74,72,.11);color:#9b3f3d}
+.ranking-status.warning{background:rgba(184,121,22,.12);color:#8f5e0d}
+.ranking-status.bad{background:rgba(179,77,75,.11);color:#963d3b}
+.ranking-rate{color:#18362a}
+.ranking-target{color:#53635b}
 
-@media (prefers-reduced-motion:reduce){.direction-progress .progress-track>span{transition:none!important}}
+/* Sections et tableaux : séparation douce pour éviter l'effet bloc. */
+.crm-table-card{
+  border:1px solid #dbe5df!important;
+  box-shadow:0 4px 16px rgba(24,50,42,.045)!important;
+  background:#fff!important;
+}
+.responsive-table thead th{
+  background:#edf5f0!important;
+  color:#173f2d!important;
+}
+.responsive-table tbody tr:hover{background:#f3f8f5!important}
+
+/* Boutons de navigation du dashboard : priorité visuelle claire. */
+.dashboard-nav-actions .btn{
+  min-height:38px;
+  border-radius:9px!important;
+  font-weight:700!important;
+}
+
+@media (max-width:900px){
+  .chart-card canvas{max-height:300px}
+}
+@media (max-width:640px){
+  .chart-card canvas{max-height:260px}
+  .kpi-card::after{top:10px;bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  .direction-progress .progress-track>span{transition:none!important}
+}
