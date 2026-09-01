@@ -1,0 +1,41 @@
+/* NASORA CRM — Direction dashboard visual polish */
+.direction-dashboard-page{max-width:1500px;margin:0 auto;padding-bottom:28px}
+.direction-dashboard-page .page-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#f7fbf8 0%,#fff 58%,#edf7f1 100%);border:1px solid #dce9e1;box-shadow:0 10px 28px rgba(25,67,49,.06)}
+.direction-dashboard-page .page-hero:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-90px;top:-110px;background:rgba(22,122,86,.07);pointer-events:none}
+.direction-dashboard-page .hero-eyebrow{letter-spacing:.11em;font-size:.7rem;font-weight:800;color:#167a56}
+.direction-dashboard-page .crm-subtitle{max-width:760px;color:#60716a;margin-bottom:0}
+.direction-dashboard-page .dashboard-nav-actions{position:relative;z-index:1}
+.direction-dashboard-page .direction-division-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;margin-top:20px}
+.direction-dashboard-page .direction-division-card{background:#fff;border:1px solid #dbe7e0;box-shadow:0 7px 22px rgba(24,50,42,.055);display:flex;flex-direction:column}
+.direction-dashboard-page .direction-division-card:first-child{border-top:3px solid #167a56}
+.direction-dashboard-page .direction-division-card:last-child{border-top:3px solid #356f8a}
+.direction-dashboard-page .direction-division-head{display:flex;justify-content:space-between}
+.direction-dashboard-page .division-badge{padding:6px 10px;border-radius:999px;background:#edf6f1;color:#176246;font-size:.72rem;font-weight:800}
+.direction-dashboard-page .direction-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.direction-dashboard-page .direction-metric{background:#f7faf8;border:1px solid #e6eee9}
+.direction-dashboard-page .direction-metric span{font-size:.72rem;color:#6a7973;font-weight:600}
+.direction-dashboard-page .direction-metric strong{font-size:1.05rem;color:#18362a}
+.direction-dashboard-page .direction-progress-label{display:flex;justify-content:space-between;font-size:.76rem;color:#53645e}
+.direction-dashboard-page .progress-track{height:8px;background:#e8efeb!important}
+.direction-dashboard-page .dashboard-summary{display:grid;grid-template-columns:1.35fr 1fr;margin-top:20px}
+.direction-dashboard-page .summary-card{border:1px solid #dbe7e0;box-shadow:0 6px 18px rgba(24,50,42,.045);background:#fff}
+.direction-dashboard-page .summary-card h3{margin-bottom:2px}
+.direction-dashboard-page .quick-actions .btn{min-height:38px;border-radius:9px!important;font-size:.78rem}
+.direction-dashboard-page .crm-section-title{padding-top:6px}
+.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+.direction-dashboard-page .kpi-card{min-height:88px}
+.direction-dashboard-page .chart-grid{display:grid;grid-template-columns:1.45fr .85fr}
+.direction-dashboard-page .chart-card{min-height:390px}
+.direction-dashboard-page .chart-card canvas{height:320px!important}
+.direction-dashboard-page .crm-table-card{box-shadow:0 5px 18px rgba(24,50,42,.04)}
+.direction-dashboard-page .responsive-table th{font-size:.72rem;letter-spacing:.02em}
+.direction-dashboard-page .responsive-table td{font-size:.82rem}
+.direction-dashboard-page .responsive-table tbody tr{transition:background .15s ease}
+.direction-dashboard-page .filter-form{background:#f7faf8;border:1px solid #dce8e1;border-radius:14px;padding:16px;box-shadow:0 5px 16px rgba(24,50,42,.035)}
+.direction-dashboard-page .filter-form label{font-size:.72rem;font-weight:700;color:#53645e;margin-bottom:5px}
+.direction-dashboard-page .filter-form .form-input{min-height:38px;border-color:#d5e1da;background:#fff}
+.direction-dashboard-page .crm-pagination{padding:14px 0 2px}
+@media(max-width:1100px){.direction-dashboard-page .direction-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.direction-dashboard-page .chart-grid{grid-template-columns:1fr}.direction-dashboard-page .chart-card{min-height:350px}}
+@media(max-width:900px){.direction-dashboard-page .direction-division-grid,.direction-dashboard-page .dashboard-summary{grid-template-columns:1fr}.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direction-dashboard-page .chart-card canvas{height:290px!important}}
+@media(max-width:640px){.direction-dashboard-page .direction-metrics,.direction-dashboard-page .kpi-grid{grid-template-columns:1fr}.direction-dashboard-page .direction-division-card,.direction-dashboard-page .summary-card,.direction-dashboard-page .chart-card{box-shadow:0 4px 14px rgba(24,50,42,.04)}.direction-dashboard-page .chart-card{min-height:310px}.direction-dashboard-page .chart-card canvas{height:240px!important}.direction-dashboard-page .filter-form{padding:12px}.direction-dashboard-page .quick-actions .btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){.direction-dashboard-page .responsive-table tbody tr{transition:none}}
