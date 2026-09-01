@@ -86,6 +86,11 @@ def entry():
     except ValueError:
         week_start = _monday(date.today())
     catalog = _catalog()
+
+    # Le bouton de changement de semaine navigue uniquement : il ne sauvegarde jamais.
+    if request.method == "POST" and "change_week" in request.form:
+        return redirect(url_for("stock.entry", week_start=week_start.isoformat()))
+
     if request.method == "POST":
         try:
             validate_csrf(request.form.get("csrf_token"))
