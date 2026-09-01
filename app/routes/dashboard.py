@@ -70,16 +70,25 @@ def _find_client_for_prospection(prospection):
     return same_name[0] if len(same_name) == 1 else None
 
 
-def _sync_professional_from_prospection(prospection, establishment=None):
+def _sync_client_fields(prospection, client, establishment=None):
     phone = (prospection.telephone or "").strip()
-    client = _find_client_for_prospection(prospection)
     valid_phone = not _invalid_phone(phone)
     establishment = (establishment or "").strip() or None
     if client is None:
-        client = Client(name=prospection.nom_client.strip(), specialty=prospection.specialite.strip() or None, structure=prospection.structure.strip(), establishment=establishment, phone=phone if valid_phone else None, potential=3, owner_id=prospection.commercial_id, last_visit=prospection.date)
+        client = Client(
+            name=prospection.nom_client.strip(),
+            specialty=prospection.specialite.strip() or None,
+            structure=prospection.structure.strip(),
+            establishment=establishment,
+            phone=phone if valid_phone else None,
+            potential=3,
+            owner_id=prospection.commercial_id,
+            last_visit=prospection.date,
+        )
         db.session.add(client)
         db.session.flush()
     else:
+        client.name = prospection.nom_client.strip() or client.name
         client.specialty = prospection.specialite.strip() or client.specialty
         client.structure = prospection.structure.strip() or client.structure
         if establishment:
@@ -88,30 +97,103 @@ def _sync_professional_from_prospection(prospection, establishment=None):
             client.phone = phone
         if client.owner_id is None:
             client.owner_id = prospection.commercial_id
-        if not client.last_visit or prospection.date > client.last_visit:
-            client.last_visit = prospection.date
+    return client
+
+
+def _sync_professional_from_prospection(prospection, establishment=None, existing_client=None, previous_payload=None):
+    client = existing_client or _find_client_for_prospection(prospection)
+    client = _sync_client_fields(prospection, client, establishment=establishment)
+
     pp = prospection.produits_presentes or None
     pr = prospection.produits_prescrits or None
     report = prospection.profils_prospect or None
-    visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=pp, products_prescribed=pr, report=report, is_duplicate=False).first()
+
+    visit = ClientVisit.query.filter_by(
+        prospection_id=prospection.id,
+        is_duplicate=False,
+    ).first()
+
+    # Legacy prospections created before the explicit link can be attached only
+    # to an exact old visit. Never guess from date alone.
+    if visit is None and previous_payload and previous_payload.get("client_id"):
+        visit = ClientVisit.query.filter_by(
+            client_id=previous_payload["client_id"],
+            commercial_id=prospection.commercial_id,
+            date=previous_payload["date"],
+            products_presented=previous_payload["products_presented"],
+            products_prescribed=previous_payload["products_prescribed"],
+            report=previous_payload["report"],
+            is_duplicate=False,
+        ).first()
+        if visit is not None and visit.prospection_id is None:
+            visit.prospection_id = prospection.id
+
     if visit is None:
-        db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=pp, products_prescribed=pr, report=report))
+        visit = ClientVisit(
+            client_id=client.id,
+            commercial_id=prospection.commercial_id,
+            prospection_id=prospection.id,
+            date=prospection.date,
+            products_presented=pp,
+            products_prescribed=pr,
+            report=report,
+        )
+        db.session.add(visit)
+    else:
+        visit.client_id = client.id
+        visit.commercial_id = prospection.commercial_id
+        visit.prospection_id = prospection.id
+        visit.date = prospection.date
+        visit.products_presented = pp
+        visit.products_prescribed = pr
+        visit.report = report
+
+    # Recalcul uniquement à partir des visites de ce professionnel.
+    latest_client_visit_date = db.session.query(func.max(ClientVisit.date)).filter(
+        ClientVisit.client_id == client.id,
+        ClientVisit.is_duplicate.is_(False),
+    ).scalar()
+    client.last_visit = latest_client_visit_date or prospection.date
 
 
-def _sync_professional_from_existing_prospection(prospection, establishment=None):
-    _sync_professional_from_prospection(prospection, establishment=establishment)
+def _sync_professional_from_existing_prospection(prospection, establishment=None, existing_client=None, previous_payload=None):
+    return _sync_professional_from_prospection(
+        prospection,
+        establishment=establishment,
+        existing_client=existing_client,
+        previous_payload=previous_payload,
+    )
 
 
 def _delete_linked_records_for_prospection(prospection):
+    # New records have an unambiguous link: delete only that exact visit.
+    visit = ClientVisit.query.filter_by(
+        prospection_id=prospection.id,
+        is_duplicate=False,
+    ).first()
+    if visit is not None:
+        db.session.delete(visit)
+        return
+
+    # For legacy rows without a link, delete only an exact payload match.
     client = _find_client_for_prospection(prospection)
     if client is None:
         return
-    visit = ClientVisit.query.filter_by(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date).order_by(ClientVisit.id.desc()).first()
+    pp = prospection.produits_presentes or None
+    pr = prospection.produits_prescrits or None
+    report = prospection.profils_prospect or None
+    visit = ClientVisit.query.filter_by(
+        client_id=client.id,
+        commercial_id=prospection.commercial_id,
+        date=prospection.date,
+        products_presented=pp,
+        products_prescribed=pr,
+        report=report,
+        is_duplicate=False,
+        prospection_id=None,
+    ).first()
     if visit is not None:
         db.session.delete(visit)
-        db.session.flush()
-    if ClientVisit.query.filter_by(client_id=client.id).count() == 0:
-        db.session.delete(client)
 
 
 def _render_dashboard(form):
@@ -134,7 +216,18 @@ def index():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form)
         try:
-            prospection = Prospection(commercial_id=current_user.id, date=form.date.data, nom_client=form.nom_client.data.strip(), specialite=form.specialite.data.strip(), structure=form.structure.data.strip(), telephone=form.telephone.data.strip(), profils_prospect=(form.profils_prospect.data or "").strip(), produits_presentes=", ".join(form.produits_presentes.data or []), produits_prescrits=", ".join(form.produits_prescrits.data or []), establishment=form.nom_structure.data.strip())
+            prospection = Prospection(
+                commercial_id=current_user.id,
+                date=form.date.data,
+                nom_client=form.nom_client.data.strip(),
+                specialite=form.specialite.data.strip(),
+                structure=form.structure.data.strip(),
+                telephone=form.telephone.data.strip(),
+                profils_prospect=(form.profils_prospect.data or "").strip(),
+                produits_presentes=", ".join(form.produits_presentes.data or []),
+                produits_prescrits=", ".join(form.produits_prescrits.data or []),
+                establishment=form.nom_structure.data.strip(),
+            )
             db.session.add(prospection)
             db.session.flush()
             _sync_professional_from_prospection(prospection, form.nom_structure.data)
@@ -153,12 +246,22 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(Prospection.date.desc(), Prospection.id.desc()).all()
+    rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(
+        Prospection.date.desc(), Prospection.id.desc()
+    ).all()
     establishments_by_prospection = {}
     for row in rows:
         client = _find_client_for_prospection(row)
-        establishments_by_prospection[row.id] = (row.establishment or "").strip() or (client.establishment if client and client.establishment else "")
-    return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
+        establishments_by_prospection[row.id] = (
+            (row.establishment or "").strip()
+            or (client.establishment if client and client.establishment else "")
+        )
+    return render_template(
+        "dashboard_prospections.html",
+        prospections=rows,
+        planning_statuses={},
+        establishments_by_prospection=establishments_by_prospection,
+    )
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
@@ -180,6 +283,19 @@ def edit_prospection(prospection_id):
         form.nom_structure.data = (prospection.establishment or (client.establishment if client else "")) or ""
     if form.validate_on_submit():
         try:
+            linked_visit = ClientVisit.query.filter_by(
+                prospection_id=prospection.id,
+                is_duplicate=False,
+            ).first()
+            previous_client = linked_visit.client if linked_visit is not None else _find_client_for_prospection(prospection)
+            previous_payload = {
+                "client_id": previous_client.id if previous_client else None,
+                "date": prospection.date,
+                "products_presented": prospection.produits_presentes or None,
+                "products_prescribed": prospection.produits_prescrits or None,
+                "report": prospection.profils_prospect or None,
+            }
+
             prospection.date = form.date.data
             prospection.nom_client = form.nom_client.data.strip()
             prospection.specialite = form.specialite.data.strip()
@@ -189,7 +305,12 @@ def edit_prospection(prospection_id):
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
-            _sync_professional_from_existing_prospection(prospection, form.nom_structure.data)
+            _sync_professional_from_existing_prospection(
+                prospection,
+                form.nom_structure.data,
+                existing_client=previous_client,
+                previous_payload=previous_payload,
+            )
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             return redirect(url_for("dashboard.prospections"))

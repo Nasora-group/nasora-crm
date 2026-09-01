@@ -29,6 +29,7 @@ class ClientVisit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey("crm_client.id", ondelete="CASCADE"), nullable=False, index=True)
     commercial_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    prospection_id = db.Column(db.Integer, db.ForeignKey("prospection.id", ondelete="SET NULL"), nullable=True, index=True)
     date = db.Column(db.Date, nullable=False, index=True)
     products_presented = db.Column(db.Text, nullable=True)
     products_prescribed = db.Column(db.Text, nullable=True)
@@ -39,6 +40,7 @@ class ClientVisit(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     client = db.relationship("Client", back_populates="visits")
     commercial = db.relationship("User", foreign_keys=[commercial_id])
+    prospection = db.relationship("Prospection", foreign_keys=[prospection_id])
 
     __table_args__ = (
         db.Index("ix_crm_visit_commercial_date_duplicate", "commercial_id", "date", "is_duplicate"),
