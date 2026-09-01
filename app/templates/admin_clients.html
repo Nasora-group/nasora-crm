@@ -1,9 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Professionnels — NASORA CRM{% endblock %}
+{% block title %}Base NASORA — NASORA CRM{% endblock %}
 {% block content %}
-<div class="page-hero"><div><h1>Professionnels & Pharmacies</h1></div><div class="hero-actions"><a class="btn" href="{{ url_for('clients.new_client') }}">+ Nouveau professionnel</a><a class="btn btn-outline" href="{{ url_for('clients_export.export_clients_excel') }}">📊 Exporter toute la base en Excel</a></div></div>
-<div class="kpi-grid"><div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><span class="kpi-label">Contacts actifs</span><span class="kpi-value">{{ total }}</span></div></div><div class="kpi-card"><div class="kpi-icon">📍</div><div class="kpi-body"><span class="kpi-label">Structures</span><span class="kpi-value">{{ structures }}</span></div></div><div class="kpi-card"><div class="kpi-icon">⭐</div><div class="kpi-body"><span class="kpi-label">Potentiel élevé</span><span class="kpi-value">{{ high_potential }}</span></div></div></div>
-<form class="filter-form" method="get"><div><label>Recherche</label><input class="form-input" name="q" value="{{ q }}" placeholder="Nom, téléphone, établissement..."></div><div><label>Structure</label><select class="form-input" name="structure"><option value="">Toutes</option>{% for s in structure_choices %}<option value="{{ s }}" {% if structure==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div><div><label>Potentiel</label><select class="form-input" name="potential"><option value="">Tous</option>{% for p in range(1,6) %}<option value="{{ p }}" {% if potential==p|string %}selected{% endif %}>{{ p }} ★</option>{% endfor %}</select></div><div><button class="btn" type="submit">Rechercher</button><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">Réinitialiser</a></div></form>
-<div class="responsive-table"><table><thead><tr><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Zone</th><th>Téléphone</th><th>Potentiel</th><th>Dernière visite</th><th>Prochaine visite</th><th></th></tr></thead><tbody>{% for c in clients %}<tr><td><strong>{{ c.name }}</strong><br><span class="muted">{{ c.establishment or '—' }}</span></td><td>{{ c.specialty or '—' }}</td><td>{{ c.structure }}</td><td>{{ c.zone or '—' }}</td><td>{{ c.phone or '—' }}</td><td>{% for _ in range(c.potential) %}★{% endfor %}</td><td>{{ c.last_visit.strftime('%d/%m/%Y') if c.last_visit else 'Jamais' }}</td><td>{{ c.next_visit.strftime('%d/%m/%Y') if c.next_visit else 'À planifier' }}</td><td><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=c.id) }}">Ouvrir</a></td></tr>{% else %}<tr><td colspan="9">Aucun professionnel trouvé.</td></tr>{% endfor %}</tbody></table></div>
-{% if pagination %}<div class="pagination">{% if pagination.has_prev %}<a href="{{ url_for('clients.list_clients', page=pagination.prev_num, q=q, structure=structure, potential=potential) }}">&laquo;</a>{% endif %}<span class="active">Page {{ pagination.page }} / {{ pagination.pages or 1 }}</span>{% if pagination.has_next %}<a href="{{ url_for('clients.list_clients', page=pagination.next_num, q=q, structure=structure, potential=potential) }}">&raquo;</a>{% endif %}</div>{% endif %}
+<style>
+.nasora-base-hero{align-items:center;margin-bottom:18px}.nasora-base-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--nasora-green)}
+.nasora-base-hero h1{margin:0;font-size:1.7rem;letter-spacing:-.025em}.nasora-base-subtitle{margin:5px 0 0;color:var(--nasora-muted);font-size:.88rem}.nasora-base-actions{display:flex;gap:8px;flex-wrap:wrap}
+.nasora-base-kpi{position:relative;overflow:hidden}.nasora-base-kpi::after{content:"";position:absolute;right:-25px;bottom:-35px;width:100px;height:100px;border-radius:50%;background:var(--nasora-green-soft);opacity:.8}.nasora-base-kpi .kpi-icon{position:relative;z-index:1}.nasora-base-kpi .kpi-body{position:relative;z-index:1}
+.nasora-base-filters{display:grid;grid-template-columns:minmax(260px,2fr) minmax(160px,1fr) minmax(140px,.8fr) auto;gap:10px;align-items:end;margin-bottom:16px}.nasora-base-field{min-width:0}.nasora-base-field label{display:block;margin-bottom:5px;font-size:.74rem;font-weight:800;color:var(--nasora-muted);text-transform:uppercase;letter-spacing:.035em}.nasora-base-search{position:relative}.nasora-base-search input{padding-left:38px}.nasora-base-search-icon{position:absolute;left:13px;bottom:11px;color:var(--nasora-muted);font-size:.95rem;pointer-events:none}.nasora-base-filter-actions{display:flex;gap:7px;white-space:nowrap}
+.nasora-base-table-wrap{overflow-x:auto}.nasora-base-table{min-width:1050px}.nasora-base-table th{white-space:nowrap}.nasora-base-table td{vertical-align:middle}.nasora-base-person{display:flex;align-items:center;gap:10px;min-width:185px}.nasora-base-avatar{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900;font-size:.78rem}.nasora-base-person strong{display:block}.nasora-base-establishment{display:block;margin-top:2px;font-size:.72rem;color:var(--nasora-muted)}.nasora-base-meta{font-size:.8rem;color:var(--nasora-text)}.nasora-base-phone{font-variant-numeric:tabular-nums;white-space:nowrap}.nasora-base-stars{color:#a15c00;letter-spacing:1px;white-space:nowrap}.nasora-base-date{font-size:.78rem;white-space:nowrap}.nasora-base-never{color:var(--nasora-muted)}.nasora-base-action{white-space:nowrap}.nasora-base-empty{text-align:center!important;padding:42px 20px!important;color:var(--nasora-muted)}.nasora-base-empty-icon{font-size:1.8rem;margin-bottom:6px}.nasora-base-empty strong{display:block;color:var(--nasora-text);margin-bottom:3px}
+.nasora-base-pagination{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px}.nasora-base-page{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:34px;padding:0 10px;border:1px solid var(--nasora-border);border-radius:8px;background:var(--nasora-white);color:var(--nasora-text);text-decoration:none;font-weight:700;font-size:.8rem}.nasora-base-page:hover{border-color:var(--nasora-green);color:var(--nasora-green)}.nasora-base-page-current{background:var(--nasora-green-soft);border-color:var(--nasora-green);color:var(--nasora-green)}
+@media(max-width:900px){.nasora-base-filters{grid-template-columns:1fr 1fr}.nasora-base-filter-actions{grid-column:1/-1}.nasora-base-filter-actions .btn{flex:1}}
+@media(max-width:600px){.nasora-base-hero{align-items:flex-start}.nasora-base-hero h1{font-size:1.4rem}.nasora-base-actions{width:100%}.nasora-base-actions .btn{flex:1}.nasora-base-filters{grid-template-columns:1fr}.nasora-base-filter-actions{grid-column:auto}.nasora-base-pagination{margin-bottom:8px}}
+</style>
+
+<div class="page-hero nasora-base-hero">
+  <div>
+    <div class="nasora-base-kicker">◈ Base NASORA</div>
+    <h1>Professionnels & Pharmacies</h1>
+    <p class="nasora-base-subtitle">Gérez, recherchez et consultez votre portefeuille de professionnels.</p>
+  </div>
+  <div class="hero-actions nasora-base-actions">
+    <a class="btn" href="{{ url_for('clients.new_client') }}">＋ Nouveau professionnel</a>
+    <a class="btn btn-outline" href="{{ url_for('clients_export.export_clients_excel') }}">↧ Exporter Excel</a>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">👥</div><div class="kpi-body"><span class="kpi-label">Contacts actifs</span><span class="kpi-value">{{ total }}</span></div></div>
+  <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">📍</div><div class="kpi-body"><span class="kpi-label">Structures</span><span class="kpi-value">{{ structures }}</span></div></div>
+  <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">★</div><div class="kpi-body"><span class="kpi-label">Potentiel élevé</span><span class="kpi-value">{{ high_potential }}</span></div></div>
+</div>
+
+<form class="filter-form nasora-base-filters" method="get">
+  <div class="nasora-base-field nasora-base-search"><label for="base-search">Recherche</label><span class="nasora-base-search-icon">⌕</span><input id="base-search" class="form-input" name="q" value="{{ q }}" placeholder="Nom, téléphone, établissement…"></div>
+  <div class="nasora-base-field"><label for="base-structure">Structure</label><select id="base-structure" class="form-input" name="structure"><option value="">Toutes les structures</option>{% for s in structure_choices %}<option value="{{ s }}" {% if structure==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+  <div class="nasora-base-field"><label for="base-potential">Potentiel</label><select id="base-potential" class="form-input" name="potential"><option value="">Tous les niveaux</option>{% for p in range(1,6) %}<option value="{{ p }}" {% if potential==p|string %}selected{% endif %}>{{ p }} ★</option>{% endfor %}</select></div>
+  <div class="nasora-base-filter-actions"><button class="btn" type="submit">Rechercher</button><a class="btn btn-outline" href="{{ url_for('clients.list_clients') }}">Réinitialiser</a></div>
+</form>
+
+<div class="panel">
+  <div class="panel-header"><div><h2>Portefeuille professionnel</h2><span class="muted">{{ total }} contact{{ 's' if total != 1 else '' }} au total</span></div></div>
+  <div class="responsive-table nasora-base-table-wrap"><table class="nasora-base-table"><thead><tr><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Zone</th><th>Téléphone</th><th>Potentiel</th><th>Dernière visite</th><th>Prochaine visite</th><th>Action</th></tr></thead><tbody>
+  {% for c in clients %}
+  <tr>
+    <td><div class="nasora-base-person"><span class="nasora-base-avatar">{{ c.name[:1]|upper }}</span><div><strong>{{ c.name }}</strong><span class="nasora-base-establishment">{{ c.establishment or 'Établissement non renseigné' }}</span></div></div></td>
+    <td class="nasora-base-meta">{{ c.specialty or '—' }}</td><td class="nasora-base-meta">{{ c.structure }}</td><td class="nasora-base-meta">{{ c.zone or '—' }}</td><td class="nasora-base-phone">{{ c.phone or '—' }}</td>
+    <td><span class="nasora-base-stars" aria-label="Potentiel {{ c.potential }} sur 5">{% for _ in range(c.potential) %}★{% endfor %}</span></td>
+    <td class="nasora-base-date {% if not c.last_visit %}nasora-base-never{% endif %}">{{ c.last_visit.strftime('%d/%m/%Y') if c.last_visit else 'Jamais' }}</td>
+    <td class="nasora-base-date {% if not c.next_visit %}nasora-base-never{% endif %}">{{ c.next_visit.strftime('%d/%m/%Y') if c.next_visit else 'À planifier' }}</td>
+    <td class="nasora-base-action"><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=c.id) }}">Ouvrir</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="nasora-base-empty"><div class="nasora-base-empty-icon">⌕</div><strong>Aucun professionnel trouvé</strong><span>Modifiez vos critères de recherche ou réinitialisez les filtres.</span></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</div>
+
+{% if pagination %}
+<div class="nasora-base-pagination">
+  {% if pagination.has_prev %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.prev_num, q=q, structure=structure, potential=potential) }}">‹</a>{% endif %}
+  <span class="nasora-base-page nasora-base-page-current">Page {{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  {% if pagination.has_next %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.next_num, q=q, structure=structure, potential=potential) }}">›</a>{% endif %}
+</div>
+{% endif %}
 {% endblock %}
