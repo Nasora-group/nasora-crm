@@ -1,4 +1,6 @@
 from app.extensions import db
+from sqlalchemy import event, inspect
+
 
 class Client(db.Model):
     __tablename__ = "crm_client"
@@ -24,6 +26,7 @@ class Client(db.Model):
     def __repr__(self):
         return f"<Client {self.name}>"
 
+
 class ClientVisit(db.Model):
     __tablename__ = "crm_client_visit"
     id = db.Column(db.Integer, primary_key=True)
@@ -45,3 +48,50 @@ class ClientVisit(db.Model):
     __table_args__ = (
         db.Index("ix_crm_visit_commercial_date_duplicate", "commercial_id", "date", "is_duplicate"),
     )
+
+
+@event.listens_for(db.session, "before_flush")
+def _track_changed_client_visits(session, flush_context, instances):
+    """Collect clients whose visit rows are about to change."""
+    client_ids = set()
+    changed = list(session.new) + list(session.dirty) + list(session.deleted)
+    for visit in changed:
+        if not isinstance(visit, ClientVisit):
+            continue
+        if visit.client_id is not None:
+            client_ids.add(visit.client_id)
+        if visit in session.dirty:
+            history = inspect(visit).attrs.client_id.history
+            for old_id in history.deleted:
+                if old_id is not None:
+                    client_ids.add(old_id)
+    if client_ids:
+        session.info["crm_visit_date_client_ids"] = client_ids
+
+
+@event.listens_for(db.session, "after_flush_postexec")
+def _refresh_client_visit_dates(session, flush_context):
+    """Keep Client.last_visit/next_visit aligned with persisted CRM visits."""
+    client_ids = session.info.pop("crm_visit_date_client_ids", set())
+    if not client_ids:
+        return
+
+    for client_id in client_ids:
+        client = session.get(Client, client_id)
+        if client is None:
+            continue
+        latest = (
+            session.query(ClientVisit)
+            .filter(
+                ClientVisit.client_id == client_id,
+                ClientVisit.is_duplicate.is_(False),
+            )
+            .order_by(ClientVisit.date.desc(), ClientVisit.id.desc())
+            .first()
+        )
+        if latest is None:
+            client.last_visit = None
+            client.next_visit = None
+        else:
+            client.last_visit = latest.date
+            client.next_visit = latest.next_visit
