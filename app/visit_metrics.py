@@ -5,12 +5,39 @@ Prospection est la source de vérité pour les KPI de visites ; ClientVisit est
 le miroir CRM utilisé pour l'historique professionnel.
 """
 
+import re
+import unicodedata
 from datetime import timedelta
 
 from sqlalchemy import func
 
 from app.extensions import db
 from app.models import Prospection
+
+
+def _normalize_text(value):
+    value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", value.lower()).strip())
+
+
+def _normalize_phone(value):
+    return re.sub(r"\D", "", value or "")
+
+
+def professional_key(prospection):
+    """Clé stable pour compter les professionnels distincts."""
+    raw_phone = (prospection.telephone or "").strip().lower()
+    phone = _normalize_phone(raw_phone)
+    invalid_phone = (
+        not raw_phone
+        or raw_phone in {"na", "n/a", "nc", "non renseigne", "non renseigné", "0"}
+        or len(phone) < 6
+        or len(set(phone)) == 1
+    )
+    if not invalid_phone:
+        return f"phone:{phone}"
+    name = _normalize_text(prospection.nom_client)
+    return f"name:{name}" if name else None
 
 
 def unique_visit_subquery(start_date=None, end_date=None, commercial_id=None):
