@@ -4,7 +4,9 @@ from io import BytesIO
 import pandas as pd
 from flask import Blueprint, render_template, request, send_file
 from flask_login import login_required
+from sqlalchemy import func
 
+from app.extensions import db
 from app.models import User, Prospection
 from app.utils import roles_required
 
@@ -32,6 +34,14 @@ def _query_from_filters():
     return query, date_start, date_end, commercial, zone, specialite
 
 
+def _specialites_stats(query):
+    rows = (query.with_entities(Prospection.specialite, func.count(Prospection.id))
+            .filter(Prospection.specialite.isnot(None))
+            .group_by(Prospection.specialite)
+            .order_by(func.count(Prospection.id).desc(), Prospection.specialite.asc()).all())
+    return [{"label": (specialite or "Non renseignée"), "count": int(count or 0)} for specialite, count in rows]
+
+
 @prospections_export_bp.route("/admin/prospections/export", methods=["GET"])
 @login_required
 @roles_required("admin")
@@ -41,6 +51,7 @@ def export_prospections():
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
     specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
+    specialites_stats = _specialites_stats(query)
 
     if request.args.get("download") == "1":
         prospections = query.order_by(Prospection.date.desc(), User.username.asc(), Prospection.id.desc()).all()
@@ -85,4 +96,5 @@ def export_prospections():
         commercial=commercial,
         zone=zone,
         specialite=specialite,
+        specialites_stats=specialites_stats,
     )
