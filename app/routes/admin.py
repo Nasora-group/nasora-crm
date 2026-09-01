@@ -47,6 +47,15 @@ def _filtered_prospections_query():
     return query
 
 
+def _prospection_specialites(query):
+    """Retourne les spécialités et leur nombre de visites pour une requête filtrée."""
+    rows=(query.with_entities(Prospection.specialite, func.count(Prospection.id))
+          .filter(Prospection.specialite.isnot(None))
+          .group_by(Prospection.specialite)
+          .order_by(func.count(Prospection.id).desc(), Prospection.specialite.asc()).all())
+    return [{"label": (specialite or "Non renseignée"), "count": int(count or 0)} for specialite, count in rows]
+
+
 def _establishments_by_prospection(rows):
     establishments={}; clients=Client.query.all(); by_phone={}; by_owner_name={}
     for client in clients:
@@ -92,7 +101,7 @@ def _commercial_sales_visualization(division,commercial_id):
     for supplier in SUPPLIERS.values():
         if supplier.get("archived") or supplier.get("division")!=division: continue
         sale_model=supplier["sale_model"]; supplier_label=supplier.get("label",sale_model.__name__)
-        rows=db.session.query(sale_model).filter(sale_model.project==division).order_by(sale_model.date.desc()).all()
+        rows=db.session.query(sale_model).filter(sale_model.project==division).filter(sale_model.commercial_id==commercial_id).order_by(sale_model.date.desc()).all()
         for sale in rows:
             if not sale.date: continue
             month_key=sale.date.strftime("%Y-%m"); quantity=sale.quantity or 0; price=float(sale.price or 0); amount=float(quantity)*price; product=getattr(getattr(sale,"product",None),"name",None) or "Produit"
@@ -124,7 +133,14 @@ def commercial_detail(username):
     if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
     commercial=User.query.filter_by(username=username).first()
     if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
-    prospection_query=Prospection.query.filter(Prospection.commercial_id==commercial.id); total_real_prospections=prospection_query.count(); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
+
+    date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
+    prospection_query=Prospection.query.filter(Prospection.commercial_id==commercial.id)
+    if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
+    if date_end: prospection_query=prospection_query.filter(Prospection.date<=date_end)
+    if specialite: prospection_query=prospection_query.filter(Prospection.specialite==specialite)
+    if zone: prospection_query=prospection_query.filter(User.zone==zone)
+    total_real_prospections=prospection_query.count(); specialites_stats=_prospection_specialites(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
     try: sales_months=_commercial_sales_visualization(commercial.project,commercial.id)
     except Exception: db.session.rollback(); logger.exception("Erreur CA commercial %s",username); sales_months=[]; flash("Les données de CA ne sont momentanément pas disponibles.","error")
     if request.method=="POST" and "download_excel" in request.form:
@@ -133,7 +149,7 @@ def commercial_detail(username):
             with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
             output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
-    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,form=form,delete_form=CSRFOnlyForm(),sales_months=sales_months)
+    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,form=form,delete_form=CSRFOnlyForm(),sales_months=sales_months,specialites_stats=specialites_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone)
 
 @admin_bp.route("/export_pdf/<username>")
 @login_required
