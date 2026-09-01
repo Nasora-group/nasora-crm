@@ -1,0 +1,18 @@
+/* NASORA CRM — navigation polish: compact, aligned, lively and readable */
+.site-nav{background:#1f6b45!important}
+.site-nav .nav-inner{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent}
+.site-nav .nav-inner::-webkit-scrollbar{height:4px}
+.site-nav .nav-inner::-webkit-scrollbar-track{background:transparent}
+.site-nav .nav-inner::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:99px}
+@media (min-width:901px){
+  .site-nav a,.site-nav button{font-size:.68rem!important;font-weight:700!important;letter-spacing:.005em!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.16)!important}
+  .site-nav .nav-icon{font-size:.82rem!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;background:rgba(255,255,255,.10)!important;color:#fff!important}
+  .site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2d7d54!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:0 3px 9px rgba(0,0,0,.10)!important}
+  .site-nav .nav-divider{background:rgba(255,255,255,.32)!important;margin:0 3px!important}
+  .site-nav .nav-spacer{min-width:8px!important}
+  .site-nav .nav-logout-form button{background:#fff!important;color:#1f6b45!important;border-color:rgba(255,255,255,.8)!important;text-shadow:none!important}
+  .site-nav .nav-logout-form button .nav-icon{background:#eaf4ed!important;color:#1f6b45!important;text-shadow:none!important}
+}
+@media (min-width:1201px){.site-nav .nav-inner{gap:3px!important;padding-left:12px!important;padding-right:12px!important}.site-nav a,.site-nav button{padding-left:7px!important;padding-right:7px!important}}
+@media (min-width:901px) and (max-width:1200px){.site-nav .nav-inner{gap:1px!important;padding-left:5px!important;padding-right:5px!important}.site-nav a,.site-nav button{font-size:.62rem!important;padding-left:4px!important;padding-right:4px!important;gap:3px!important}.site-nav .nav-icon{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;font-size:.7rem!important}.site-nav .nav-divider{margin:0 2px!important}}
+@media (max-width:900px){.site-nav{background:#1f6b45!important;box-shadow:0 12px 30px rgba(15,52,31,.18)!important}.site-nav a,.site-nav button{color:#fff!important;font-weight:700!important}.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2d7d54!important;color:#fff!important}.site-nav .nav-divider{background:rgba(255,255,255,.25)!important}}
