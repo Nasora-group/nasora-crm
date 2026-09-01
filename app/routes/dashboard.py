@@ -1,11 +1,16 @@
 import logging
 import re
 import unicodedata
-from flask import Blueprint, render_template, redirect, url_for, flash
+from collections import Counter
+from datetime import date
+
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
+from sqlalchemy import func
+
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, get_active_products_for_division, STRUCTURES
+from app.models import Prospection, User, get_active_products_for_division, STRUCTURES
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
@@ -198,3 +203,81 @@ def delete_prospection(prospection_id):
             logger.exception("Erreur lors de la suppression de la prospection #%s", prospection_id)
             flash("Impossible de supprimer la prospection. Aucun changement n'a été appliqué.", "error")
     return redirect(url_for("dashboard.prospections"))
+
+
+@dashboard_bp.route("/admin/dashboard-direction", methods=["GET"])
+@login_required
+@roles_required("admin")
+def direction():
+    """Dashboard Direction : pilotage de l'activité terrain, sans CA ni ventes."""
+    date_start_raw = (request.args.get("date_start") or "").strip()
+    date_end_raw = (request.args.get("date_end") or "").strip()
+    commercial_raw = (request.args.get("commercial_id") or "").strip()
+    zone = (request.args.get("zone") or "").strip()
+    specialite = (request.args.get("specialite") or "").strip()
+
+    def parse_date(value):
+        try:
+            return date.fromisoformat(value) if value else None
+        except ValueError:
+            return None
+
+    date_start = parse_date(date_start_raw)
+    date_end = parse_date(date_end_raw)
+    commercial_id = int(commercial_raw) if commercial_raw.isdigit() else None
+
+    query = Prospection.query.join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
+    if date_start:
+        query = query.filter(Prospection.date >= date_start)
+    if date_end:
+        query = query.filter(Prospection.date <= date_end)
+    if commercial_id:
+        query = query.filter(Prospection.commercial_id == commercial_id)
+    if zone:
+        query = query.filter(User.zone == zone)
+    if specialite:
+        query = query.filter(Prospection.specialite == specialite)
+
+    rows = query.all()
+    total_prospections = len(rows)
+    professionals = {(_normalize_text(r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.nom_client)}
+    structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
+    specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
+    zones_counter = Counter(((r.commercial.zone or "Non renseignée").strip() or "Non renseignée") for r in rows)
+    commercial_counter = Counter(r.commercial_id for r in rows)
+    evolution_counter = Counter(r.date.isoformat() for r in rows if r.date)
+
+    commercials = User.query.filter_by(role="commercial").order_by(User.username).all()
+    zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
+    specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
+
+    objectifs = []
+    activity_target = 100
+    for commercial in commercials:
+        if commercial_id and commercial.id != commercial_id:
+            continue
+        realise = commercial_counter.get(commercial.id, 0)
+        taux = round(realise * 100 / activity_target, 1) if activity_target else 0
+        if taux >= 100:
+            statut, badge = "Objectif atteint", "bg-success"
+        elif taux >= 80:
+            statut, badge = "À surveiller", "bg-warning text-dark"
+        else:
+            statut, badge = "Insuffisant", "bg-danger"
+        objectifs.append({"name": commercial.username, "objectif": activity_target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
+
+    ordered_evolution = sorted(evolution_counter.items())
+    charts = {
+        "specialites": {"labels": list(specialites_counter.keys()), "values": list(specialites_counter.values())},
+        "zones": {"labels": list(zones_counter.keys()), "values": list(zones_counter.values())},
+        "commercials": {"labels": [next((c.username for c in commercials if c.id == cid), str(cid)) for cid, _ in commercial_counter.most_common()], "values": [count for _, count in commercial_counter.most_common()]},
+        "evolution": {"labels": [label for label, _ in ordered_evolution], "values": [count for _, count in ordered_evolution]},
+    }
+    kpis = [
+        {"label": "Prospections", "value": total_prospections},
+        {"label": "Spécialités visitées", "value": len(specialites_counter)},
+        {"label": "Professionnels visités", "value": len(professionals)},
+        {"label": "Structures visitées", "value": len(structures)},
+    ]
+    filters = {"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite}
+    return render_template("dashboard_direction.html", kpis=kpis, charts=charts, objectifs=objectifs, commercials=commercials, zones=zones, specialites=specialites, filters=filters)
