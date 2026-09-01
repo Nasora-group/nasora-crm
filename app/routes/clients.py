@@ -236,7 +236,7 @@ def new_visit(client_id):
             next_visit_obj = date.fromisoformat(next_visit) if next_visit else None
             if next_visit_obj and next_visit_obj < visit_date_obj:
                 flash("La prochaine visite ne peut pas être antérieure à la date de la visite.", "warning")
-                return render_template("client_visit_form.html", client=client, today=visit_date)
+                return render_template("client_visit_form.html", client=client, today=visit_date, visit=None)
             products_presented = request.form.get("products_presented", "").strip() or None
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
@@ -256,4 +256,57 @@ def new_visit(client_id):
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer la visite. Vérifiez les dates.", "error")
-    return render_template("client_visit_form.html", client=client, today=date.today().isoformat())
+    return render_template("client_visit_form.html", client=client, today=date.today().isoformat(), visit=None)
+
+
+@clients_bp.route("/admin/clients/<int:client_id>/visits/<int:visit_id>/modifier", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "commercial")
+def edit_visit(client_id, visit_id):
+    client = Client.query.get_or_404(client_id)
+    visit = ClientVisit.query.filter_by(id=visit_id, client_id=client.id).first_or_404()
+    if not _commercial_can_access_client(client):
+        return render_template("403.html"), 403
+    if current_user.role == "commercial" and visit.commercial_id != current_user.id:
+        return render_template("403.html"), 403
+    if request.method == "POST":
+        try:
+            visit_date = request.form.get("date") or ""
+            next_visit = request.form.get("next_visit") or None
+            visit_date_obj = date.fromisoformat(visit_date)
+            next_visit_obj = date.fromisoformat(next_visit) if next_visit else None
+            if next_visit_obj and next_visit_obj < visit_date_obj:
+                flash("La prochaine visite ne peut pas être antérieure à la date de la visite.", "warning")
+                return render_template("client_visit_form.html", client=client, visit=visit, today=visit_date)
+            visit.date = visit_date_obj
+            visit.next_visit = next_visit_obj
+            visit.products_presented = request.form.get("products_presented", "").strip() or None
+            visit.products_prescribed = request.form.get("products_prescribed", "").strip() or None
+            visit.report = request.form.get("report", "").strip() or None
+            db.session.commit()
+            flash("Visite mise à jour avec succès.", "success")
+            return redirect(url_for("clients.client_detail", client_id=client.id))
+        except Exception:
+            db.session.rollback()
+            flash("Impossible de mettre à jour la visite. Vérifiez les dates.", "error")
+    return render_template("client_visit_form.html", client=client, today=visit.date.isoformat(), visit=visit)
+
+
+@clients_bp.route("/admin/clients/<int:client_id>/visits/<int:visit_id>/supprimer", methods=["POST"])
+@login_required
+@roles_required("admin", "commercial")
+def delete_visit(client_id, visit_id):
+    client = Client.query.get_or_404(client_id)
+    visit = ClientVisit.query.filter_by(id=visit_id, client_id=client.id).first_or_404()
+    if not _commercial_can_access_client(client):
+        return render_template("403.html"), 403
+    if current_user.role == "commercial" and visit.commercial_id != current_user.id:
+        return render_template("403.html"), 403
+    try:
+        db.session.delete(visit)
+        db.session.commit()
+        flash("Visite supprimée avec succès.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Impossible de supprimer la visite.", "error")
+    return redirect(url_for("clients.client_detail", client_id=client.id))
