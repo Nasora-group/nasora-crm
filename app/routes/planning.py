@@ -20,8 +20,6 @@ def _build_creneaux_from_form():
     creneaux = {}
     empty_slot = encode_planning_slot([])
     for jour in JOURS:
-        # Règle métier absolue : aucun planning ne peut enregistrer une visite
-        # le samedi ou le dimanche, même si un ancien formulaire en envoie une.
         if jour in NON_WORKING_DAYS:
             creneaux[jour] = empty_slot
             continue
@@ -34,6 +32,11 @@ def _build_creneaux_from_form():
             entries.append((structure, nom))
         creneaux[jour] = encode_planning_slot(entries)
     return creneaux
+
+
+def _valid_week_start(value):
+    """Return whether a planning week starts on a Monday."""
+    return value is not None and value.weekday() == 0
 
 
 def _next_monday(reference=None):
@@ -80,6 +83,10 @@ def saisie():
     formulaire = PlanningForm()
 
     if formulaire.validate_on_submit():
+        if not _valid_week_start(formulaire.date.data):
+            flash("La date de début doit être un lundi.", "error")
+            return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
+
         nouveau_planning = Planning(
             commercial_id=current_user.id,
             date=formulaire.date.data,
@@ -105,6 +112,17 @@ def edit_planning(planning_id):
     formulaire = PlanningForm(obj=planning)
 
     if formulaire.validate_on_submit():
+        if not _valid_week_start(formulaire.date.data):
+            flash("La date de début doit être un lundi.", "error")
+            return render_template(
+                "saisie_planning.html",
+                formulaire=formulaire,
+                mode="edit",
+                planning=planning,
+                existing_types={jour: [t for t, _n in decode_planning_slot(getattr(planning, jour))] for jour in JOURS},
+                existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
+            )
+
         planning.date = formulaire.date.data
         for champ, valeur in _build_creneaux_from_form().items():
             setattr(planning, champ, valeur)
@@ -212,9 +230,6 @@ def admin_planning_generate(commercial_id):
     complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
     empty_slot = encode_planning_slot([])
     for cycle_index, cycle_date in enumerate(dates):
-        # Hard business rule: generated planning contains visits only Monday-Friday.
-        # Saturday and Sunday are explicitly written empty so no redistribution or
-        # legacy/default value can populate them later.
         fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
         fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
         db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
