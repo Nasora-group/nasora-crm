@@ -6,7 +6,7 @@ from datetime import date
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from sqlalchemy import func, text
+from sqlalchemy import bindparam, func, text
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
@@ -232,12 +232,8 @@ def _visit_targets_for_commercials(commercials):
                 target INTEGER NOT NULL DEFAULT 100 CHECK (target >= 0)
             )
         """))
-        rows = db.session.execute(
-            text("SELECT commercial_id, target FROM visit_objective WHERE commercial_id IN :ids").bindparams(
-                __import__("sqlalchemy").bindparam("ids", expanding=True)
-            ),
-            {"ids": [commercial.id for commercial in commercials]},
-        ).mappings().all()
+        statement = text("SELECT commercial_id, target FROM visit_objective WHERE commercial_id IN :ids").bindparams(bindparam("ids", expanding=True))
+        rows = db.session.execute(statement, {"ids": [commercial.id for commercial in commercials]}).mappings().all()
         for row in rows:
             targets[int(row["commercial_id"])] = int(row["target"])
         db.session.commit()
