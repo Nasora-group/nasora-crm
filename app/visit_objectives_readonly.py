@@ -42,3 +42,10 @@ def read_visit_targets(commercials):
         )
 
     return targets
+
+
+def install_readonly_objective_reader():
+    """Replace the legacy dashboard helper with the strictly read-only one."""
+    from app.routes import dashboard
+
+    dashboard._visit_targets_for_commercials = read_visit_targets
