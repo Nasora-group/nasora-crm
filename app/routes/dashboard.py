@@ -6,7 +6,7 @@ from datetime import date
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import bindparam, func, text
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
@@ -18,8 +18,10 @@ from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
 
+
 def _parse_products(raw):
     return [p.strip() for p in (raw or "").split(",") if p.strip()]
+
 
 def _set_product_choices(form, division, existing_values=None):
     active = get_active_products_for_division(division)
@@ -30,19 +32,24 @@ def _set_product_choices(form, division, existing_values=None):
     form.produits_presentes.choices = choices
     form.produits_prescrits.choices = choices
 
+
 def _set_structure_choices(form):
     form.structure.choices = [(value, label) for value, label in STRUCTURES]
+
 
 def _normalize_text(value):
     value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", value.lower()).strip())
 
+
 def _normalize_phone(value):
     return re.sub(r"\D", "", value or "")
+
 
 def _invalid_phone(value):
     raw = (value or "").strip().lower()
     return raw in {"", "na", "n/a", "nc", "non renseigne", "non renseigné", "0"} or len(_normalize_phone(raw)) < 6
+
 
 def _find_client_for_prospection(prospection):
     phone = (prospection.telephone or "").strip()
@@ -60,6 +67,7 @@ def _find_client_for_prospection(prospection):
     if owned:
         return sorted(owned, key=lambda c: c.id)[0]
     return same_name[0] if len(same_name) == 1 else None
+
 
 def _sync_professional_from_prospection(prospection, establishment=None):
     phone = (prospection.telephone or "").strip()
@@ -88,8 +96,10 @@ def _sync_professional_from_prospection(prospection, establishment=None):
     if visit is None:
         db.session.add(ClientVisit(client_id=client.id, commercial_id=prospection.commercial_id, date=prospection.date, products_presented=pp, products_prescribed=pr, report=report))
 
+
 def _sync_professional_from_existing_prospection(prospection, establishment=None):
     _sync_professional_from_prospection(prospection, establishment=establishment)
+
 
 def _delete_linked_records_for_prospection(prospection):
     client = _find_client_for_prospection(prospection)
@@ -102,10 +112,12 @@ def _delete_linked_records_for_prospection(prospection):
     if ClientVisit.query.filter_by(client_id=client.id).count() == 0:
         db.session.delete(client)
 
+
 def _render_dashboard(form):
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
     return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
+
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
 @login_required
@@ -135,6 +147,7 @@ def index():
             return _render_dashboard(form)
     return _render_dashboard(form)
 
+
 @dashboard_bp.route("/dashboard/prospections", methods=["GET"])
 @login_required
 @roles_required("commercial")
@@ -145,6 +158,7 @@ def prospections():
         client = _find_client_for_prospection(row)
         establishments_by_prospection[row.id] = (row.establishment or "").strip() or (client.establishment if client and client.establishment else "")
     return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
+
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
 @login_required
@@ -184,6 +198,7 @@ def edit_prospection(prospection_id):
             flash("Erreur lors de la mise à jour.", "error")
     return render_template("edit_prospection.html", form=form, prospection=prospection)
 
+
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/supprimer", methods=["POST"])
 @login_required
 @roles_required("commercial")
@@ -203,6 +218,29 @@ def delete_prospection(prospection_id):
             logger.exception("Erreur lors de la suppression de la prospection #%s", prospection_id)
             flash("Impossible de supprimer la prospection. Aucun changement n'a été appliqué.", "error")
     return redirect(url_for("dashboard.prospections"))
+
+
+def _visit_targets_for_commercials(commercials):
+    """Read per-commercial visit targets with a safe 100-visit fallback."""
+    targets = {commercial.id: 100 for commercial in commercials}
+    if not commercials:
+        return targets
+    try:
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS visit_objective (
+                commercial_id INTEGER PRIMARY KEY,
+                target INTEGER NOT NULL DEFAULT 100 CHECK (target >= 0)
+            )
+        """))
+        statement = text("SELECT commercial_id, target FROM visit_objective WHERE commercial_id IN :ids").bindparams(bindparam("ids", expanding=True))
+        rows = db.session.execute(statement, {"ids": [commercial.id for commercial in commercials]}).mappings().all()
+        for row in rows:
+            targets[int(row["commercial_id"])] = int(row["target"])
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("Impossible de lire les objectifs de visites; fallback à 100.", exc_info=True)
+    return targets
 
 
 @dashboard_bp.route("/admin/dashboard-direction", methods=["GET"])
@@ -251,12 +289,13 @@ def direction():
     zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
     specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
 
+    visit_targets = _visit_targets_for_commercials(commercials)
     objectifs = []
-    activity_target = 100
     for commercial in commercials:
         if commercial_id and commercial.id != commercial_id:
             continue
         realise = commercial_counter.get(commercial.id, 0)
+        activity_target = visit_targets.get(commercial.id, 100)
         taux = round(realise * 100 / activity_target, 1) if activity_target else 0
         if taux >= 100:
             statut, badge = "Objectif atteint", "bg-success"
