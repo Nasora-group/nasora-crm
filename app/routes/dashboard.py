@@ -14,6 +14,7 @@ from app.models import Prospection, User, get_active_products_for_division, STRU
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
+from app.visit_metrics import professional_key
 
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -278,7 +279,7 @@ def direction():
 
     rows = query.all()
     total_prospections = len(rows)
-    professionals = {(_normalize_text(r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.nom_client)}
+    professionals = {professional_key(r) for r in rows if professional_key(r)}
     structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
     specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
     zones_counter = Counter(((r.commercial.zone or "Non renseignée").strip() or "Non renseignée") for r in rows)
@@ -312,11 +313,16 @@ def direction():
         "commercials": {"labels": [next((c.username for c in commercials if c.id == cid), str(cid)) for cid, _ in commercial_counter.most_common()], "values": [count for _, count in commercial_counter.most_common()]},
         "evolution": {"labels": [label for label, _ in ordered_evolution], "values": [count for _, count in ordered_evolution]},
     }
-    kpis = [
-        {"label": "Prospections", "value": total_prospections},
-        {"label": "Spécialités visitées", "value": len(specialites_counter)},
-        {"label": "Professionnels visités", "value": len(professionals)},
-        {"label": "Structures visitées", "value": len(structures)},
-    ]
-    filters = {"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite}
-    return render_template("dashboard_direction.html", kpis=kpis, charts=charts, objectifs=objectifs, commercials=commercials, zones=zones, specialites=specialites, filters=filters)
+
+    return render_template(
+        "admin_dashboard_direction.html",
+        total_prospections=total_prospections,
+        total_professionals=len(professionals),
+        total_structures=len(structures),
+        objectifs=objectifs,
+        charts=charts,
+        commercials=commercials,
+        zones=zones,
+        specialites=specialites,
+        filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite},
+    )
