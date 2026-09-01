@@ -1,11 +1,11 @@
 {# Attend en contexte : planning (objet Planning), delete_form (optionnel, pour afficher les actions) #}
 <div class="planning-week-card">
     <div class="planning-week-header">
-        <h3>Semaine du {{ planning.date.strftime('%d/%m/%Y') }}</h3>
+        <div><span class="planning-week-kicker">CYCLE DE VISITES</span><h3>Semaine du {{ planning.date.strftime('%d/%m/%Y') }}</h3></div>
         {% if delete_form %}
         <div class="planning-week-actions">
             <a href="{{ url_for('planning.edit_planning', planning_id=planning.id) }}" class="btn btn-outline">Modifier</a>
-            <form method="POST" action="{{ url_for('planning.delete_planning', planning_id=planning.id) }}" style="display:inline;">
+            <form method="POST" action="{{ url_for('planning.delete_planning', planning_id=planning.id) }}">
                 {{ delete_form.hidden_tag() }}
                 <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer ce planning (semaine du {{ planning.date.strftime('%d/%m/%Y') }}) ?');">Supprimer</button>
             </form>
@@ -19,13 +19,13 @@
             <div class="planning-day-col-label">{{ jour_label }}</div>
             {% if entries %}
                 {% for type_structure, nom in entries %}
-                <div class="planning-badge" style="background-color: {{ structure_colors.get(type_structure, '#6b8e4e') }};">
+                <div class="planning-badge" style="--planning-structure-color: {{ structure_colors.get(type_structure, '#6b8e4e') }};">
                     <span class="planning-badge-type">{{ type_structure }}</span>
                     {% if nom %}<span class="planning-badge-nom">{{ nom }}</span>{% endif %}
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="planning-day-empty">—</div>
+                <div class="planning-day-empty">Aucune visite</div>
             {% endif %}
         </div>
         {% endfor %}
