@@ -21,7 +21,6 @@ SALE_MODELS = [s["sale_model"] for s in SUPPLIERS.values() if not s.get("archive
 
 
 def _month_expression(sale_model):
-    """Expression mensuelle compatible avec SQLite (CI) et PostgreSQL (production)."""
     if db.engine.dialect.name == "sqlite":
         return func.strftime("%Y-%m", sale_model.date)
     return func.to_char(sale_model.date, "YYYY-MM")
@@ -36,6 +35,19 @@ def _division_targets(division, today):
         db.session.rollback(); logger.warning("Impossible de lire les objectifs pour %s", division, exc_info=True); return None, None
 
 
+def _visit_target_for_commercial(commercial_id):
+    """Lit le même objectif individuel que le dashboard Direction, sans dupliquer la logique métier."""
+    try:
+        from app.routes.dashboard import _visit_targets_for_commercials
+        commercial = User.query.get(commercial_id)
+        if commercial:
+            return int(_visit_targets_for_commercials([commercial]).get(commercial_id, 100))
+    except Exception:
+        db.session.rollback()
+        logger.warning("Impossible de lire l'objectif de visites du commercial %s; fallback à 100.", commercial_id, exc_info=True)
+    return 100
+
+
 def _filtered_prospections_query():
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start=request.args.get("date_start"); date_end=request.args.get("date_end"); commercial_id_filter=request.args.get("commercial"); zone=request.args.get("zone"); specialite=request.args.get("specialite")
@@ -48,16 +60,11 @@ def _filtered_prospections_query():
 
 
 def _prospection_specialites(query):
-    """Retourne les spécialités et leur nombre de visites pour une requête filtrée."""
-    rows=(query.with_entities(Prospection.specialite, func.count(Prospection.id))
-          .filter(Prospection.specialite.isnot(None))
-          .group_by(Prospection.specialite)
-          .order_by(func.count(Prospection.id).desc(), Prospection.specialite.asc()).all())
+    rows=(query.with_entities(Prospection.specialite, func.count(Prospection.id)).filter(Prospection.specialite.isnot(None)).group_by(Prospection.specialite).order_by(func.count(Prospection.id).desc(), Prospection.specialite.asc()).all())
     return [{"label": (specialite or "Non renseignée"), "count": int(count or 0)} for specialite, count in rows]
 
 
 def _prospection_activity_stats(query):
-    """Calcule les KPI terrain à partir de la même requête filtrée."""
     rows=query.order_by(Prospection.date.asc(), Prospection.id.asc()).all()
     professional_keys=set(); structure_keys=set(); zone_counts={}; daily_counts={}
     for row in rows:
@@ -66,18 +73,10 @@ def _prospection_activity_stats(query):
         if professional_key.strip() not in {"phone:", "name:"}: professional_keys.add(professional_key)
         structure=(row.establishment or row.structure or "").strip().casefold()
         if structure: structure_keys.add(structure)
-        commercial=getattr(row,"commercial",None)
-        zone=(getattr(commercial,"zone",None) or "Non renseignée").strip()
-        zone_counts[zone]=zone_counts.get(zone,0)+1
+        commercial=getattr(row,"commercial",None); zone=(getattr(commercial,"zone",None) or "Non renseignée").strip(); zone_counts[zone]=zone_counts.get(zone,0)+1
         if row.date:
-            key=row.date.isoformat()
-            daily_counts[key]=daily_counts.get(key,0)+1
-    return {
-        "professionnels": len(professional_keys),
-        "structures": len(structure_keys),
-        "zones": [{"label":k,"count":v} for k,v in sorted(zone_counts.items(), key=lambda item:(-item[1], item[0]))],
-        "daily": [{"label":k,"count":v} for k,v in sorted(daily_counts.items())],
-    }
+            key=row.date.isoformat(); daily_counts[key]=daily_counts.get(key,0)+1
+    return {"professionnels":len(professional_keys),"structures":len(structure_keys),"zones":[{"label":k,"count":v} for k,v in sorted(zone_counts.items(),key=lambda item:(-item[1],item[0]))],"daily":[{"label":k,"count":v} for k,v in sorted(daily_counts.items())]}
 
 
 def _establishments_by_prospection(rows):
@@ -151,7 +150,11 @@ def commercial_detail(username):
     if date_end: prospection_query=prospection_query.filter(Prospection.date<=date_end)
     if specialite: prospection_query=prospection_query.filter(Prospection.specialite==specialite)
     if zone: prospection_query=prospection_query.filter(User.zone==zone)
-    total_real_prospections=prospection_query.count(); specialites_stats=_prospection_specialites(prospection_query); activity_stats=_prospection_activity_stats(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
+    total_real_prospections=prospection_query.count(); visit_target=_visit_target_for_commercial(commercial.id); visit_rate=round(total_real_prospections*100/visit_target,1) if visit_target else 0
+    if visit_rate>=100: visit_status="Objectif atteint"
+    elif visit_rate>=80: visit_status="À surveiller"
+    else: visit_status="Insuffisant"
+    specialites_stats=_prospection_specialites(prospection_query); activity_stats=_prospection_activity_stats(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
     available_zones=[z for (z,) in User.query.filter(User.role=="commercial",User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
     if request.method=="POST" and "download_excel" in request.form:
         try:
@@ -159,7 +162,7 @@ def commercial_detail(username):
             with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
             output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
-    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones)
+    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,visit_target=visit_target,visit_rate=visit_rate,visit_status=visit_status,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones)
 
 @admin_bp.route("/export_pdf/<username>")
 @login_required
