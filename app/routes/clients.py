@@ -57,23 +57,22 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
-    """Retourne uniquement les professionnels encore rattachés à une
-    prospection active du commercial connecté.
+    """Retourne uniquement les professionnels rattachés au commercial connecté.
 
     Les anciennes Client/ClientVisit restent conservées pour l'historique
-    Admin, mais ne doivent plus réapparaître dans "Mes professionnels" après
-    suppression de la dernière prospection correspondante.
+    Admin, mais ne doivent pas permettre à un commercial d'afficher la fiche
+    d'un autre commercial.
     """
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
     if not active_prospections:
         return Client.query.filter(False)
 
-    # Les clients issus des prospections récentes peuvent être retrouvés par
-    # téléphone ou, lorsque le téléphone est absent/non renseigné, par nom
-    # normalisé. On construit les IDs côté application pour conserver la
-    # compatibilité avec les anciennes données et éviter une comparaison SQL
-    # fragile sur les accents/espaces.
-    clients = Client.query.all()
+    # Pour un commercial, on ne considère que ses fiches propriétaires ou les
+    # fiches encore non attribuées. Une correspondance téléphone ne doit jamais
+    # faire remonter la fiche d'un autre commercial.
+    clients = Client.query.filter(
+        or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)
+    ).all()
     active_ids = set()
 
     for prospect in active_prospections:
@@ -93,10 +92,7 @@ def _commercial_client_query():
                 if _normalize_text(client.name) == prospect_name
             ]
             for client in same_name:
-                # On privilégie la fiche du commercial, mais on garde aussi
-                # les fiches non attribuées correspondant à la prospection.
-                if client.owner_id in (None, current_user.id):
-                    active_ids.add(client.id)
+                active_ids.add(client.id)
 
     if not active_ids:
         return Client.query.filter(False)
@@ -107,7 +103,9 @@ def _commercial_client_query():
 def _commercial_can_access_client(client):
     if current_user.role != "commercial":
         return True
-    return client.owner_id in (None, current_user.id) or ClientVisit.query.filter_by(client_id=client.id, commercial_id=current_user.id).first() is not None
+    # Une fiche attribuée à un autre commercial reste strictement privée.
+    # Les fiches non attribuées peuvent être prises en charge par le commercial.
+    return client.owner_id in (None, current_user.id)
 
 
 def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
