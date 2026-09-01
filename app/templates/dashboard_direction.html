@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Tableau de bord — Activité terrain</h2>
+      <div class="text-muted">Pilotage des prospections, visites, couverture et spécialités</div>
+    </div>
+  </div>
+
+  <form method="get" class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-2"><label class="form-label">Du</label><input type="date" name="date_start" value="{{ filters.date_start }}" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label">Au</label><input type="date" name="date_end" value="{{ filters.date_end }}" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label">Commercial</label><select name="commercial_id" class="form-select"><option value="">Tous</option>{% for c in commercials %}<option value="{{ c.id }}" {% if filters.commercial_id|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label">Zone</label><select name="zone" class="form-select"><option value="">Toutes</option>{% for z in zones %}<option value="{{ z }}" {% if filters.zone == z %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label">Spécialité</label><select name="specialite" class="form-select"><option value="">Toutes</option>{% for s in specialites %}<option value="{{ s }}" {% if filters.specialite == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="col-md-2 d-flex gap-2"><button class="btn btn-success flex-fill">Filtrer</button><a href="{{ url_for('dashboard.direction') }}" class="btn btn-outline-secondary">↺</a></div>
+      </div>
+    </div>
+  </form>
+
+  <div class="row g-3 mb-4">
+    {% for kpi in kpis %}<div class="col-6 col-xl-3"><div class="card h-100 shadow-sm border-0"><div class="card-body"><div class="text-muted small">{{ kpi.label }}</div><div class="fs-2 fw-bold">{{ kpi.value }}</div></div></div></div>{% endfor %}
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5>Spécialités visitées</h5><canvas id="specialitesChart" height="260"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5>Évolution des prospections</h5><canvas id="evolutionChart" height="260"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5>Prospections par zone</h5><canvas id="zonesChart" height="260"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5>Activité par commercial</h5><canvas id="commercialsChart" height="260"></canvas></div></div></div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body"><h5 class="mb-3">Suivi des objectifs d'activité</h5>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Commercial</th><th>Objectif</th><th>Réalisé</th><th>Taux</th><th>Statut</th></tr></thead><tbody>
+      {% for row in objectifs %}<tr><td>{{ row.name }}</td><td>{{ row.objectif }}</td><td>{{ row.realise }}</td><td>{{ row.taux }} %</td><td><span class="badge {{ row.badge }}">{{ row.statut }}</span></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">Aucune donnée</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const charts = {{ charts|tojson }};
+new Chart(document.getElementById('specialitesChart'), {type:'bar', data:{labels:charts.specialites.labels,datasets:[{label:'Prospections',data:charts.specialites.values}]}, options:{responsive:true,maintainAspectRatio:false}});
+new Chart(document.getElementById('evolutionChart'), {type:'line', data:{labels:charts.evolution.labels,datasets:[{label:'Prospections',data:charts.evolution.values,tension:.25,fill:false}]}, options:{responsive:true,maintainAspectRatio:false}});
+new Chart(document.getElementById('zonesChart'), {type:'bar', data:{labels:charts.zones.labels,datasets:[{label:'Prospections',data:charts.zones.values}]}, options:{responsive:true,maintainAspectRatio:false}});
+new Chart(document.getElementById('commercialsChart'), {type:'bar', data:{labels:charts.commercials.labels,datasets:[{label:'Prospections',data:charts.commercials.values}]}, options:{indexAxis:'y',responsive:true,maintainAspectRatio:false}});
+</script>
+{% endblock %}
