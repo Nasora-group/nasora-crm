@@ -13,7 +13,6 @@ from app.forms import ProspectionForm, CSRFOnlyForm
 from app.models import Prospection, User, get_active_products_for_division, STRUCTURES
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
-from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 from app.visit_metrics import professional_key
 
 logger = logging.getLogger(__name__)
@@ -115,9 +114,7 @@ def _delete_linked_records_for_prospection(prospection):
 
 
 def _render_dashboard(form):
-    labels, totals, _ = _monthly_revenue_for_division(current_user.project)
-    sales_kpis = _objectives_kpis(current_user.project, labels, totals)
-    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
+    return render_template("dashboard.html", form=form)
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
@@ -258,71 +255,3 @@ def direction():
     def parse_date(value):
         try:
             return date.fromisoformat(value) if value else None
-        except ValueError:
-            return None
-
-    date_start = parse_date(date_start_raw)
-    date_end = parse_date(date_end_raw)
-    commercial_id = int(commercial_raw) if commercial_raw.isdigit() else None
-
-    query = Prospection.query.join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
-    if date_start:
-        query = query.filter(Prospection.date >= date_start)
-    if date_end:
-        query = query.filter(Prospection.date <= date_end)
-    if commercial_id:
-        query = query.filter(Prospection.commercial_id == commercial_id)
-    if zone:
-        query = query.filter(User.zone == zone)
-    if specialite:
-        query = query.filter(Prospection.specialite == specialite)
-
-    rows = query.all()
-    total_prospections = len(rows)
-    professionals = {professional_key(r) for r in rows if professional_key(r)}
-    structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
-    specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
-    zones_counter = Counter(((r.commercial.zone or "Non renseignée").strip() or "Non renseignée") for r in rows)
-    commercial_counter = Counter(r.commercial_id for r in rows)
-    evolution_counter = Counter(r.date.isoformat() for r in rows if r.date)
-
-    commercials = User.query.filter_by(role="commercial").order_by(User.username).all()
-    zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
-    specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
-
-    visit_targets = _visit_targets_for_commercials(commercials)
-    objectifs = []
-    for commercial in commercials:
-        if commercial_id and commercial.id != commercial_id:
-            continue
-        realise = commercial_counter.get(commercial.id, 0)
-        activity_target = visit_targets.get(commercial.id, 100)
-        taux = round(realise * 100 / activity_target, 1) if activity_target else 0
-        if taux >= 100:
-            statut, badge = "Objectif atteint", "bg-success"
-        elif taux >= 80:
-            statut, badge = "À surveiller", "bg-warning text-dark"
-        else:
-            statut, badge = "Insuffisant", "bg-danger"
-        objectifs.append({"name": commercial.username, "objectif": activity_target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
-
-    ordered_evolution = sorted(evolution_counter.items())
-    charts = {
-        "specialites": {"labels": list(specialites_counter.keys()), "values": list(specialites_counter.values())},
-        "zones": {"labels": list(zones_counter.keys()), "values": list(zones_counter.values())},
-        "commercials": {"labels": [next((c.username for c in commercials if c.id == cid), str(cid)) for cid, _ in commercial_counter.most_common()], "values": [count for _, count in commercial_counter.most_common()]},
-        "evolution": {"labels": [label for label, _ in ordered_evolution], "values": [count for _, count in ordered_evolution]},
-    }
-
-    return render_template(
-        "admin_dashboard_direction.html",
-        total_prospections=total_prospections,
-        total_professionals=len(professionals),
-        total_structures=len(structures),
-        objectifs=objectifs,
-        charts=charts,
-        commercials=commercials,
-        zones=zones,
-        specialites=specialites,
-        filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite},
-    )
