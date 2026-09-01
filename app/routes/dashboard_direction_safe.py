@@ -92,7 +92,7 @@ def direction():
                 statut, badge = "À surveiller", "bg-warning text-dark"
             else:
                 statut, badge = "Insuffisant", "bg-danger"
-            objectifs.append({"name": commercial.username, "objectif": target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
+            objectifs.append({"commercial_id": commercial.id, "name": commercial.username, "objectif": target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
 
         ordered_evolution = sorted(evolution_counter.items())
         top_commercials = commercial_counter.most_common()
