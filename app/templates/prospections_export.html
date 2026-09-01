@@ -1,24 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Export des prospections — NASORA CRM{% endblock %}
 {% block content %}
-<div class="page-hero">
-  <div><span class="hero-eyebrow">DIRECTION</span><h1>Extraction des prospections</h1><p>Filtrez les prospections de toute l'équipe et exportez exactement le résultat.</p></div>
-</div>
+<div class="page-hero"><div><span class="hero-eyebrow">DIRECTION</span><h1>Extraction des prospections</h1><p>Filtrez les prospections de toute l'équipe et exportez exactement le résultat.</p></div></div>
+<section class="summary-card"><div class="section-heading"><div><span class="crm-overline">FILTRES & STATISTIQUES</span><h2>Analyse des prospections</h2></div><span class="muted">{{ results_count }} prospection(s) trouvée(s)</span></div>
+<form method="get" class="filter-form">
+<div><label for="date_start">Date de début</label><input class="form-input" type="date" id="date_start" name="date_start" value="{{ date_start }}"></div>
+<div><label for="date_end">Date de fin</label><input class="form-input" type="date" id="date_end" name="date_end" value="{{ date_end }}"></div>
+<div><label for="commercial">Commercial</label><select class="form-input" id="commercial" name="commercial"><option value="">Tous les commerciaux</option>{% for c in commerciaux %}<option value="{{ c.id }}" {% if commercial == c.id|string %}selected{% endif %}>{{ c.username }}</option>{% endfor %}</select></div>
+<div><label for="zone">Zone</label><select class="form-input" id="zone" name="zone"><option value="">Toutes les zones</option>{% for z in zones %}<option value="{{ z }}" {% if zone == z %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></div>
+<div><label for="specialite">Spécialité</label><select class="form-input" id="specialite" name="specialite"><option value="">Toutes</option>{% for s in specialites %}<option value="{{ s }}" {% if specialite == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+<div class="quick-actions"><button class="btn" type="submit">🔎 Filtrer</button><a class="btn btn-outline" href="{{ url_for('prospections_export.export_prospections') }}">Réinitialiser</a></div></form>
+<div class="quick-actions" style="margin-top:16px"><a class="btn" href="{{ url_for('prospections_export.export_prospections', date_start=date_start, date_end=date_end, commercial=commercial, zone=zone, specialite=specialite, download='1') }}">📊 Exporter le résultat en Excel</a></div></section>
 
-<section class="summary-card">
-  <div class="section-heading"><h2>Filtres</h2><span class="muted">{{ results_count }} prospection(s) trouvée(s)</span></div>
-  <form method="get" class="filter-form">
-    <div><label for="date_start">Date de début</label><input class="form-input" type="date" id="date_start" name="date_start" value="{{ date_start }}"></div>
-    <div><label for="date_end">Date de fin</label><input class="form-input" type="date" id="date_end" name="date_end" value="{{ date_end }}"></div>
-    <div><label for="commercial">Commercial</label><select class="form-input" id="commercial" name="commercial"><option value="">Tous les commerciaux</option>{% for c in commerciaux %}<option value="{{ c.id }}" {% if commercial == c.id|string %}selected{% endif %}>{{ c.username }}</option>{% endfor %}</select></div>
-    <div><label for="zone">Zone</label><select class="form-input" id="zone" name="zone"><option value="">Toutes les zones</option>{% for z in zones %}<option value="{{ z }}" {% if zone == z %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></div>
-    <div><label for="specialite">Spécialité</label><select class="form-input" id="specialite" name="specialite"><option value="">Toutes</option>{% for s in specialites %}<option value="{{ s }}" {% if specialite == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
-    <div class="quick-actions"><button class="btn" type="submit">🔎 Filtrer</button><a class="btn btn-outline" href="{{ url_for('prospections_export.export_prospections') }}">Réinitialiser</a></div>
-  </form>
-  <div class="quick-actions" style="margin-top:16px">
-    <a class="btn" href="{{ url_for('prospections_export.export_prospections', date_start=date_start, date_end=date_end, commercial=commercial, zone=zone, specialite=specialite, download='1') }}">📊 Exporter le résultat en Excel</a>
-  </div>
-</section>
+{% if specialites_stats %}<section class="summary-card" style="margin-top:20px"><div class="section-heading"><div><span class="crm-overline">RÉPARTITION DES VISITES</span><h2>Spécialités visitées</h2><p class="crm-subtitle">Histogramme basé exactement sur les filtres actifs ci-dessus.</p></div></div><div style="position:relative;height:360px"><canvas id="specialitesExportChart" aria-label="Histogramme des spécialités visitées"></canvas></div></section>
+<script>document.addEventListener('DOMContentLoaded',function(){const canvas=document.getElementById('specialitesExportChart');if(!canvas||typeof Chart==='undefined')return;new Chart(canvas,{type:'bar',data:{labels:{{ specialites_stats|map(attribute='label')|list|tojson }},datasets:[{label:'Prospections',data:{{ specialites_stats|map(attribute='count')|list|tojson }},borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.parsed.y+' prospection(s)';}}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{autoSkip:false,maxRotation:45,minRotation:0}}}}});});</script>{% endif %}
 
 <div class="section-heading"><h2>Résultats</h2><span class="muted">Aperçu des 100 premières lignes · l'export Excel contient toutes les lignes</span></div>
 <div class="responsive-table"><table><thead><tr><th>Commercial</th><th>Date</th><th>Client</th><th>Spécialité</th><th>Structure</th><th>Téléphone</th><th>Profil</th><th>Produits présentés</th><th>Produits prescrits</th></tr></thead><tbody>{% for p in prospections %}<tr><td><strong>{{ p.commercial.username }}</strong></td><td>{{ p.date.strftime('%d/%m/%Y') }}</td><td>{{ p.nom_client }}</td><td>{{ p.specialite }}</td><td>{{ p.structure }}</td><td>{{ p.telephone }}</td><td>{{ p.profils_prospect or '—' }}</td><td>{{ p.produits_presentes or '—' }}</td><td>{{ p.produits_prescrits or '—' }}</td></tr>{% else %}<tr><td colspan="9">Aucune prospection ne correspond aux filtres.</td></tr>{% endfor %}</tbody></table></div>
