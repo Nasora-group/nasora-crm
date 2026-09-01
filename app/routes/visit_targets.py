@@ -12,10 +12,10 @@ visit_targets_bp = Blueprint("visit_targets", __name__, url_prefix="/admin/visit
 
 
 def _ensure_table():
-    """Create the small per-commercial target table when it is missing.
+    """Create the small per-commercial target table only when a write is requested.
 
-    The repository currently has no active Alembic revision in migrations/versions,
-    so this idempotent DDL keeps existing production databases compatible.
+    Reads must remain strictly read-only so loading the dashboard never changes
+    the database schema or transaction state.
     """
     db.session.execute(text("""
         CREATE TABLE IF NOT EXISTS visit_objective (
@@ -27,12 +27,7 @@ def _ensure_table():
 
 
 def _admin_only():
-    """Return a real 403 for authenticated non-admin users.
-
-    This endpoint changes persistent visit objectives and must never redirect a
-    commercial to the home page: callers and tests need an explicit forbidden
-    response so the authorization contract is unambiguous.
-    """
+    """Return a real 403 for authenticated non-admin users."""
     if not current_user.is_authenticated:
         return None
     if current_user.role != "admin":
@@ -46,8 +41,18 @@ def list_targets():
     forbidden = _admin_only()
     if forbidden is not None:
         return forbidden
-    _ensure_table()
-    rows = db.session.execute(text("SELECT commercial_id, target FROM visit_objective")).mappings().all()
+
+    try:
+        rows = db.session.execute(
+            text("SELECT commercial_id, target FROM visit_objective")
+        ).mappings().all()
+    except Exception:
+        # The table may not exist yet on an older database. A read must not
+        # create it; the dashboard already uses the same 100-visit fallback.
+        db.session.rollback()
+        logger.info("Table visit_objective absente; utilisation des objectifs par défaut.")
+        return jsonify({})
+
     values = {str(row["commercial_id"]): int(row["target"]) for row in rows}
     return jsonify(values)
 
