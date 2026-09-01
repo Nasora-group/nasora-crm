@@ -206,7 +206,6 @@ def client_detail(client_id):
     visits = visits.order_by(ClientVisit.date.desc()).all()
 
     # Une simple consultation de la fiche ne doit jamais écrire en base.
-    # Les champs persistés restent alimentés lors de l'enregistrement d'une visite.
     display_last_visit = client.last_visit
     if legacy_history and (not display_last_visit or legacy_history[0].date > display_last_visit):
         display_last_visit = legacy_history[0].date
@@ -216,8 +215,12 @@ def client_detail(client_id):
     if latest_crm_next and (not display_next_visit or latest_crm_next != display_next_visit):
         display_next_visit = latest_crm_next
 
-    presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for v in legacy_history if (v.produits_presentes or "").strip())
-    prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for v in legacy_history if (v.produits_prescrits or "").strip())
+    # Une prospection liée à une ClientVisit représente la même activité terrain.
+    # Elle ne doit donc pas être comptée une seconde fois dans les KPI de la fiche.
+    linked_prospection_ids = {v.prospection_id for v in visits if v.prospection_id is not None}
+    unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
+    presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
+    prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_prescrits or "").strip())
     return render_template("client_detail.html", client=client, history=legacy_history, visits=visits, presented_count=presented_count, prescribed_count=prescribed_count, display_last_visit=display_last_visit, display_next_visit=display_next_visit)
 
 
@@ -240,11 +243,7 @@ def new_visit(client_id):
             products_presented = request.form.get("products_presented", "").strip() or None
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
-
-            # Un administrateur peut saisir une visite depuis la fiche d'un commercial :
-            # si la fiche est déjà attribuée, l'historique doit rester rattaché à ce commercial.
             attributed_commercial_id = client.owner_id or current_user.id
-
             if _exact_visit_exists(client.id, attributed_commercial_id, visit_date_obj, products_presented, products_prescribed, report):
                 flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=client.id))
