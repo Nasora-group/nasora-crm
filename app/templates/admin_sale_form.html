@@ -1,44 +1,7 @@
 {% extends "base.html" %}
-
+{% block title %}Modifier une vente — {{ supplier.label }}{% endblock %}
 {% block content %}
-<h1>Modifier une vente — {{ supplier.label }}</h1>
-<p style="color:var(--ink-soft);">{{ sale.product.name }}</p>
-
-<div class="form-container">
-    <form method="POST">
-        {{ form.hidden_tag() }}
-
-        <div class="form-group">
-            {{ form.date.label(class="form-label") }}
-            {{ form.date(class="form-input") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.quantity.label(class="form-label") }}
-            {{ form.quantity(class="form-input") }}
-        </div>
-
-        <div class="form-group">
-            {{ form.price.label(class="form-label") }}
-            {{ form.price(class="form-input", step="0.01") }}
-        </div>
-
-        {% if form.errors %}
-            <div class="flash flash-error">
-                <ul style="margin:0; padding-left:18px;">
-                    {% for field, errors in form.errors.items() %}
-                        {% for error in errors %}
-                            <li>{{ form[field].label.text }} : {{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-        <div class="form-group">
-            {{ form.submit(class="btn-submit") }}
-            <a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Annuler</a>
-        </div>
-    </form>
-</div>
+<div class="sales-page"><section class="sales-hero"><div class="sales-hero-copy"><p class="sales-eyebrow">Gestion commerciale · Correction</p><h1>Modifier une vente</h1><p>{{ supplier.label }} · {{ sale.product.name }}</p></div><div class="sales-hero-actions"><a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">← Retour à l'historique</a></div></section>
+<div class="form-container sales-edit-card"><form method="POST">{{ form.hidden_tag() }}<div class="sales-edit-grid"><div class="form-group">{{ form.date.label(class="form-label") }}{{ form.date(class="form-input") }}</div><div class="form-group">{{ form.quantity.label(class="form-label") }}{{ form.quantity(class="form-input", min="0") }}</div><div class="form-group">{{ form.price.label(class="form-label") }}{{ form.price(class="form-input", step="0.01", min="0") }}</div></div>{% if form.errors %}<div class="flash flash-error"><ul style="margin:0;padding-left:18px">{% for field,errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>{% endif %}<div class="sales-submit"><span class="sales-submit-note">Les modifications seront enregistrées immédiatement.</span><div class="sales-actions">{{ form.submit(class="btn-submit") }}<a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Annuler</a></div></div></form></div></div>
+<style>.sales-page{display:flex;flex-direction:column;gap:20px}.sales-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 26px;border:1px solid #dfe8df;border-radius:18px;background:linear-gradient(135deg,#fff,#f3f8f1);box-shadow:0 8px 28px rgba(30,55,38,.07)}.sales-eyebrow{margin:0 0 5px;color:#6b8e4e;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.sales-hero h1{margin:0;font-size:1.65rem}.sales-hero p:not(.sales-eyebrow){margin:7px 0 0;color:#6c7971;font-size:.9rem}.sales-edit-card{padding:22px;border:1px solid #dfe8df;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(30,55,38,.055)}.sales-edit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.sales-submit{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 0 0;margin-top:8px;border-top:1px solid #edf1ed}.sales-submit .sales-actions{display:flex;gap:8px;align-items:center}.sales-submit .btn-submit{font:700 .82rem Inter,sans-serif}@media(max-width:700px){.sales-hero{align-items:stretch;flex-direction:column}.sales-edit-grid{grid-template-columns:1fr}.sales-submit{align-items:stretch;flex-direction:column}.sales-submit .sales-actions{flex-direction:column;align-items:stretch}.sales-submit .sales-actions>*{width:100%;box-sizing:border-box;text-align:center}.sales-hero h1{font-size:1.4rem}}</style>
 {% endblock %}
