@@ -25,7 +25,13 @@ def _normalize_phone(value):
 
 
 def professional_key(prospection):
-    """Clé stable pour compter les professionnels distincts."""
+    """Clé stable pour compter les professionnels distincts.
+
+    Un téléphone valide reste prioritaire. Lorsque le téléphone est absent ou
+    manifestement artificiel, on utilise nom + structure afin d'éviter de
+    fusionner des professionnels homonymes travaillant dans des structures
+    différentes. Le nom seul n'est utilisé qu'en dernier recours.
+    """
     raw_phone = (prospection.telephone or "").strip().lower()
     phone = _normalize_phone(raw_phone)
     invalid_phone = (
@@ -36,8 +42,18 @@ def professional_key(prospection):
     )
     if not invalid_phone:
         return f"phone:{phone}"
+
     name = _normalize_text(prospection.nom_client)
-    return f"name:{name}" if name else None
+    structure = _normalize_text(
+        getattr(prospection, "establishment", None)
+        or getattr(prospection, "structure", None)
+        or ""
+    )
+    if name and structure:
+        return f"name_structure:{name}|{structure}"
+    if name:
+        return f"name:{name}"
+    return None
 
 
 def unique_visit_subquery(start_date=None, end_date=None, commercial_id=None):
