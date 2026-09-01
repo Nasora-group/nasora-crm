@@ -1,28 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Évaluations des commerciaux</h1>
-<p style="color:var(--ink-soft);">Sélectionne un commercial pour consulter son historique ou saisir une nouvelle évaluation mensuelle.</p>
+<div class="eval-page">
+    <section class="eval-hero">
+        <div>
+            <span class="eval-kicker">Pilotage · Évaluations</span>
+            <h1>Évaluations des commerciaux</h1>
+            <p>Sélectionnez un commercial pour consulter son historique ou saisir une nouvelle évaluation mensuelle.</p>
+        </div>
+        <a href="{{ url_for('evaluations.classement') }}" class="btn eval-hero-action">🏆 Classement du mois</a>
+    </section>
 
-<div class="dashboard-links">
-    <a href="{{ url_for('evaluations.classement') }}" class="btn btn-outline">Voir le classement du mois</a>
-</div>
+    <section class="eval-section-head">
+        <div>
+            <h2>Équipe commerciale</h2>
+            <p>Accédez rapidement au suivi individuel de chaque commercial.</p>
+        </div>
+        <span class="eval-count">{{ commerciaux|length }} commercial{% if commerciaux|length != 1 %}aux{% endif %}</span>
+    </section>
 
-<table class="responsive-table">
-    <thead>
-        <tr><th>Nom</th><th>Division</th><th>Zone</th><th>Action</th></tr>
-    </thead>
-    <tbody>
+    <div class="eval-commercial-grid">
         {% for commercial in commerciaux %}
-        <tr>
-            <td>{{ commercial.username }}</td>
-            <td>{{ commercial.project|upper }}</td>
-            <td>{{ commercial.zone or '—' }}</td>
-            <td><a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline">Voir les évaluations</a></td>
-        </tr>
+        <article class="eval-commercial-card">
+            <div class="eval-commercial-top">
+                <div class="eval-avatar">{{ commercial.username[:1]|upper }}</div>
+                <div class="eval-commercial-identity">
+                    <strong>{{ commercial.username }}</strong>
+                    <span>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</span>
+                </div>
+            </div>
+            <div class="eval-commercial-meta">
+                <span>Division</span><strong>{{ commercial.project|upper }}</strong>
+                <span>Zone</span><strong>{{ commercial.zone or '—' }}</strong>
+            </div>
+            <a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline eval-full-action">Voir les évaluations <span>→</span></a>
+        </article>
         {% else %}
-        <tr><td colspan="4">Aucun commercial trouvé.</td></tr>
+        <div class="eval-empty">
+            <div class="eval-empty-icon">✓</div>
+            <h2>Aucun commercial trouvé</h2>
+            <p>La liste des commerciaux à évaluer est actuellement vide.</p>
+        </div>
         {% endfor %}
-    </tbody>
-</table>
+    </div>
+</div>
 {% endblock %}
