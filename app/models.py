@@ -12,15 +12,15 @@ class User(UserMixin,db.Model):
     id=db.Column(db.Integer,primary_key=True); username=db.Column(db.String(150),unique=True,nullable=False,index=True); password=db.Column(db.String(255),nullable=False); role=db.Column(db.String(50),nullable=False); zone=db.Column(db.String(100),nullable=True); project=db.Column(db.String(50),nullable=False); is_active_account=db.Column(db.Boolean,default=True,nullable=False)
     def __repr__(self): return f"<User {self.username} ({self.role}/{self.project})>"
 
-class VisitObjective(db.Model):
-    __tablename__ = "visit_objective"
-    id=db.Column(db.Integer,primary_key=True)
-    commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True,unique=True)
-    target_visits=db.Column(db.Integer,nullable=False,default=10)
-    commercial=db.relationship("User",backref=db.backref("visit_objective",uselist=False))
-
 class Prospection(db.Model):
     id=db.Column(db.Integer,primary_key=True); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); date=db.Column(db.Date,nullable=False,index=True); nom_client=db.Column(db.String(150),nullable=False); specialite=db.Column(db.String(150),nullable=False); structure=db.Column(db.String(150),nullable=False); telephone=db.Column(db.String(30),nullable=False); profils_prospect=db.Column(db.Text,nullable=True); produits_presentes=db.Column(db.Text,nullable=True); produits_prescrits=db.Column(db.Text,nullable=True)
     establishment=db.Column(db.String(200),nullable=True,index=True)
     client_id=db.Column(db.Integer,db.ForeignKey("crm_client.id",name="fk_prospection_client"),nullable=True,index=True)
     planning_id=db.Column(db.Integer,db.ForeignKey("planning.id",name="fk_prospection_planning"),nullable=True,index=True)
+
+class VisitObjective(db.Model):
+    __tablename__="visit_objective"
+    id=db.Column(db.Integer,primary_key=True)
+    commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True,unique=True)
+    target_visits=db.Column(db.Integer,nullable=False,default=10)
+    commercial=db.relationship("User",backref=db.backref("visit_objective",uselist=False))
