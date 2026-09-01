@@ -236,10 +236,15 @@ def new_visit(client_id):
             products_presented = request.form.get("products_presented", "").strip() or None
             products_prescribed = request.form.get("products_prescribed", "").strip() or None
             report = request.form.get("report", "").strip() or None
-            if _exact_visit_exists(client.id, current_user.id, visit_date_obj, products_presented, products_prescribed, report):
+
+            # Un administrateur peut saisir une visite depuis la fiche d'un commercial :
+            # si la fiche est déjà attribuée, l'historique doit rester rattaché à ce commercial.
+            attributed_commercial_id = client.owner_id or current_user.id
+
+            if _exact_visit_exists(client.id, attributed_commercial_id, visit_date_obj, products_presented, products_prescribed, report):
                 flash("Cette visite existe déjà pour ce professionnel à cette date. Aucune nouvelle ligne n'a été créée.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=client.id))
-            v = ClientVisit(client_id=client.id, commercial_id=current_user.id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=date.fromisoformat(next_visit) if next_visit else None)
+            v = ClientVisit(client_id=client.id, commercial_id=attributed_commercial_id, date=visit_date_obj, products_presented=products_presented, products_prescribed=products_prescribed, report=report, next_visit=date.fromisoformat(next_visit) if next_visit else None)
             db.session.add(v)
             client.last_visit = v.date
             client.next_visit = v.next_visit
