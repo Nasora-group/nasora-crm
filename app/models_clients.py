@@ -68,8 +68,8 @@ def _track_changed_client_visits(session, flush_context, instances):
         if visit in session.deleted:
             continue
         client = session.get(Client, visit.client_id) if visit.client_id is not None else None
-        if client is not None and client.owner_id is not None and client.owner_id != visit.commercial_id:
-            raise ValueError("Une visite ne peut pas être attribuée à un autre commercial que le propriétaire du professionnel.")
+        if (visit.prospection_id is not None and client is not None and client.owner_id is not None and client.owner_id != visit.commercial_id):
+            raise ValueError("Une visite liée à une prospection ne peut pas être attribuée à un autre commercial que le propriétaire du professionnel.")
     if client_ids:
         session.info["crm_visit_date_client_ids"] = client_ids
 
