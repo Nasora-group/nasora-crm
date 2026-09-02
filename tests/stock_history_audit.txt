@@ -1,0 +1,1 @@
+Historical stock display is preserved for inactive products.
