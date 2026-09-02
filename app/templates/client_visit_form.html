@@ -1,48 +1,68 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Modifier la visite' if visit else 'Nouvelle visite' }} — {{ client.name }}{% endblock %}
 {% block content %}
-<div class="page-hero">
-    <div>
-        <h1>{{ 'Modifier la visite' if visit else 'Nouvelle visite' }}</h1>
-        <p>{{ client.name }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p>
-    </div>
-    <div class="hero-actions">
-        <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">← Fiche client</a>
-    </div>
-</div>
+<style>
+.visit-form-page{max-width:920px;margin:0 auto}.visit-form-hero{margin-bottom:18px}.visit-form-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--nasora-green)}.visit-form-title{display:flex;align-items:center;gap:12px}.visit-form-avatar{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900}.visit-form-title h1{margin:0;font-size:1.7rem;letter-spacing:-.025em}.visit-form-hero p{margin:5px 0 0;color:var(--nasora-muted);font-size:.86rem}.visit-form-card{background:var(--nasora-white);border:1px solid var(--nasora-border);border-radius:16px;padding:20px;box-shadow:0 7px 24px rgba(15,23,42,.045)}.visit-form-section{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--nasora-border)}.visit-form-section:last-of-type{border-bottom:0;margin-bottom:0;padding-bottom:4px}.visit-form-section-head{display:flex;align-items:center;gap:9px;margin-bottom:13px}.visit-form-section-icon{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--nasora-green-soft);color:var(--nasora-green);font-weight:900}.visit-form-section-head h2{margin:0;font-size:.98rem}.visit-form-field{margin-bottom:14px}.visit-form-field:last-child{margin-bottom:0}.visit-form-field label{display:block;margin-bottom:6px;font-size:.76rem;font-weight:800;color:var(--nasora-text)}.visit-form-field label span{color:var(--nasora-green)}.visit-form-field .form-input{width:100%;box-sizing:border-box}.visit-form-field textarea.form-input{resize:vertical;min-height:90px;line-height:1.5}.visit-form-help{display:block;margin-top:5px;font-size:.7rem;color:var(--nasora-muted)}.visit-form-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--nasora-border)}@media(max-width:600px){.visit-form-title h1{font-size:1.35rem}.visit-form-avatar{width:40px;height:40px}.visit-form-card{padding:15px}.visit-form-actions{justify-content:stretch}.visit-form-actions .btn{flex:1;text-align:center}}
+</style>
 
-<form method="post" class="form-container">
+<div class="visit-form-page">
+  <div class="page-hero visit-form-hero">
+    <div>
+      <div class="visit-form-kicker">◈ Base NASORA · Activité terrain</div>
+      <div class="visit-form-title">
+        <span class="visit-form-avatar">{{ client.name[:1]|upper }}</span>
+        <div>
+          <h1>{{ 'Modifier la visite' if visit else 'Nouvelle visite' }}</h1>
+          <p>{{ client.name }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p>
+        </div>
+      </div>
+    </div>
+    <div class="hero-actions"><a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">← Fiche client</a></div>
+  </div>
+
+  <form method="post" class="visit-form-card">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="form-grid">
-        <div>
-            <label>Date de visite *</label>
-            <input class="form-input" type="date" name="date" value="{{ today }}" required>
+    <div class="visit-form-section">
+      <div class="visit-form-section-head"><span class="visit-form-section-icon">📅</span><h2>Planification de la visite</h2></div>
+      <div class="form-grid">
+        <div class="visit-form-field">
+          <label for="visit-date">Date de visite <span>*</span></label>
+          <input id="visit-date" class="form-input" type="date" name="date" value="{{ today }}" required>
         </div>
-        <div>
-            <label>Prochaine visite</label>
-            <input class="form-input" type="date" name="next_visit" value="{{ visit.next_visit.isoformat() if visit and visit.next_visit else '' }}">
+        <div class="visit-form-field">
+          <label for="next-visit">Prochaine visite</label>
+          <input id="next-visit" class="form-input" type="date" name="next_visit" value="{{ visit.next_visit.isoformat() if visit and visit.next_visit else '' }}">
+          <span class="visit-form-help">Programmez directement le prochain passage si une date est déjà définie.</span>
         </div>
+      </div>
     </div>
 
-    <div>
-        <label>Produits présentés</label>
-        <textarea class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM...">{{ visit.products_presented if visit else '' }}</textarea>
+    <div class="visit-form-section">
+      <div class="visit-form-section-head"><span class="visit-form-section-icon">📦</span><h2>Produits & opportunités</h2></div>
+      <div class="visit-form-field">
+        <label for="products-presented">Produits présentés</label>
+        <textarea id="products-presented" class="form-input" name="products_presented" rows="3" placeholder="Ex. ASTHE 1000, MYOCALM...">{{ visit.products_presented if visit else '' }}</textarea>
+      </div>
+      <div class="visit-form-field">
+        <label for="products-prescribed">Produits prescrits / demandés</label>
+        <textarea id="products-prescribed" class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes...">{{ visit.products_prescribed if visit else '' }}</textarea>
+      </div>
     </div>
 
-    <div>
-        <label>Produits prescrits / demandés</label>
-        <textarea class="form-input" name="products_prescribed" rows="3" placeholder="Produits prescrits, intentions, commandes...">{{ visit.products_prescribed if visit else '' }}</textarea>
+    <div class="visit-form-section">
+      <div class="visit-form-section-head"><span class="visit-form-section-icon">📝</span><h2>Compte-rendu terrain</h2></div>
+      <div class="visit-form-field">
+        <label for="report">Compte-rendu de visite</label>
+        <textarea id="report" class="form-input" name="report" rows="7" placeholder="Besoins, objections, concurrence, engagement, prochaine action...">{{ visit.report if visit else '' }}</textarea>
+        <span class="visit-form-help">Notez les informations utiles pour assurer le suivi commercial lors de la prochaine visite.</span>
+      </div>
     </div>
 
-    <div>
-        <label>Compte-rendu de visite</label>
-        <textarea class="form-input" name="report" rows="6" placeholder="Besoins, objections, concurrence, engagement, prochaine action...">{{ visit.report if visit else '' }}</textarea>
+    <div class="visit-form-actions">
+      <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">Annuler</a>
+      <button class="btn" type="submit">✓ {{ 'Enregistrer les modifications' if visit else 'Enregistrer la visite' }}</button>
     </div>
-
-    <div class="quick-actions">
-        <button class="btn" type="submit">✓ {{ 'Enregistrer les modifications' if visit else 'Enregistrer la visite' }}</button>
-        <a class="btn btn-outline" href="{{ url_for('clients.client_detail', client_id=client.id) }}">Annuler</a>
-    </div>
-</form>
+  </form>
+</div>
 {% endblock %}
