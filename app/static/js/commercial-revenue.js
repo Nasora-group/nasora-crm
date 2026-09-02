@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function () {
   const match = window.location.pathname.match(/^\/commercial_dashboard\/([^/]+)\/?$/); if (!match) return;
-  const username=decodeURIComponent(match[1]), anchor=document.querySelector(".crm-section-title"); if(!anchor)return;
+  const username=decodeURIComponent(match[1]); const anchor=document.querySelector(".crm-section-title"); if(!anchor)return;
   const card=document.createElement("section"); card.className="summary-card commercial-revenue-card"; card.style.marginTop="18px";
   card.innerHTML='<div class="section-heading"><div><span class="crm-overline">CHIFFRE D’AFFAIRES</span><h2>CA <span class="commercial-revenue-division"></span></h2><p class="crm-subtitle">CA réalisé par ce commercial, uniquement sur sa division NASMEDIC ou NASDERM.</p></div><strong class="commercial-revenue-total">Chargement…</strong></div><div style="height:280px;position:relative;margin-bottom:18px"><canvas aria-label="Évolution mensuelle du chiffre d’affaires"></canvas></div><div class="table-responsive table-scroll"><table class="responsive-table" style="min-width:650px"><thead><tr><th>Mois</th><th>CA réalisé</th><th>Action</th></tr></thead><tbody><tr><td colspan="3">Chargement…</td></tr></tbody></table></div>';
   anchor.parentNode.insertBefore(card,anchor);
