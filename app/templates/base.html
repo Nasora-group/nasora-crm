@@ -41,6 +41,8 @@
 <span class="nav-divider"></span>
 <a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span>Fiches produits</a>
 <a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span>Stocks disponibles</a>
+<a href="{{ url_for('stock.entry') }}"><span class="nav-icon">📥</span>Saisie stocks</a>
+<a href="{{ url_for('visit_targets.list_targets') }}"><span class="nav-icon">🎯</span>Objectifs visites</a>
 {% else %}
 <a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span>Tableau de bord</a>
 <a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon">◷</span>Visualisation du CA</a>
@@ -59,6 +61,5 @@
 {% block content %}{% endblock %}
 </div>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
-<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');if(toggle&&nav){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰'});nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰'})})}
-const crmHeading=Array.from(document.querySelectorAll('h3')).find(function(el){return el.textContent.trim()==='Gestion CRM'});if(crmHeading){const actions=crmHeading.closest('.summary-card')?.querySelector('.quick-actions');if(actions&&!actions.querySelector('[data-stock-entry]')){const link=document.createElement('a');link.href='{{ url_for("stock.entry") }}';link.className='btn btn-outline';link.dataset.stockEntry='true';link.textContent='📥 Saisie stocks';actions.appendChild(link)}}});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');if(toggle&&nav){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰'});nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰'})})}});</script>
 </body></html>
