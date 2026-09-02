@@ -8,7 +8,8 @@ from flask_login import login_required
 from app.models import Prospection, User
 from app.utils import roles_required
 from app.visit_metrics import professional_key
-from app.routes.dashboard import _normalize_text, _visit_targets_for_commercials
+from app.routes.dashboard import _normalize_text
+from app.visit_objectives_readonly import read_visit_targets
 
 logger = logging.getLogger(__name__)
 terrain_bp = Blueprint("dashboard_safe", __name__)
@@ -74,7 +75,7 @@ def direction():
         specialites = sorted({(row.specialite or "").strip() for row in Prospection.query.with_entities(Prospection.specialite).all() if row[0] and row[0].strip()})
 
         try:
-            visit_targets = _visit_targets_for_commercials(commercials)
+            visit_targets = read_visit_targets(commercials)
         except Exception:
             logger.exception("Impossible de charger les objectifs de visites")
             visit_targets = {c.id: 100 for c in commercials}
