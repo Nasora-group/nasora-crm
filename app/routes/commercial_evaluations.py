@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
 
 from app.models import Evaluation, EVALUATION_MAX_TOTAL
@@ -22,5 +22,24 @@ def my_evaluations():
         "commercial_evaluations.html",
         evaluations=evaluations,
         mois_labels=MOIS_LABELS,
+        max_total=EVALUATION_MAX_TOTAL,
+    )
+
+
+@commercial_evaluations_bp.route("/mes-evaluations/<int:year>/<int:month>")
+@login_required
+@roles_required("commercial")
+def my_evaluation_detail(year, month):
+    if month < 1 or month > 12:
+        abort(404)
+    evaluation = Evaluation.query.filter_by(
+        commercial_id=current_user.id,
+        year=year,
+        month=month,
+    ).first_or_404()
+    return render_template(
+        "commercial_evaluation_detail.html",
+        evaluation=evaluation,
+        mois_label=MOIS_LABELS[month],
         max_total=EVALUATION_MAX_TOTAL,
     )
