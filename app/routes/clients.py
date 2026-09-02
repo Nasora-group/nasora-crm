@@ -57,25 +57,40 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
+    """Return clients the current commercial is allowed to see.
+
+    Owned clients must remain visible even when they have no legacy
+    prospection. Unassigned clients are additionally exposed when they can
+    be matched to one of the commercial's legacy prospections. Clients owned
+    by another commercial are never included.
+    """
+    owned_query = Client.query.filter(Client.owner_id == current_user.id)
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
+
+    # A commercial must always see the professionals explicitly attributed to it.
     if not active_prospections:
-        return Client.query.filter(False)
-    clients = Client.query.filter(or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)).all()
-    active_ids = set()
+        return owned_query
+
+    candidates = Client.query.filter(
+        or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)
+    ).all()
+    visible_ids = {client.id for client in candidates if client.owner_id == current_user.id}
+
     for prospect in active_prospections:
         prospect_phone = _normalize_phone(prospect.telephone)
         prospect_name = _normalize_text(prospect.nom_client)
-        if prospect_phone and len(prospect_phone) >= 6:
-            for client in clients:
-                if _normalize_phone(client.phone) == prospect_phone:
-                    active_ids.add(client.id)
-        if prospect_name:
-            for client in clients:
-                if _normalize_text(client.name) == prospect_name:
-                    active_ids.add(client.id)
-    if not active_ids:
-        return Client.query.filter(False)
-    return Client.query.filter(Client.id.in_(active_ids))
+        for client in candidates:
+            if client.owner_id != current_user.id and client.owner_id is not None:
+                continue
+            if prospect_phone and len(prospect_phone) >= 6:
+                client_phone = _normalize_phone(client.phone)
+                if client_phone and client_phone == prospect_phone:
+                    visible_ids.add(client.id)
+                    continue
+            if prospect_name and _normalize_text(client.name) == prospect_name:
+                visible_ids.add(client.id)
+
+    return Client.query.filter(Client.id.in_(visible_ids)) if visible_ids else owned_query
 
 
 def _commercial_can_access_client(client):
