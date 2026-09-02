@@ -20,7 +20,7 @@
   </div>
   <div class="hero-actions nasora-base-actions">
     <a class="btn" href="{{ url_for('clients.new_client') }}">＋ Nouveau professionnel</a>
-    <a class="btn btn-outline" href="{{ url_for('clients_export.export_clients_excel') }}">↧ Exporter Excel</a>
+    {% if current_user.role == 'admin' %}<a class="btn btn-outline" href="{{ url_for('clients_export.export_clients_excel') }}">↧ Exporter Excel</a>{% endif %}
   </div>
 </div>
 
