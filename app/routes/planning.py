@@ -96,6 +96,11 @@ def _planning_candidates(commercial_id):
     return list(latest.values())
 
 
+def _monday_plannings(query):
+    """Keep only legitimate Monday-start planning rows without DB-specific SQL."""
+    return [planning for planning in query.all() if planning.date and planning.date.weekday() == 0]
+
+
 @planning_bp.route("/visualiser_planning")
 @login_required
 @roles_required("commercial")
@@ -103,13 +108,8 @@ def visualiser():
     # A valid planning always starts on Monday. Exclude legacy/non-conforming
     # rows from the commercial view so Saturday/Sunday can never reappear as
     # a planning week after older data or a manual DB import.
-    plannings = (
-        Planning.query.filter(
-            Planning.commercial_id == current_user.id,
-            db.func.extract("dow", Planning.date) == 1,
-        )
-        .order_by(Planning.date.desc())
-        .all()
+    plannings = _monday_plannings(
+        Planning.query.filter_by(commercial_id=current_user.id).order_by(Planning.date.desc())
     )
     delete_form = CSRFOnlyForm()
     return render_template("visualiser_planning.html", plannings=plannings, delete_form=delete_form)
@@ -261,13 +261,8 @@ def admin_planning_detail(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
     # Only Monday-start rows are legitimate planning weeks. This also keeps
     # legacy weekend/non-Monday rows out of the admin presentation.
-    plannings = (
-        Planning.query.filter(
-            Planning.commercial_id == commercial_id,
-            db.func.extract("dow", Planning.date) == 1,
-        )
-        .order_by(Planning.date.desc())
-        .all()
+    plannings = _monday_plannings(
+        Planning.query.filter_by(commercial_id=commercial_id).order_by(Planning.date.desc())
     )
     return render_template("admin_planning_detail.html", plannings=plannings, commercial=commercial)
 
