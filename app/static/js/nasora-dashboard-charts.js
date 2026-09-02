@@ -81,9 +81,68 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyNasoraChartTheme);
-  } else {
+  function initAdminDashboardCharts() {
+    if (!window.Chart) return;
+    var lineCanvas = document.getElementById('globalSalesChart');
+    var divisionCanvas = document.getElementById('divisionChart');
+    if (!lineCanvas && !divisionCanvas) return;
+
+    fetch('/admin_dashboard_chart_data', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('Chart data unavailable');
+        return response.json();
+      })
+      .then(function (data) {
+        var labels = Array.isArray(data.labels) ? data.labels : [];
+        var totals = Array.isArray(data.totals) ? data.totals.map(Number) : [];
+        var divisions = data.divisions || {};
+
+        if (lineCanvas && labels.length && totals.length) {
+          new Chart(lineCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: labels.map(function (label) { return String(label).slice(0, 7); }),
+              datasets: [{ label: 'CA total', data: totals, fill: true }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return ' ' + Number(ctx.parsed.y || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' €'; } } } },
+              scales: { y: { beginAtZero: true, ticks: { callback: function (value) { return Number(value).toLocaleString('fr-FR') + ' €'; } } }, x: { grid: { display: false } } }
+            }
+          });
+        }
+
+        if (divisionCanvas && (Number(divisions.nasmedic || 0) || Number(divisions.nasderm || 0))) {
+          new Chart(divisionCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['NASMEDIC', 'NASDERM'], datasets: [{ data: [Number(divisions.nasmedic || 0), Number(divisions.nasderm || 0)] }] },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '64%',
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: function (ctx) { return ' ' + ctx.label + ' : ' + Number(ctx.parsed || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' €'; } } }
+              }
+            }
+          });
+        }
+      })
+      .catch(function (error) {
+        console.warn('NASORA charts:', error.message);
+      });
+  }
+
+  function boot() {
     applyNasoraChartTheme();
+    initAdminDashboardCharts();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
   }
 })();
