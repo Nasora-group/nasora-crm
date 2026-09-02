@@ -3,37 +3,33 @@
     <div>
       <span class="crm-overline">VISUALISATION DU CA</span>
       <h2>CA mensuel · {{ division_label }}</h2>
-      <p class="crm-subtitle">Même présentation que la visualisation CA de la division, limitée à {{ commercial.username }}.</p>
+      <p class="crm-subtitle">Historique complet du chiffre d’affaires de la division, avec les mêmes données que la page CA mensuel.</p>
     </div>
-  </div>
-  <div class="dashboard-links" style="margin-bottom:14px;">
-    <span class="btn">{{ division_label }}</span>
   </div>
   <div class="kpi-grid division-kpi-grid commercial-division-kpis">
     <article class="kpi-card division-kpi-card">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-7"/></svg></div>
-      <div class="kpi-body"><span class="kpi-label">Vente moyenne mensuelle</span><strong class="kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</strong><span class="kpi-sub">{{ monthly_revenue_labels|length }} mois avec ventes</span></div>
+      <div class="kpi-body"><span class="kpi-label">Vente moyenne mensuelle</span><strong class="kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</strong><span class="kpi-sub">{{ monthly_revenue_labels|length }} mois historiques</span></div>
     </article>
     <article class="kpi-card division-kpi-card">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-      <div class="kpi-body"><span class="kpi-label">Objectif du mois</span>
-        {% if not kpis.objectives_available %}<strong class="kpi-value kpi-unavailable">Indisponible</strong>
-        {% elif kpis.monthly_target %}<strong class="kpi-value">{{ "%.0f"|format(kpis.monthly_pct) }} %</strong><div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.monthly_pct, 100] | min }}%;"></div></div><span class="kpi-sub">{{ "%.2f"|format(kpis.current_month_revenue) }} € / {{ "%.2f"|format(kpis.monthly_target) }} €</span>
-        {% else %}<strong class="kpi-value kpi-unavailable">Aucun objectif</strong>{% endif %}
-      </div>
+      <div class="kpi-body"><span class="kpi-label">CA du mois</span><strong class="kpi-value">{{ "%.2f"|format(kpis.current_month_revenue) }} €</strong><span class="kpi-sub">Mois en cours</span></div>
     </article>
     <article class="kpi-card division-kpi-card">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.8 6.3L22 9l-5 4.4 1.5 6.6-6.5-3.5-6.5 3.5L7 13.4 2 9l7.2-.7z"/></svg></div>
-      <div class="kpi-body"><span class="kpi-label">Objectif annuel {{ kpis.current_year }}</span>
-        {% if not kpis.objectives_available %}<strong class="kpi-value kpi-unavailable">Indisponible</strong>
-        {% elif kpis.annual_target %}<strong class="kpi-value">{{ "%.0f"|format(kpis.annual_pct) }} %</strong><div class="kpi-progress"><div class="kpi-progress-bar" style="width: {{ [kpis.annual_pct, 100] | min }}%;"></div></div><span class="kpi-sub">{{ "%.2f"|format(kpis.current_year_revenue) }} € / {{ "%.2f"|format(kpis.annual_target) }} €</span>
-        {% else %}<strong class="kpi-value kpi-unavailable">Aucun objectif</strong>{% endif %}
-      </div>
+      <div class="kpi-body"><span class="kpi-label">CA annuel {{ kpis.current_year }}</span><strong class="kpi-value">{{ "%.2f"|format(kpis.current_year_revenue) }} €</strong><span class="kpi-sub">Cumul de l’année</span></div>
     </article>
   </div>
 </section>
 
 <section class="crm-surface crm-table-card commercial-revenue-existing-table">
+  <div class="section-heading" style="padding:18px 18px 8px;">
+    <div>
+      <span class="crm-overline">HISTORIQUE</span>
+      <h2>Historique du CA mensuel</h2>
+      <p class="crm-subtitle">Toutes les périodes disponibles sont affichées, y compris les années précédentes.</p>
+    </div>
+  </div>
   <table class="responsive-table">
     <thead><tr><th>Mois</th>{% for slug, label, sale_model, product_model in suppliers %}<th>{{ label }} (€)</th>{% endfor %}<th>Total (€)</th><th>Détails</th></tr></thead>
     <tbody>
@@ -42,15 +38,15 @@
         <td><strong>{{ row.month }}</strong></td>
         {% for slug, label, sale_model, product_model in suppliers %}<td>{{ "%.2f"|format(row.amounts.get(slug, 0)) }} €</td>{% endfor %}
         <td><strong>{{ "%.2f"|format(row.total) }} €</strong></td>
-        <td><a class="btn btn-outline" href="{{ url_for('vm_cockpit.commercial_revenue_detail_page', username=commercial.username, month=row.month) }}">Voir les détails</a></td>
+        <td><a class="btn btn-outline" href="{{ url_for('revenue.' ~ ('monthly_revenue_detail_nasmedic' if division == 'nasmedic' else 'monthly_revenue_detail_nasderm'), month=row.month) }}">Voir les détails</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="{{ suppliers|length + 3 }}">Aucun CA enregistré pour ce commercial.</td></tr>
+      <tr><td colspan="{{ suppliers|length + 3 }}">Aucun historique CA disponible pour cette division.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </section>
 <style>
-.commercial-revenue-existing .commercial-division-kpis{margin-top:16px}.commercial-revenue-existing-table{margin-top:14px;overflow:auto}.commercial-revenue-existing-table table{min-width:850px}.commercial-revenue-existing-table th{white-space:nowrap}.commercial-revenue-existing-table td{vertical-align:middle}.commercial-revenue-existing .dashboard-links{display:flex;gap:8px;flex-wrap:wrap}
+.commercial-revenue-existing .commercial-division-kpis{margin-top:16px}.commercial-revenue-existing-table{margin-top:14px;overflow:auto}.commercial-revenue-existing-table table{min-width:850px}.commercial-revenue-existing-table th{white-space:nowrap}.commercial-revenue-existing-table td{vertical-align:middle}
 @media(max-width:760px){.commercial-revenue-existing-table{margin-left:0;margin-right:0}.commercial-revenue-existing-table table{min-width:720px}}
 </style>
