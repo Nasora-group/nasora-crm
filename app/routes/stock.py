@@ -146,14 +146,17 @@ def entry():
             for item in catalog:
                 for slug in WHOLESALERS:
                     key = f"stock__{item['division']}__{item['laboratory']}__{slug}__{item['product']}"
-                    quantity = max(0, int(request.form.get(key, "0").strip() or 0))
+                    raw_quantity = request.form.get(key, "0").strip() or "0"
+                    quantity = int(raw_quantity)
+                    if quantity < 0:
+                        raise ValueError("negative stock quantity")
                     _save_stock_entry(item, slug, week_start, quantity)
             db.session.commit()
             flash(f"Stocks de la semaine du {week_start.strftime('%d/%m/%Y')} enregistrés.", "success")
             return redirect(url_for("stock.available", week=week_start.isoformat()))
         except (ValueError, ValidationError):
             db.session.rollback()
-            flash("Une quantité de stock est invalide. Utilisez uniquement des nombres entiers positifs.", "error")
+            flash("Une quantité de stock est invalide. Utilisez uniquement des nombres entiers positifs ou nuls.", "error")
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer les stocks pour le moment.", "error")
