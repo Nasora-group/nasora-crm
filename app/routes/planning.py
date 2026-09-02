@@ -120,7 +120,12 @@ def saisie():
             flash("La date de début doit être un lundi.", "error")
             return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
 
-        if _planning_date_already_exists(current_user.id, formulaire.date.data):
+        # Serialize manual creations for the same commercial. The database
+        # row lock prevents two simultaneous requests from both passing the
+        # duplicate-week check before either one inserts its planning.
+        User.query.filter_by(id=current_user.id).with_for_update().first()
+        if _planning_date_already_exists(current_user.id, formulaire.date.data, lock=True):
+            db.session.rollback()
             flash("Un planning existe déjà pour cette semaine.", "error")
             return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
 
@@ -130,7 +135,12 @@ def saisie():
             **_build_creneaux_from_form(),
         )
         db.session.add(nouveau_planning)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Impossible d'enregistrer le planning : il existe déjà pour cette semaine.", "error")
+            return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
         flash("Planning enregistré avec succès.", "success")
         return redirect(url_for("planning.visualiser"))
 
@@ -160,7 +170,11 @@ def edit_planning(planning_id):
                 existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
             )
 
-        if _planning_date_already_exists(current_user.id, formulaire.date.data, exclude_id=planning.id):
+        # Lock the commercial row before checking the target week so two
+        # simultaneous edits cannot both move planning onto the same Monday.
+        User.query.filter_by(id=current_user.id).with_for_update().first()
+        if _planning_date_already_exists(current_user.id, formulaire.date.data, exclude_id=planning.id, lock=True):
+            db.session.rollback()
             flash("Un planning existe déjà pour cette semaine.", "error")
             return render_template(
                 "saisie_planning.html",
@@ -174,7 +188,19 @@ def edit_planning(planning_id):
         planning.date = formulaire.date.data
         for champ, valeur in _build_creneaux_from_form().items():
             setattr(planning, champ, valeur)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Impossible de mettre à jour le planning : cette semaine est déjà occupée.", "error")
+            return render_template(
+                "saisie_planning.html",
+                formulaire=formulaire,
+                mode="edit",
+                planning=planning,
+                existing_types={jour: [t for t, _n in decode_planning_slot(getattr(planning, jour))] for jour in JOURS},
+                existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
+            )
         flash("Planning mis à jour avec succès.", "success")
         return redirect(url_for("planning.visualiser"))
 
