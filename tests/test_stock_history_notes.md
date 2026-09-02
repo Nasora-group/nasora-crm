@@ -1,1 +1,0 @@
-Stock history regression: archived or inactive products already stored in a weekly snapshot must remain visible.
