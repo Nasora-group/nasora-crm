@@ -63,9 +63,10 @@ def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
     return query.first() is not None
 
 
-def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, lock=False):
+def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, lock=False, query=None):
     """Return whether a commercial already has a planning for a given Monday."""
-    query = Planning.query.filter(
+    query = query or Planning.query
+    query = query.filter(
         Planning.commercial_id == commercial_id,
         Planning.date == planning_date,
     )
