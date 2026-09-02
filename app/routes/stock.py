@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 from sqlalchemy import false
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import DIVISION_SUPPLIERS, SUPPLIERS
@@ -50,6 +51,43 @@ def _snapshot(week_start):
     allowed = _allowed_divisions()
     query = query.filter(StockEntry.division.in_(allowed)) if allowed else query.filter(false())
     return {(e.division, e.laboratory, e.wholesaler, e.product_name): e for e in query.all()}
+
+
+def _save_stock_entry(item, slug, week_start, quantity):
+    """Crée ou met à jour une ligne sans laisser une course concurrente annuler toute la saisie."""
+    filters = {
+        "week_start": week_start,
+        "division": item["division"],
+        "laboratory": item["laboratory"],
+        "wholesaler": slug,
+        "product_name": item["product"],
+    }
+    stock = StockEntry.query.filter_by(**filters).first()
+    if stock is not None:
+        stock.quantity = quantity
+        return
+
+    try:
+        # Le point de sauvegarde isole uniquement cette insertion. Si une
+        # autre requête insère la même clé avant nous, l'IntegrityError ne
+        # force pas le rollback de toute la saisie du formulaire.
+        with db.session.begin_nested():
+            db.session.add(
+                StockEntry(
+                    **filters,
+                    quantity=quantity,
+                    created_by_id=current_user.id,
+                )
+            )
+            db.session.flush()
+    except IntegrityError:
+        # La contrainte unique est l'arbitre final en cas de concurrence.
+        # Après rollback du savepoint, la ligne gagnante peut être relue puis
+        # mise à jour avec la quantité soumise par cet administrateur.
+        stock = StockEntry.query.filter_by(**filters).first()
+        if stock is None:
+            raise
+        stock.quantity = quantity
 
 
 @stock_bp.route("/disponible")
@@ -110,11 +148,7 @@ def entry():
                 for slug in WHOLESALERS:
                     key = f"stock__{item['division']}__{item['laboratory']}__{slug}__{item['product']}"
                     quantity = max(0, int(request.form.get(key, "0").strip() or 0))
-                    stock = StockEntry.query.filter_by(week_start=week_start, division=item["division"], laboratory=item["laboratory"], wholesaler=slug, product_name=item["product"]).first()
-                    if stock is None:
-                        stock = StockEntry(week_start=week_start, division=item["division"], laboratory=item["laboratory"], wholesaler=slug, product_name=item["product"], created_by_id=current_user.id)
-                        db.session.add(stock)
-                    stock.quantity = quantity
+                    _save_stock_entry(item, slug, week_start, quantity)
             db.session.commit()
             flash(f"Stocks de la semaine du {week_start.strftime('%d/%m/%Y')} enregistrés.", "success")
             return redirect(url_for("stock.available", week=week_start.isoformat()))
