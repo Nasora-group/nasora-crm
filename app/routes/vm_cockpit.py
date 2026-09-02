@@ -67,6 +67,81 @@ def _commercial_revenue(commercial_id, division):
     return sorted(combined.items())
 
 
+def _commercial_revenue_rows(commercial_id, division):
+    """Même structure d'affichage que la page CA mensuel, mais filtrée au commercial."""
+    combined = {}
+    suppliers = []
+    for slug in DIVISION_SUPPLIERS.get(division, []):
+        supplier = SUPPLIERS[slug]
+        sale_model = supplier["sale_model"]
+        suppliers.append((slug, supplier["label"], sale_model, supplier["product_model"]))
+        month_expr = func.strftime("%Y-%m", sale_model.date) if db.engine.dialect.name == "sqlite" else func.to_char(sale_model.date, "YYYY-MM")
+        amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
+        rows = (
+            db.session.query(
+                month_expr.label("month"),
+                func.coalesce(func.sum(amount_expr), 0).label("revenue"),
+            )
+            .filter(
+                sale_model.project == division,
+                sale_model.commercial_id == commercial_id,
+            )
+            .group_by(month_expr)
+            .order_by(month_expr)
+            .all()
+        )
+        for month, revenue in rows:
+            if month is not None:
+                month = str(month)[:7]
+                combined.setdefault(month, {})[slug] = float(revenue or 0)
+
+    labels = sorted(combined.keys())
+    rows = [
+        {
+            "month": month,
+            "amounts": {slug: combined[month].get(slug, 0.0) for slug, *_ in suppliers},
+            "total": sum(combined[month].get(slug, 0.0) for slug, *_ in suppliers),
+        }
+        for month in labels
+    ]
+    return rows, suppliers, labels
+
+
+def _commercial_revenue_kpis(commercial_id, division, labels, rows):
+    """KPI identiques à la visualisation CA mensuel, calculés sur le commercial."""
+    today = date.today()
+    totals = [float(row["total"] or 0) for row in rows]
+    total_revenue = sum(totals)
+    current_month_key = today.strftime("%Y-%m")
+    current_month_revenue = next((row["total"] for row in rows if row["month"] == current_month_key), 0.0)
+    current_year_revenue = sum(row["total"] for row in rows if str(row["month"]).startswith(str(today.year)))
+    monthly_avg = total_revenue / len(labels) if labels else 0.0
+    monthly_target = annual_target = None
+    objectives_available = True
+    try:
+        from app.models import SalesObjective
+
+        monthly_objective = SalesObjective.query.filter_by(division=division, year=today.year, month=today.month).first()
+        annual_objective = SalesObjective.query.filter_by(division=division, year=today.year, month=None).first()
+        monthly_target = float(monthly_objective.target_amount) if monthly_objective and monthly_objective.target_amount is not None else None
+        annual_target = float(annual_objective.target_amount) if annual_objective and annual_objective.target_amount is not None else None
+    except Exception:
+        db.session.rollback()
+        objectives_available = False
+
+    return {
+        "monthly_avg": monthly_avg,
+        "current_month_revenue": current_month_revenue,
+        "current_year_revenue": current_year_revenue,
+        "monthly_target": monthly_target,
+        "annual_target": annual_target,
+        "monthly_pct": current_month_revenue / monthly_target * 100.0 if monthly_target else None,
+        "annual_pct": current_year_revenue / annual_target * 100.0 if annual_target else None,
+        "current_year": today.year,
+        "objectives_available": objectives_available,
+    }
+
+
 def _commercial_revenue_detail(commercial_id, division, month):
     """Retourne le détail produit du CA du commercial pour un mois."""
     try:
@@ -242,21 +317,23 @@ def commercial_revenue_detail_page(username, month):
 
 @vm_cockpit_bp.after_app_request
 def inject_server_rendered_commercial_revenue(response):
-    """Ajoute le bloc CA directement dans le HTML de la fiche commerciale.
+    """Insère la visualisation CA existante dans la fiche commerciale.
 
-    Cette voie de rendu ne dépend pas du chargement d'un fichier JS côté navigateur.
+    La présentation reprend volontairement la page /monthly_revenue_nasmedic
+    ou /monthly_revenue_nasderm : mêmes KPI, même découpage par laboratoire,
+    même tableau mensuel et même logique de détail, mais filtrés au commercial.
     """
     path = request.path.rstrip("/")
     if request.method != "GET" or not path.startswith("/commercial_dashboard/"):
         return response
-    suffixes = ("/revenue-data", "/revenue-detail/")
+    suffixes = ("/revenue-data", "/revenue-detail/", "/ca/")
     if any(path.endswith(suffix) or suffix in path for suffix in suffixes):
         return response
     if response.status_code != 200 or not response.content_type.startswith("text/html"):
         return response
     marker = '<div class="section-heading crm-section-title">'
     html = response.get_data(as_text=True)
-    if marker not in html or "commercial-revenue-server" in html:
+    if marker not in html or "commercial-revenue-existing" in html:
         return response
     username = path.split("/commercial_dashboard/", 1)[1]
     if not username:
@@ -267,13 +344,18 @@ def inject_server_rendered_commercial_revenue(response):
     division = (commercial.project or "").lower()
     if division not in DIVISION_SUPPLIERS:
         return response
-    months = _commercial_revenue(commercial.id, division)
+
+    rows, suppliers, labels = _commercial_revenue_rows(commercial.id, division)
+    kpis = _commercial_revenue_kpis(commercial.id, division, labels, rows)
     fragment = render_template(
-        "commercial_revenue_server.html",
+        "commercial_revenue_existing.html",
         commercial=commercial,
-        revenue_division_label=division.upper(),
-        revenue_months=months,
-        revenue_total=sum(revenue for _, revenue in months),
+        division=division,
+        division_label=division.upper(),
+        rows=rows,
+        suppliers=suppliers,
+        monthly_revenue_labels=labels,
+        kpis=kpis,
     )
     response.set_data(html.replace(marker, fragment + marker, 1))
     return response
