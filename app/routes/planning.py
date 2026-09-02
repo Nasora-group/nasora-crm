@@ -52,12 +52,15 @@ def _cycle_dates(start_date):
     return [start_date + timedelta(days=7 * index) for index in range(4)]
 
 
-def _cycle_already_exists(commercial_id, cycle_dates):
+def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
     """Return whether this commercial already has any planning in the cycle."""
-    return Planning.query.filter(
+    query = Planning.query.filter(
         Planning.commercial_id == commercial_id,
         Planning.date.in_(cycle_dates),
-    ).first() is not None
+    )
+    if lock:
+        query = query.with_for_update()
+    return query.first() is not None
 
 
 def _planning_candidates(commercial_id):
@@ -246,7 +249,7 @@ def admin_planning_generate(commercial_id):
     # for the same commercial cannot both pass the overlap check before insert.
     try:
         User.query.filter_by(id=commercial.id).with_for_update().first()
-        if _cycle_already_exists(commercial.id, cycle_dates):
+        if _cycle_already_exists(commercial.id, cycle_dates, lock=True):
             db.session.rollback()
             flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
             return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
