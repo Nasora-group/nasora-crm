@@ -298,6 +298,9 @@ def edit_visit(client_id, visit_id):
         return render_template("403.html"), 403
     if current_user.role == "commercial" and visit.commercial_id != current_user.id:
         return render_template("403.html"), 403
+    if visit.prospection_id is not None:
+        flash("Cette visite est liée à une prospection et ne peut pas être modifiée depuis la Base NASORA.", "warning")
+        return redirect(url_for("clients.client_detail", client_id=client.id))
     if request.method == "POST":
         try:
             visit_date = request.form.get("date") or ""
@@ -339,6 +342,9 @@ def delete_visit(client_id, visit_id):
         return render_template("403.html"), 403
     if current_user.role == "commercial" and visit.commercial_id != current_user.id:
         return render_template("403.html"), 403
+    if visit.prospection_id is not None:
+        flash("Cette visite est liée à une prospection et ne peut pas être supprimée depuis la Base NASORA.", "warning")
+        return redirect(url_for("clients.client_detail", client_id=client.id))
     try:
         db.session.delete(visit)
         db.session.flush()
