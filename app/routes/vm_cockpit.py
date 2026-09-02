@@ -191,7 +191,7 @@ def _commercial_revenue_detail(commercial_id, division, month):
 @roles_required("commercial")
 def index():
     today = date.today()
-    week_end = today + timedelta(days=7)
+    week_end = today + timedelta(days=6)
     visits_today = _unique_visit_rows_for_commercial(current_user.id, date_filter=today)
     upcoming = Client.query.filter(
         Client.owner_id == current_user.id,
