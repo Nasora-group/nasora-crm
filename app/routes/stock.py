@@ -62,8 +62,21 @@ def available():
         selected = date.today()
     week_start = _monday(selected)
     entries = _snapshot(week_start)
+
+    # Le catalogue actif reste la base de l'affichage courant. On y ajoute
+    # toutefois les produits présents dans le snapshot historique afin qu'un
+    # produit désactivé ou un laboratoire archivé ne fasse pas disparaître
+    # rétroactivement les stocks déjà saisis.
+    catalog = _catalog()
+    catalog_keys = {(item["division"], item["laboratory"], item["product"]) for item in catalog}
+    for division, laboratory, _wholesaler, product in entries:
+        key = (division, laboratory, product)
+        if key not in catalog_keys:
+            catalog.append({"division": division, "laboratory": laboratory, "product": product})
+            catalog_keys.add(key)
+
     grouped = {}
-    for item in _catalog():
+    for item in catalog:
         key = (item["division"], item["laboratory"])
         row = grouped.setdefault(key, {"division": item["division"], "laboratory": item["laboratory"], "products": []})
         stocks = {}
