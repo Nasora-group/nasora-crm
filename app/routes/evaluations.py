@@ -154,6 +154,8 @@ def classement():
     today = date.today()
     year = request.args.get("year", today.year, type=int)
     month = request.args.get("month", today.month, type=int)
+    if month < 1 or month > 12:
+        month = today.month
     commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
     rows = []
     for c in commerciaux:
@@ -177,6 +179,8 @@ def classement():
 @roles_required("admin")
 def export_evaluations_excel(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
+    if commercial.role != "commercial":
+        abort(404)
     evaluations = Evaluation.query.filter_by(commercial_id=commercial_id).order_by(Evaluation.year, Evaluation.month).all()
     rows = []
     for e in evaluations:
@@ -222,6 +226,8 @@ def _pdf_header(canvas, doc):
 @roles_required("admin")
 def export_evaluations_pdf(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
+    if commercial.role != "commercial":
+        abort(404)
     evaluations = Evaluation.query.filter_by(commercial_id=commercial_id).order_by(Evaluation.year, Evaluation.month).all()
 
     output = io.BytesIO()
@@ -268,65 +274,27 @@ def export_evaluations_pdf(commercial_id):
                 [f"{e.total_score:.1f}/{EVALUATION_MAX_TOTAL}", e.niveau or "—", str(_visits_count(commercial_id, e.year, e.month)), e.evaluator.username if e.evaluator else "—", date.today().strftime("%d/%m/%Y")],
             ]
             st = Table(summary, colWidths=[40 * mm, 45 * mm, 40 * mm, 55 * mm, 45 * mm])
-            st.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a6741")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#b9c5b5")), ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("PADDING", (0, 0), (-1, -1), 5)]))
+            st.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a6741")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#b9c5b5")), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("PADDING", (0, 0), (-1, -1), 5)]))
             story.append(st)
 
-            section_data = [["Rubrique / critère", "Note", "Maximum"]]
-            for section_name, section_desc, items in EVALUATION_SECTIONS:
-                section_data.append([Paragraph(f"<b>{section_name}</b><br/><font size='6'>{section_desc or ''}</font>", small), "", ""])
-                section_total = 0
-                section_max = 0
+            score_rows = [["Critère", "Points", "Maximum"]]
+            for _, _, items in EVALUATION_SECTIONS:
                 for field_name, label, max_pts, _ in items:
-                    value = getattr(e, field_name) or 0
-                    section_total += value
-                    section_max += max_pts
-                    section_data.append([Paragraph(label, small), f"{value:g}", f"{max_pts:g}"])
-                section_data.append([Paragraph(f"<b>Total {section_name}</b>", small), f"{section_total:g}", f"{section_max:g}"])
-            details = Table(section_data, colWidths=[205 * mm, 30 * mm, 30 * mm], repeatRows=1)
-            details.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a6741")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a6741")),
-                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c7cec4")),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-                ("PADDING", (0, 0), (-1, -1), 4),
-            ]))
-            story.append(details)
-
-            narrative = [
-                [Paragraph("Points forts", section), Paragraph("Axes d’amélioration", section)],
-                [Paragraph((e.points_forts or "Aucun point fort renseigné.").replace("\n", "<br/>"), body), Paragraph((e.axes_amelioration or "Aucun axe d’amélioration renseigné.").replace("\n", "<br/>"), body)],
-                [Paragraph("Objectifs quantitatifs", section), Paragraph("Objectifs qualitatifs", section)],
-                [Paragraph((e.objectifs_quantitatifs or "Aucun objectif quantitatif renseigné.").replace("\n", "<br/>"), body), Paragraph((e.objectifs_qualitatifs or "Aucun objectif qualitatif renseigné.").replace("\n", "<br/>"), body)],
+                    score_rows.append([label, str(getattr(e, field_name) or 0), str(max_pts)])
+            score_table = Table(score_rows, colWidths=[190 * mm, 35 * mm, 35 * mm], repeatRows=1)
+            score_table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8efe5")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#35502f")), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c7d0c4")), ("ALIGN", (1, 1), (-1, -1), "CENTER"), ("PADDING", (0, 0), (-1, -1), 4)]))
+            story.append(score_table)
+            notes = [
+                ("Points forts", e.points_forts),
+                ("Axes d’amélioration", e.axes_amelioration),
+                ("Objectifs quantitatifs", e.objectifs_quantitatifs),
+                ("Objectifs qualitatifs", e.objectifs_qualitatifs),
             ]
-            nt = Table(narrative, colWidths=[132 * mm, 132 * mm])
-            nt.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#c7cec4")), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3f6f1")), ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#f3f6f1")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
-            story.append(nt)
-            story.append(Spacer(1, 10))
+            for label, value in notes:
+                if value:
+                    story.append(Paragraph(f"<b>{label} :</b> {value}", body))
 
     doc.build(story, onFirstPage=_pdf_header, onLaterPages=_pdf_header)
     output.seek(0)
-    filename = f"rapport_evaluation_{commercial.username}_{date.today().isoformat()}.pdf"
+    filename = f"evaluation_{commercial.username}_{date.today().isoformat()}.pdf"
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/pdf")
-
-
-@evaluations_bp.route("/mes-evaluations")
-@login_required
-@roles_required("commercial")
-def my_evaluations():
-    evaluations = Evaluation.query.filter_by(commercial_id=current_user.id).order_by(Evaluation.year.desc(), Evaluation.month.desc()).all()
-    return render_template("commercial_evaluations.html", evaluations=evaluations, mois_labels=MOIS_LABELS)
-
-
-@evaluations_bp.route("/mes-evaluations/<int:year>/<int:month>")
-@login_required
-@roles_required("commercial")
-def my_evaluation_detail(year, month):
-    evaluation = Evaluation.query.filter_by(commercial_id=current_user.id, year=year, month=month).first_or_404()
-    visits = _visits_count(current_user.id, year, month)
-    return render_template(
-        "commercial_evaluation_detail.html", evaluation=evaluation, sections=EVALUATION_SECTIONS,
-        max_total=EVALUATION_MAX_TOTAL, mois_label=MOIS_LABELS[month], year=year, visits=visits,
-    )
