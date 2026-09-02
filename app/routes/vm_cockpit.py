@@ -2,7 +2,7 @@ from calendar import monthrange
 from collections import Counter
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -207,3 +207,73 @@ def commercial_revenue_detail(username, month):
             "total": round(sum(row["revenue"] for row in rows), 2),
         }
     )
+
+
+@vm_cockpit_bp.route("/commercial_dashboard/<username>/ca/<month>", methods=["GET"])
+@login_required
+@roles_required("admin", "commercial")
+def commercial_revenue_detail_page(username, month):
+    """Page HTML robuste du détail CA, sans dépendre de JavaScript."""
+    commercial = User.query.filter_by(username=username, role="commercial").first_or_404()
+    if current_user.role == "commercial" and current_user.id != commercial.id:
+        return render_template("403.html"), 403
+    division = (commercial.project or "").lower()
+    if division not in DIVISION_SUPPLIERS:
+        return render_template(
+            "commercial_revenue_detail.html",
+            commercial=commercial,
+            division_label=division.upper() or "DIVISION NON RENSEIGNÉE",
+            month=month,
+            rows=[],
+            total=0.0,
+        )
+    rows = _commercial_revenue_detail(commercial.id, division, month)
+    if rows is None:
+        return render_template("404.html"), 404
+    return render_template(
+        "commercial_revenue_detail.html",
+        commercial=commercial,
+        division_label=division.upper(),
+        month=month,
+        rows=rows,
+        total=sum(row["revenue"] for row in rows),
+    )
+
+
+@vm_cockpit_bp.after_app_request
+def inject_server_rendered_commercial_revenue(response):
+    """Ajoute le bloc CA directement dans le HTML de la fiche commerciale.
+
+    Cette voie de rendu ne dépend pas du chargement d'un fichier JS côté navigateur.
+    """
+    path = request.path.rstrip("/")
+    if request.method != "GET" or not path.startswith("/commercial_dashboard/"):
+        return response
+    suffixes = ("/revenue-data", "/revenue-detail/")
+    if any(path.endswith(suffix) or suffix in path for suffix in suffixes):
+        return response
+    if response.status_code != 200 or not response.content_type.startswith("text/html"):
+        return response
+    marker = '<div class="section-heading crm-section-title">'
+    html = response.get_data(as_text=True)
+    if marker not in html or "commercial-revenue-server" in html:
+        return response
+    username = path.split("/commercial_dashboard/", 1)[1]
+    if not username:
+        return response
+    commercial = User.query.filter_by(username=username).first()
+    if not commercial or commercial.role != "commercial":
+        return response
+    division = (commercial.project or "").lower()
+    if division not in DIVISION_SUPPLIERS:
+        return response
+    months = _commercial_revenue(commercial.id, division)
+    fragment = render_template(
+        "commercial_revenue_server.html",
+        commercial=commercial,
+        revenue_division_label=division.upper(),
+        revenue_months=months,
+        revenue_total=sum(revenue for _, revenue in months),
+    )
+    response.set_data(html.replace(marker, fragment + marker, 1))
+    return response

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Détail CA — {{ commercial.username }}{% endblock %}
+{% block content %}
+<div class="commercial-sheet" style="max-width:1200px;margin:0 auto;padding:20px 0 40px">
+  <div class="crm-page-hero">
+    <div>
+      <span class="crm-overline">DÉTAIL DU CHIFFRE D’AFFAIRES · {{ division_label }}</span>
+      <h1>{{ commercial.username }}</h1>
+      <p class="crm-subtitle">Détail des ventes du mois {{ month }} — division {{ division_label }}.</p>
+    </div>
+  </div>
+  <section class="summary-card" style="margin-top:18px">
+    <div class="section-heading" style="display:flex;justify-content:space-between;gap:18px;align-items:flex-start">
+      <div><span class="crm-overline">CA MENSUEL</span><h2>{{ month }}</h2></div>
+      <strong style="font-size:1.5rem">{{ '{:,.0f}'.format(total).replace(',', ' ') }} FCFA</strong>
+    </div>
+    {% if rows %}
+    <div class="table-responsive" style="overflow:auto;margin-top:18px">
+      <table class="responsive-table" style="min-width:650px">
+        <thead><tr><th>Laboratoire</th><th>Produit</th><th>Quantité</th><th>CA</th></tr></thead>
+        <tbody>{% for row in rows %}<tr><td>{{ row.supplier }}</td><td><strong>{{ row.product }}</strong></td><td>{{ row.quantity }}</td><td><strong>{{ '{:,.0f}'.format(row.revenue).replace(',', ' ') }} FCFA</strong></td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}<div class="crm-surface empty-state" style="margin-top:18px"><h3>Aucune vente</h3><p>Aucune vente enregistrée pour ce commercial sur ce mois.</p></div>{% endif %}
+    <div style="margin-top:18px"><a class="btn btn-outline" href="{{ url_for('admin.commercial_detail', username=commercial.username) }}">← Retour à la fiche commerciale</a></div>
+  </section>
+</div>
+{% endblock %}
