@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
@@ -42,6 +43,21 @@ def _valid_week_start(value):
 def _next_monday(reference=None):
     reference = reference or date.today()
     return reference + timedelta(days=(7 - reference.weekday()) % 7)
+
+
+def _cycle_dates(start_date):
+    """Return the four Monday dates covered by a generated cycle."""
+    if not _valid_week_start(start_date):
+        raise ValueError("La date de début doit être un lundi")
+    return [start_date + timedelta(days=7 * index) for index in range(4)]
+
+
+def _cycle_already_exists(commercial_id, cycle_dates):
+    """Return whether this commercial already has any planning in the cycle."""
+    return Planning.query.filter(
+        Planning.commercial_id == commercial_id,
+        Planning.date.in_(cycle_dates),
+    ).first() is not None
 
 
 def _planning_candidates(commercial_id):
@@ -206,7 +222,7 @@ def admin_planning_generate(commercial_id):
     except ValueError:
         flash("Date de début invalide.", "error")
         return redirect(url_for("planning.admin_plannings"))
-    if start_date.weekday() != 0:
+    if not _valid_week_start(start_date):
         flash("La date de début doit être un lundi.", "error")
         return redirect(url_for("planning.admin_plannings"))
 
@@ -217,24 +233,35 @@ def admin_planning_generate(commercial_id):
         flash(str(exc), "error")
         return redirect(url_for("planning.admin_plannings"))
 
-    dates = [start_date + timedelta(days=7 * index) for index in range(4)]
-    existing = Planning.query.filter(
-        Planning.commercial_id == commercial.id,
-        Planning.date.in_(dates),
-    ).first()
-    if existing:
+    cycle_dates = _cycle_dates(start_date)
+    if _cycle_already_exists(commercial.id, cycle_dates):
         flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
         return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
 
     generated_entries = [planning_entries_for_week(week) for week in weeks]
     complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
     empty_slot = encode_planning_slot([])
-    for cycle_index, cycle_date in enumerate(dates):
-        fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
-        fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
-        db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
 
-    db.session.commit()
+    # Lock the commercial row for the transaction so two concurrent generations
+    # for the same commercial cannot both pass the overlap check before insert.
+    try:
+        User.query.filter_by(id=commercial.id).with_for_update().first()
+        if _cycle_already_exists(commercial.id, cycle_dates):
+            db.session.rollback()
+            flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
+            return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+
+        for cycle_index, cycle_date in enumerate(cycle_dates):
+            fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
+            fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
+            db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
+
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("Génération annulée : le planning existe déjà ou ne peut pas être créé.", "error")
+        return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+
     flash(
         f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.",
         "success",
