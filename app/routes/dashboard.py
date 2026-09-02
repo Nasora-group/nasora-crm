@@ -349,17 +349,10 @@ def _visit_targets_for_commercials(commercials):
     if not commercials:
         return targets
     try:
-        db.session.execute(text("""
-            CREATE TABLE IF NOT EXISTS visit_objective (
-                commercial_id INTEGER PRIMARY KEY,
-                target INTEGER NOT NULL DEFAULT 100 CHECK (target >= 0)
-            )
-        """))
         statement = text("SELECT commercial_id, target FROM visit_objective WHERE commercial_id IN :ids").bindparams(bindparam("ids", expanding=True))
         rows = db.session.execute(statement, {"ids": [commercial.id for commercial in commercials]}).mappings().all()
         for row in rows:
             targets[int(row["commercial_id"])] = int(row["target"])
-        db.session.commit()
     except Exception:
         db.session.rollback()
         logger.warning("Impossible de lire les objectifs de visites; fallback à 100.", exc_info=True)
