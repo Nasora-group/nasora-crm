@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.routes.planning import _valid_week_start
+from app.routes.planning import _cycle_dates, _valid_week_start
 from app.services.planning_ai import PlanningCandidate, cycle_from_two_weeks, generate_two_weeks, planning_entries_for_week
 
 
@@ -14,6 +14,27 @@ def test_planning_week_start_rejects_saturday():
 
 def test_planning_week_start_rejects_sunday():
     assert _valid_week_start(date(2026, 9, 6)) is False
+
+
+def test_cycle_dates_are_four_mondays():
+    dates = _cycle_dates(date(2026, 9, 7))
+
+    assert dates == [
+        date(2026, 9, 7),
+        date(2026, 9, 14),
+        date(2026, 9, 21),
+        date(2026, 9, 28),
+    ]
+    assert all(day.weekday() == 0 for day in dates)
+
+
+def test_cycle_dates_reject_non_monday():
+    try:
+        _cycle_dates(date(2026, 9, 6))
+    except ValueError as exc:
+        assert "lundi" in str(exc)
+    else:
+        raise AssertionError("Une date de cycle non-lundi doit être rejetée")
 
 
 def test_generator_creates_only_five_working_days_per_week():
