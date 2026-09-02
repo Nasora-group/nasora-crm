@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
 
-from app.models import Evaluation, EVALUATION_MAX_TOTAL
-from app.routes.evaluations import MOIS_LABELS
+from app.models import Evaluation, EVALUATION_MAX_TOTAL, EVALUATION_SECTIONS
+from app.models_clients import ClientVisit
+from app.routes.evaluations import MOIS_LABELS, _visits_count
 from app.utils import roles_required
 
 commercial_evaluations_bp = Blueprint("commercial_evaluations", __name__)
@@ -40,6 +41,10 @@ def my_evaluation_detail(year, month):
     return render_template(
         "commercial_evaluation_detail.html",
         evaluation=evaluation,
+        year=year,
+        month=month,
         mois_label=MOIS_LABELS[month],
         max_total=EVALUATION_MAX_TOTAL,
+        sections=EVALUATION_SECTIONS,
+        visits=_visits_count(current_user.id, year, month),
     )
