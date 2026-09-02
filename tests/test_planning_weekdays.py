@@ -38,7 +38,7 @@ def test_cycle_dates_reject_non_monday():
         raise AssertionError("Une date de cycle non-lundi doit être rejetée")
 
 
-def test_planning_date_guard_detects_existing_date(monkeypatch):
+def test_planning_date_guard_detects_existing_date():
     class FakeQuery:
         def filter(self, *args):
             return self
@@ -46,12 +46,10 @@ def test_planning_date_guard_detects_existing_date(monkeypatch):
         def first(self):
             return object()
 
-    monkeypatch.setattr(Planning, "query", FakeQuery())
-
-    assert _planning_date_already_exists(7, date(2026, 9, 7)) is True
+    assert _planning_date_already_exists(7, date(2026, 9, 7), query=FakeQuery()) is True
 
 
-def test_planning_date_guard_can_exclude_current_planning(monkeypatch):
+def test_planning_date_guard_can_exclude_current_planning():
     class FakeQuery:
         def __init__(self):
             self.filter_calls = 0
@@ -64,9 +62,7 @@ def test_planning_date_guard_can_exclude_current_planning(monkeypatch):
             return None
 
     query = FakeQuery()
-    monkeypatch.setattr(Planning, "query", query)
-
-    assert _planning_date_already_exists(7, date(2026, 9, 7), exclude_id=12) is False
+    assert _planning_date_already_exists(7, date(2026, 9, 7), exclude_id=12, query=query) is False
     assert query.filter_calls == 2
 
 
