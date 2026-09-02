@@ -102,8 +102,30 @@ def _find_duplicate_client(phone, name, structure, exclude_id=None):
     return None, None
 
 
-def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report):
-    return ClientVisit.query.filter_by(client_id=client_id, commercial_id=commercial_id, date=visit_date, products_presented=products_presented, products_prescribed=products_prescribed, report=report, is_duplicate=False).first() is not None
+def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report, exclude_id=None):
+    query = ClientVisit.query.filter_by(
+        client_id=client_id,
+        commercial_id=commercial_id,
+        date=visit_date,
+        products_presented=products_presented,
+        products_prescribed=products_prescribed,
+        report=report,
+        is_duplicate=False,
+    )
+    if exclude_id is not None:
+        query = query.filter(ClientVisit.id != exclude_id)
+    return query.first() is not None
+
+
+def _refresh_client_visit_dates(client):
+    visits = ClientVisit.query.filter_by(client_id=client.id, is_duplicate=False).order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).all()
+    if visits:
+        latest = visits[0]
+        client.last_visit = latest.date
+        client.next_visit = latest.next_visit
+    else:
+        client.last_visit = None
+        client.next_visit = None
 
 
 @clients_bp.route("/admin/clients")
@@ -122,7 +144,14 @@ def list_clients():
     if structure:
         query = query.filter(Client.structure == structure)
     if potential:
-        query = query.filter(Client.potential == int(potential))
+        try:
+            potential_value = int(potential)
+        except ValueError:
+            potential_value = None
+        if potential_value in range(1, 6):
+            query = query.filter(Client.potential == potential_value)
+        else:
+            potential = ""
     page = request.args.get("page", 1, type=int)
     pagination = query.order_by(Client.name.asc()).paginate(page=page, per_page=25, error_out=False)
     total = query.with_entities(func.count(func.distinct(Client.id))).scalar() or 0
@@ -203,7 +232,7 @@ def client_detail(client_id):
     visits = ClientVisit.query.filter_by(client_id=client.id)
     if current_user.role == "commercial":
         visits = visits.filter(ClientVisit.commercial_id == current_user.id)
-    visits = visits.order_by(ClientVisit.date.desc()).all()
+    visits = visits.order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).all()
 
     display_last_visit = client.last_visit
     if legacy_history and (not display_last_visit or legacy_history[0].date > display_last_visit):
@@ -278,11 +307,19 @@ def edit_visit(client_id, visit_id):
             if next_visit_obj and next_visit_obj < visit_date_obj:
                 flash("La prochaine visite ne peut pas être antérieure à la date de la visite.", "warning")
                 return render_template("client_visit_form.html", client=client, visit=visit, today=visit_date)
+            products_presented = request.form.get("products_presented", "").strip() or None
+            products_prescribed = request.form.get("products_prescribed", "").strip() or None
+            report = request.form.get("report", "").strip() or None
+            if _exact_visit_exists(client.id, visit.commercial_id, visit_date_obj, products_presented, products_prescribed, report, exclude_id=visit.id):
+                flash("Modification bloquée : une visite identique existe déjà pour ce professionnel à cette date.", "warning")
+                return render_template("client_visit_form.html", client=client, visit=visit, today=visit.date.isoformat())
             visit.date = visit_date_obj
             visit.next_visit = next_visit_obj
-            visit.products_presented = request.form.get("products_presented", "").strip() or None
-            visit.products_prescribed = request.form.get("products_prescribed", "").strip() or None
-            visit.report = request.form.get("report", "").strip() or None
+            visit.products_presented = products_presented
+            visit.products_prescribed = products_prescribed
+            visit.report = report
+            db.session.flush()
+            _refresh_client_visit_dates(client)
             db.session.commit()
             flash("Visite mise à jour avec succès.", "success")
             return redirect(url_for("clients.client_detail", client_id=client.id))
@@ -304,6 +341,8 @@ def delete_visit(client_id, visit_id):
         return render_template("403.html"), 403
     try:
         db.session.delete(visit)
+        db.session.flush()
+        _refresh_client_visit_dates(client)
         db.session.commit()
         flash("Visite supprimée avec succès.", "success")
     except Exception:
