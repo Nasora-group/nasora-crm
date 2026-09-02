@@ -1,0 +1,1 @@
+The stock availability route now preserves rows from the selected weekly snapshot even when the corresponding product is no longer active.
