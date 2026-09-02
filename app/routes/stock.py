@@ -31,6 +31,12 @@ def _catalog():
     catalog = []
     for division in _allowed_divisions():
         for slug in DIVISION_SUPPLIERS.get(division, []):
+            # NASDERM est exploité avec Gilbert. Cette règle doit être
+            # appliquée côté serveur et pas seulement par l'interface afin
+            # qu'un fournisseur NASDERM archivé/non autorisé ne puisse jamais
+            # réapparaître dans une nouvelle saisie de stock.
+            if division == "nasderm" and slug != "gilbert":
+                continue
             supplier = SUPPLIERS[slug]
             model = supplier["product_model"]
             for product in model.query.filter_by(is_active=True).order_by(model.name).all():
@@ -68,9 +74,6 @@ def _save_stock_entry(item, slug, week_start, quantity):
         return
 
     try:
-        # Le point de sauvegarde isole uniquement cette insertion. Si une
-        # autre requête insère la même clé avant nous, l'IntegrityError ne
-        # force pas le rollback de toute la saisie du formulaire.
         with db.session.begin_nested():
             db.session.add(
                 StockEntry(
@@ -81,9 +84,6 @@ def _save_stock_entry(item, slug, week_start, quantity):
             )
             db.session.flush()
     except IntegrityError:
-        # La contrainte unique est l'arbitre final en cas de concurrence.
-        # Après rollback du savepoint, la ligne gagnante peut être relue puis
-        # mise à jour avec la quantité soumise par cet administrateur.
         stock = StockEntry.query.filter_by(**filters).first()
         if stock is None:
             raise
@@ -137,7 +137,6 @@ def entry():
         week_start = _monday(date.today())
     catalog = _catalog()
 
-    # Le bouton de changement de semaine navigue uniquement : il ne sauvegarde jamais.
     if request.method == "POST" and "change_week" in request.form:
         return redirect(url_for("stock.entry", week_start=week_start.isoformat()))
 
