@@ -165,14 +165,15 @@ def commercial_detail(username):
     elif visit_rate>=80: visit_status="À surveiller"
     else: visit_status="Insuffisant"
     specialites_stats=_prospection_specialites(prospection_query); activity_stats=_prospection_activity_stats(prospection_query); page=request.args.get("page",1,type=int); pagination=prospection_query.order_by(Prospection.date.desc()).paginate(page=page,per_page=25,error_out=False); form=DownloadExcelForm()
-    available_zones=[z for (z,) in User.query.filter(User.role=="commercial",User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
+    available_zones=[z for (z,) in User.query.filter(User.id==commercial.id,User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
+    available_specialites=[s for (s,) in Prospection.query.filter_by(commercial_id=commercial.id).filter(Prospection.specialite.isnot(None)).with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all()]
     if request.method=="POST" and "download_excel" in request.form:
         try:
             data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Nom de la structure":p.establishment or "","Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
             with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
             output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
-    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,visit_target=visit_target,visit_rate=visit_rate,visit_status=visit_status,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones)
+    return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,visit_target=visit_target,visit_rate=visit_rate,visit_status=visit_status,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones,available_specialites=available_specialites)
 
 @admin_bp.route("/export_pdf/<username>")
 @login_required
