@@ -44,8 +44,20 @@ def read_visit_targets(commercials):
     return targets
 
 
+def read_visit_target(commercial_id):
+    """Read one commercial's target without invoking the legacy write-on-read helper."""
+    from app.models import User
+
+    commercial = User.query.get(commercial_id)
+    if not commercial or commercial.role != "commercial":
+        return 100
+    return int(read_visit_targets([commercial]).get(commercial_id, 100))
+
+
 def install_readonly_objective_reader():
-    """Replace the legacy dashboard helper with the strictly read-only one."""
+    """Replace legacy objective readers with strictly read-only implementations."""
     from app.routes import dashboard
+    from app.routes import admin
 
     dashboard._visit_targets_for_commercials = read_visit_targets
+    admin._visit_target_for_commercial = read_visit_target
