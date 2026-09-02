@@ -1,6 +1,7 @@
 from datetime import date
 
-from app.routes.planning import _cycle_dates, _valid_week_start
+from app.models import Planning
+from app.routes.planning import _cycle_dates, _planning_date_already_exists, _valid_week_start
 from app.services.planning_ai import PlanningCandidate, cycle_from_two_weeks, generate_two_weeks, planning_entries_for_week
 
 
@@ -35,6 +36,34 @@ def test_cycle_dates_reject_non_monday():
         assert "lundi" in str(exc)
     else:
         raise AssertionError("Une date de cycle non-lundi doit être rejetée")
+
+
+def test_planning_date_guard_detects_existing_date():
+    class FakeQuery:
+        def filter(self, *args):
+            return self
+
+        def first(self):
+            return object()
+
+    assert _planning_date_already_exists(7, date(2026, 9, 7), query=FakeQuery()) is True
+
+
+def test_planning_date_guard_can_exclude_current_planning():
+    class FakeQuery:
+        def __init__(self):
+            self.filter_calls = 0
+
+        def filter(self, *args):
+            self.filter_calls += 1
+            return self
+
+        def first(self):
+            return None
+
+    query = FakeQuery()
+    assert _planning_date_already_exists(7, date(2026, 9, 7), exclude_id=12, query=query) is False
+    assert query.filter_calls == 2
 
 
 def test_generator_creates_only_five_working_days_per_week():

@@ -63,6 +63,20 @@ def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
     return query.first() is not None
 
 
+def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, lock=False, query=None):
+    """Return whether a commercial already has a planning for a given Monday."""
+    query = query or Planning.query
+    query = query.filter(
+        Planning.commercial_id == commercial_id,
+        Planning.date == planning_date,
+    )
+    if exclude_id is not None:
+        query = query.filter(Planning.id != exclude_id)
+    if lock:
+        query = query.with_for_update()
+    return query.first() is not None
+
+
 def _planning_candidates(commercial_id):
     """Build candidates only from real establishments already entered by this commercial."""
     rows = (
@@ -106,6 +120,10 @@ def saisie():
             flash("La date de début doit être un lundi.", "error")
             return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
 
+        if _planning_date_already_exists(current_user.id, formulaire.date.data):
+            flash("Un planning existe déjà pour cette semaine.", "error")
+            return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
+
         nouveau_planning = Planning(
             commercial_id=current_user.id,
             date=formulaire.date.data,
@@ -133,6 +151,17 @@ def edit_planning(planning_id):
     if formulaire.validate_on_submit():
         if not _valid_week_start(formulaire.date.data):
             flash("La date de début doit être un lundi.", "error")
+            return render_template(
+                "saisie_planning.html",
+                formulaire=formulaire,
+                mode="edit",
+                planning=planning,
+                existing_types={jour: [t for t, _n in decode_planning_slot(getattr(planning, jour))] for jour in JOURS},
+                existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
+            )
+
+        if _planning_date_already_exists(current_user.id, formulaire.date.data, exclude_id=planning.id):
+            flash("Un planning existe déjà pour cette semaine.", "error")
             return render_template(
                 "saisie_planning.html",
                 formulaire=formulaire,
