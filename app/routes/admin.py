@@ -180,8 +180,26 @@ def commercial_detail(username):
 @roles_required("admin","commercial")
 def export_pdf(username):
     if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
-    commercial=User.query.filter_by(username=username).first_or_404(); prospections=commercial.prospections.order_by(Prospection.date.desc()).all(); buffer=BytesIO(); p=canvas.Canvas(buffer,pagesize=letter); p.setFont("Helvetica-Bold",14); p.drawString(72,750,f"Prospections de {username}"); p.setFont("Helvetica",10); y=720
+    commercial=User.query.filter_by(username=username).first_or_404()
+    date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
+    prospection_query=Prospection.query.join(User).filter(Prospection.commercial_id==commercial.id)
+    if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
+    if date_end: prospection_query=prospection_query.filter(Prospection.date<=date_end)
+    if specialite: prospection_query=prospection_query.filter(Prospection.specialite==specialite)
+    if zone: prospection_query=prospection_query.filter(User.zone==zone)
+    prospections=prospection_query.order_by(Prospection.date.desc()).all()
+    buffer=BytesIO(); p=canvas.Canvas(buffer,pagesize=letter); p.setFont("Helvetica-Bold",14); p.drawString(72,750,f"Prospections de {username}"); p.setFont("Helvetica",9)
+    if date_start or date_end or specialite or zone:
+        filters=[]
+        if date_start: filters.append(f"Du {date_start}")
+        if date_end: filters.append(f"au {date_end}")
+        if specialite: filters.append(f"Spécialité : {specialite}")
+        if zone: filters.append(f"Zone : {zone}")
+        p.drawString(72,732,"Filtres : " + " · ".join(filters))
+    y=710
     for prospection in prospections:
-        if y<60: p.showPage(); p.setFont("Helvetica",10); y=750
+        if y<60: p.showPage(); p.setFont("Helvetica",9); y=750
         p.drawString(72,y,f"{prospection.date} - {prospection.nom_client} ({prospection.structure})"); y-=18
+    if not prospections:
+        p.drawString(72,y,"Aucune prospection ne correspond aux filtres sélectionnés.")
     p.showPage(); p.save(); buffer.seek(0); return send_file(buffer,download_name=f"prospections_{username}.pdf",as_attachment=True,mimetype="application/pdf")
