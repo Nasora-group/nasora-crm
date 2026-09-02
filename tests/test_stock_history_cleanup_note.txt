@@ -1,1 +1,0 @@
-Regression coverage is intentionally kept in Python test files for the stock history display behavior.
