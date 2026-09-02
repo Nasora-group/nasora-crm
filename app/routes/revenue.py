@@ -3,7 +3,7 @@ from calendar import monthrange
 from collections import namedtuple
 from datetime import date, datetime
 
-from flask import Blueprint, render_template, flash, request, abort
+from flask import Blueprint, render_template, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -106,6 +106,31 @@ def monthly_revenue_nasderm():
 @roles_required("admin", "commercial")
 def monthly_revenue_nasmedic():
     return _monthly_revenue_route("nasmedic", "monthly_revenue_nasmedic.html")
+
+
+@revenue_bp.route("/admin_dashboard_chart_data")
+@login_required
+@roles_required("admin")
+def admin_dashboard_chart_data():
+    """Données JSON dédiées aux graphiques du tableau de bord Direction."""
+    try:
+        labels_nasmedic, totals_nasmedic, _ = _monthly_revenue_for_division("nasmedic")
+        labels_nasderm, totals_nasderm, _ = _monthly_revenue_for_division("nasderm")
+        all_labels = sorted(set(labels_nasmedic) | set(labels_nasderm))
+        nasmedic_by_month = dict(zip(labels_nasmedic, totals_nasmedic))
+        nasderm_by_month = dict(zip(labels_nasderm, totals_nasderm))
+        return jsonify({
+            "labels": all_labels,
+            "totals": [nasmedic_by_month.get(m, 0.0) + nasderm_by_month.get(m, 0.0) for m in all_labels],
+            "divisions": {
+                "nasmedic": sum(totals_nasmedic),
+                "nasderm": sum(totals_nasderm),
+            },
+        })
+    except Exception:
+        db.session.rollback()
+        logger.exception("Impossible de charger les données des graphiques Direction")
+        return jsonify({"labels": [], "totals": [], "divisions": {"nasmedic": 0, "nasderm": 0}}), 500
 
 
 def _month_bounds(month):
