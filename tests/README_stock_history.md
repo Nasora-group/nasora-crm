@@ -1,1 +1,0 @@
-This regression is covered by tests/test_stock_history.py. Historical stock rows must remain visible even when their product is no longer active.
