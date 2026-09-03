@@ -1,46 +1,10 @@
-from functools import wraps
 import json
 
-from flask import flash, redirect, url_for
-from flask_login import current_user
+from app.permissions import division_matches, authorize_role
 
-
-def roles_required(*roles):
-    """Restreint l'accès à une route aux rôles listés.
-    Usage : @roles_required('admin') ou @roles_required('admin', 'commercial')
-    """
-    allowed_roles = {role.strip().lower() for role in roles if role and role.strip()}
-
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapped(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return redirect(url_for("auth.login"))
-
-            # Défense en profondeur : un compte désactivé ne doit jamais
-            # conserver un accès à une route protégée via une session existante.
-            if not getattr(current_user, "is_active_account", False):
-                flash("Votre compte est désactivé. Contactez un administrateur.", "error")
-                return redirect(url_for("auth.login"))
-
-            current_role = (getattr(current_user, "role", "") or "").strip().lower()
-            if current_role not in allowed_roles:
-                flash("Accès non autorisé.", "error")
-                return redirect(url_for("auth.home"))
-            return view_func(*args, **kwargs)
-        return wrapped
-    return decorator
-
-
-def division_matches(user, division):
-    """Un commercial ne doit voir/agir que sur les données de sa propre division."""
-    if not user or not getattr(user, "is_authenticated", False):
-        return False
-    if (getattr(user, "role", "") or "").strip().lower() == "admin":
-        return True
-    user_division = (getattr(user, "project", "") or "").strip().lower()
-    target_division = (division or "").strip().lower()
-    return bool(user_division and target_division and user_division == target_division)
+# Backward-compatible alias: existing routes can keep @roles_required while
+# authorization is now implemented centrally in app.permissions.
+roles_required = authorize_role
 
 
 def encode_planning_slot(entries):
@@ -77,6 +41,6 @@ def format_planning_slot(raw):
 
 
 def planning_entries(raw):
-    """Comme decode_planning_slot, mais exposé en filtre Jinja pour construire
+    """Comme decode_planning_slot, mais exposé comme filtre Jinja pour construire
     un affichage riche (badges colorés) plutôt qu'une simple chaîne de texte."""
     return decode_planning_slot(raw)
