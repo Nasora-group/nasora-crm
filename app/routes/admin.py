@@ -13,6 +13,7 @@ from app.extensions import db
 from app.forms import DownloadExcelForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, SalesObjective
 from app.models_clients import Client
+from app.permissions import owns_record
 from app.utils import roles_required
 from app.visit_metrics import professional_key
 
@@ -151,9 +152,11 @@ def dashboard():
 @login_required
 @roles_required("admin","commercial")
 def commercial_detail(username):
-    if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
     commercial=User.query.filter_by(username=username).first()
     if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
+    if not owns_record(current_user, commercial, owner_field="id"):
+        flash("Accès non autorisé.","error")
+        return render_template("403.html"),403
     date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
     prospection_query=Prospection.query.join(User).filter(Prospection.commercial_id==commercial.id)
     if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
@@ -168,19 +171,25 @@ def commercial_detail(username):
     available_zones=[z for (z,) in User.query.filter(User.id==commercial.id,User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
     available_specialites=[s for (s,) in Prospection.query.filter_by(commercial_id=commercial.id).filter(Prospection.specialite.isnot(None)).with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all()]
     if request.method=="POST" and "download_excel" in request.form:
-        try:
-            data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Nom de la structure":p.establishment or "","Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
-            with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
-            output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
+        if not form.validate_on_submit():
+            flash("Requête de téléchargement invalide.", "error")
+        else:
+            try:
+                data=[{"Date":p.date.strftime("%Y-%m-%d"),"Nom Client":p.nom_client,"Spécialité":p.specialite,"Structure":p.structure,"Nom de la structure":p.establishment or "","Téléphone":p.telephone,"Profils Prospect":p.profils_prospect,"Produits Présentés":p.produits_presentes,"Produits Prescrits":p.produits_prescrits} for p in prospection_query.order_by(Prospection.date.desc()).all()]; df=pd.DataFrame(data); output=BytesIO()
+                with pd.ExcelWriter(output,engine="xlsxwriter") as writer: df.to_excel(writer,index=False,sheet_name="Prospections")
+                output.seek(0); return send_file(output,download_name=f"prospections_{username}.xlsx",as_attachment=True,mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            except Exception: logger.exception("Erreur export Excel pour %s",username); flash("Erreur lors de la génération du fichier Excel.","error")
     return render_template("commercial_dashboard.html",commercial=commercial,prospections=pagination.items,pagination=pagination,total_real_prospections=total_real_prospections,visit_target=visit_target,visit_rate=visit_rate,visit_status=visit_status,form=form,delete_form=CSRFOnlyForm(),specialites_stats=specialites_stats,activity_stats=activity_stats,date_start=date_start,date_end=date_end,specialite=specialite,zone=zone,available_zones=available_zones,available_specialites=available_specialites)
 
 @admin_bp.route("/export_pdf/<username>")
 @login_required
 @roles_required("admin","commercial")
 def export_pdf(username):
-    if current_user.role=="commercial" and current_user.username!=username: flash("Accès non autorisé.","error"); return render_template("403.html"),403
-    commercial=User.query.filter_by(username=username).first_or_404()
+    commercial=User.query.filter_by(username=username).first()
+    if not commercial: flash("Commercial non trouvé.","error"); return render_template("404.html"),404
+    if not owns_record(current_user, commercial, owner_field="id"):
+        flash("Accès non autorisé.","error")
+        return render_template("403.html"),403
     date_start=(request.args.get("date_start") or "").strip(); date_end=(request.args.get("date_end") or "").strip(); specialite=(request.args.get("specialite") or "").strip(); zone=(request.args.get("zone") or "").strip()
     prospection_query=Prospection.query.join(User).filter(Prospection.commercial_id==commercial.id)
     if date_start: prospection_query=prospection_query.filter(Prospection.date>=date_start)
