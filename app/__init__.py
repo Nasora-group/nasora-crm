@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_login import current_user
 from dotenv import load_dotenv
 from app.config import get_config
@@ -36,7 +36,7 @@ def create_app(config_object=None):
         response.headers.setdefault("Permissions-Policy", "geolocation=(self), microphone=(), camera=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
-        if current_user.is_authenticated or response.request.path == "/login":
+        if current_user.is_authenticated or request.path == "/login":
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
         if os.environ.get("FLASK_ENV", "").lower() == "production":
