@@ -48,7 +48,7 @@ def read_visit_target(commercial_id):
     """Read one commercial's target without invoking the legacy write-on-read helper."""
     from app.models import User
 
-    commercial = User.query.get(commercial_id)
+    commercial = db.session.get(User, commercial_id)
     if not commercial or commercial.role != "commercial":
         return 100
     return int(read_visit_targets([commercial]).get(commercial_id, 100))
