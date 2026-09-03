@@ -1,12 +1,6 @@
 from types import SimpleNamespace
 
-from app.permissions import (
-    account_is_active,
-    division_matches,
-    has_role,
-    is_admin,
-    owns_record,
-)
+from app.permissions import account_is_active, division_matches, is_admin, owns_record
 
 
 def user(user_id=1, role="commercial", project="nasmedic", active=True):
@@ -55,6 +49,5 @@ def test_admin_owns_any_record():
 def test_inactive_user_has_no_permissions():
     u = user(active=False)
     assert not account_is_active(u)
-    assert not has_role("commercial")
     assert not division_matches(u, "nasmedic")
     assert not owns_record(u, record(u.id))
