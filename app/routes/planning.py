@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -106,9 +106,6 @@ def _monday_plannings(query):
 @login_required
 @roles_required("commercial")
 def visualiser():
-    # A valid planning always starts on Monday. Exclude legacy/non-conforming
-    # rows from the commercial view so Saturday/Sunday can never reappear as
-    # a planning week after older data or a manual DB import.
     plannings = _monday_plannings(
         Planning.query.filter_by(commercial_id=current_user.id).order_by(Planning.date.desc())
     )
