@@ -8,6 +8,7 @@ from sqlalchemy import func
 from app.extensions import db
 from app.forms import SupplierSalesForm, SaleEditForm, CSRFOnlyForm
 from app.models import SUPPLIERS
+from app.permissions import division_matches
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,12 @@ def _handle_supplier_sales(slug, template_name):
     product_model = supplier["product_model"]
     sale_model = supplier["sale_model"]
     division = supplier["division"]
+
+    # Un commercial ne doit jamais pouvoir consulter le catalogue d'une autre
+    # division, même si la route est techniquement accessible en lecture seule.
+    # Les administrateurs conservent l'accès transversal aux divisions.
+    if not division_matches(current_user, division):
+        abort(403)
 
     form = SupplierSalesForm()
     products = product_model.query.filter_by(is_active=True).order_by(product_model.name).all()
