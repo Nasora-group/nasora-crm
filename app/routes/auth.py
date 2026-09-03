@@ -6,7 +6,6 @@ from werkzeug.security import check_password_hash
 
 from app.forms import LoginForm
 from app.models import User
-from app.extensions import csrf
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,6 @@ def login():
 
 
 @auth_bp.route("/logout", methods=["POST"])
-@csrf.exempt
 @login_required
 def logout():
     logout_user()
