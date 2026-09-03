@@ -1,0 +1,54 @@
+/* NASORA CRM — SaaS Premium Layer
+   Couche visuelle additive : ne modifie pas la logique métier.
+*/
+:root{
+  --saas-green:#17643f;
+  --saas-green-dark:#0f3f2a;
+  --saas-green-soft:#edf6f0;
+  --saas-ink:#142019;
+  --saas-muted:#66736b;
+  --saas-border:#dfe7e1;
+  --saas-bg:#f7f9f7;
+  --saas-radius:14px;
+  --saas-shadow:0 8px 28px rgba(20,32,25,.06);
+}
+
+body{background:var(--saas-bg)!important;min-height:100vh;}
+.site-header{position:relative!important;z-index:110!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(10px);}
+.header-inner{min-height:72px!important;}
+.brand-logo{transition:transform .18s ease,box-shadow .18s ease!important;}
+.brand:hover .brand-logo{transform:translateY(-1px);box-shadow:0 7px 18px rgba(23,100,63,.12)!important;}
+.header-user{display:flex!important;align-items:center!important;gap:10px!important;}
+.header-user-role{padding:5px 9px;border:1px solid #cfe2d5;border-radius:999px;background:var(--saas-green-soft);}
+.header-user-name{font-weight:700!important;}
+
+.site-nav{z-index:105!important;}
+.site-nav a,.site-nav button{letter-spacing:-.01em!important;}
+.site-nav a:hover,.site-nav a:focus-visible{transform:translateY(-1px)!important;}
+
+.container{min-height:calc(100vh - 150px);}
+.container>*{animation:saasFadeIn .22s ease both;}
+@keyframes saasFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+.crm-page-hero,.page-hero{position:relative!important;overflow:hidden!important;}
+.crm-page-hero::after,.page-hero::after{content:"";position:absolute;right:-70px;top:-90px;width:190px;height:190px;border-radius:50%;background:var(--saas-green-soft);opacity:.7;pointer-events:none;}
+.crm-page-hero>*,.page-hero>*{position:relative;z-index:1;}
+
+.kpi-card,.dashboard-card,.chart-card,.summary-card,.crm-surface,.panel,.card,.data-card,.filter-form,.responsive-table{box-shadow:var(--saas-shadow)!important;}
+.kpi-card,.dashboard-card,.chart-card,.summary-card,.crm-surface,.panel,.card,.data-card,.filter-form{border-radius:var(--saas-radius)!important;}
+
+.btn,.btn-submit{transition:transform .16s ease,box-shadow .16s ease,background .16s ease!important;}
+.btn:hover,.btn-submit:hover{transform:translateY(-1px)!important;box-shadow:0 6px 16px rgba(23,100,63,.16)!important;}
+.btn:active,.btn-submit:active{transform:translateY(0)!important;}
+
+.flash-messages{margin-bottom:16px;}
+.flash{padding:11px 14px!important;border-radius:10px!important;}
+
+footer{border-top:1px solid var(--saas-border)!important;background:#fff!important;}
+footer p{font-size:.74rem!important;color:var(--saas-muted)!important;}
+
+@media(max-width:700px){
+  .container{min-height:calc(100vh - 90px)!important;}
+  .crm-page-hero::after,.page-hero::after{right:-100px;top:-110px;width:180px;height:180px;}
+}
+@media(prefers-reduced-motion:reduce){.container>*{animation:none!important}.brand:hover .brand-logo,.btn:hover,.btn-submit:hover{transform:none!important}}
