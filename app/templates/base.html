@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}NASORA HEALTH & SKINCARE — CRM{% endblock %}</title>
+<title>{% block title %}NASORA HEALTH &amp; SKINCARE — CRM{% endblock %}</title>
 <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-refresh.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/crm-pro.css') }}">
@@ -53,7 +53,7 @@
 <a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span>Mes évaluations</a>
 <a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span>Stocks disponibles</a>
 {% endif %}
-<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><button type="submit"><span class="nav-icon">↪</span>Déconnexion</button></form>
+<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">{{ csrf_token() }}<button type="submit"><span class="nav-icon">↪</span>Déconnexion</button></form>
 {% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span>Connexion</a>{% endif %}</div></nav>
 <main id="main-content" class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
