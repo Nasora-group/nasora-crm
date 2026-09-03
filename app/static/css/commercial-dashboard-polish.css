@@ -31,6 +31,38 @@
 .commercial-sheet .crm-pagination{gap:7px!important}
 .commercial-sheet .crm-pagination .btn{min-width:110px}
 .commercial-sheet .empty-state{border:1px dashed var(--nasora-border-strong)!important;text-align:center;padding:34px!important}
-@media(max-width:1050px){.commercial-sheet{padding-left:12px!important;padding-right:12px!important}.commercial-sheet .filter-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}.commercial-sheet .quick-actions{grid-column:1/-1}.commercial-sheet .crm-chart-grid{grid-template-columns:1fr!important}}
-@media(max-width:760px){.commercial-sheet{padding-left:8px!important;padding-right:8px!important}.commercial-sheet .crm-page-hero{padding:20px!important}.commercial-sheet .crm-page-hero h1{font-size:1.4rem!important}.commercial-sheet .filter-form{grid-template-columns:1fr!important}.commercial-sheet .quick-actions{grid-column:auto}.commercial-sheet .quick-actions .btn{flex:1}.commercial-sheet .crm-kpi-grid{grid-template-columns:1fr!important}.commercial-sheet .chart-box{height:260px!important}.commercial-sheet .objective-grid{grid-template-columns:1fr!important}.commercial-sheet .crm-pagination{flex-wrap:wrap}.commercial-sheet .crm-pagination .btn{flex:1}}
-@media(prefers-reduced-motion:reduce){.commercial-sheet tbody tr{transition:none}}
+
+/* COMMERCIAL COCKPIT — couche additive, logique métier inchangée */
+.commercial-sheet .crm-page-hero{display:flex;align-items:center;min-height:118px;background:linear-gradient(135deg,#eff8f2 0%,#fff 62%,#f4f8f6 100%)!important}
+.commercial-sheet .crm-page-hero h1{font-weight:800!important}
+.commercial-sheet .summary-card{border:1px solid var(--nasora-border)!important;box-shadow:0 7px 22px rgba(20,55,40,.05)!important;background:#fff}
+.commercial-sheet .section-heading{padding-bottom:12px;border-bottom:1px solid #edf2ef}
+.commercial-sheet .crm-overline{font-weight:800;letter-spacing:.12em}
+.commercial-sheet .crm-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.commercial-sheet .crm-kpi-grid .kpi-card{border:1px solid #dce8e1!important;background:linear-gradient(145deg,#fff,#f9fcfa)!important;box-shadow:0 6px 18px rgba(20,55,40,.045)!important;transition:transform .18s ease,box-shadow .18s ease}
+.commercial-sheet .crm-kpi-grid .kpi-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(20,55,40,.09)!important}
+.commercial-sheet .crm-kpi-grid .kpi-card:nth-child(2) .kpi-icon{background:#eef6f1}
+.commercial-sheet .crm-kpi-grid .kpi-card:nth-child(3) .kpi-icon{background:#eef5f8}
+.commercial-sheet .crm-kpi-grid .kpi-card:nth-child(4) .kpi-icon{background:#f5f1f8}
+.commercial-sheet .crm-kpi-grid .kpi-label{font-weight:700;color:#53645e}
+.commercial-sheet .crm-kpi-grid .kpi-value{color:var(--nasora-ink);letter-spacing:-.02em}
+.commercial-sheet .crm-chart-grid{grid-template-columns:1.15fr .85fr!important}
+.commercial-sheet .chart-card{box-shadow:0 7px 20px rgba(20,55,40,.045)!important}
+.commercial-sheet .chart-card .section-heading h2{font-size:1rem!important}
+.commercial-sheet .chart-card .crm-subtitle{font-size:.75rem!important}
+.commercial-sheet .chart-box{height:285px!important}
+.commercial-sheet .objective-grid{gap:12px!important}
+.commercial-sheet .objective-item{background:linear-gradient(145deg,#f5faf7,#fff)!important;box-shadow:none!important;transition:transform .16s ease,border-color .16s ease}
+.commercial-sheet .objective-item:hover{transform:translateY(-1px);border-color:#c9ddd1!important}
+.commercial-sheet .objective-number{letter-spacing:-.03em}
+.commercial-sheet .crm-table-card{box-shadow:0 7px 22px rgba(20,55,40,.05)!important}
+.commercial-sheet .responsive-table thead th{background:#f3f7f4!important;color:#40534a!important;border-bottom:1px solid #dce8e1!important}
+.commercial-sheet .responsive-table tbody tr:hover{background:#f7fbf8!important}
+.commercial-sheet .responsive-table tbody td{border-bottom-color:#edf2ef!important}
+.commercial-sheet .export-actions{margin:10px 0 12px!important}
+.commercial-sheet .export-actions .btn{box-shadow:0 3px 9px rgba(20,55,40,.045)!important}
+.commercial-sheet .filter-note{padding:9px 11px;border-left:3px solid var(--nasora-green);background:#f6faf7;border-radius:0 8px 8px 0}
+
+@media(max-width:1050px){.commercial-sheet{padding-left:12px!important;padding-right:12px!important}.commercial-sheet .filter-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}.commercial-sheet .quick-actions{grid-column:1/-1}.commercial-sheet .crm-chart-grid{grid-template-columns:1fr!important}.commercial-sheet .crm-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:760px){.commercial-sheet{padding-left:8px!important;padding-right:8px!important}.commercial-sheet .crm-page-hero{padding:20px!important;min-height:0}.commercial-sheet .crm-page-hero h1{font-size:1.4rem!important}.commercial-sheet .filter-form{grid-template-columns:1fr!important}.commercial-sheet .quick-actions{grid-column:auto}.commercial-sheet .quick-actions .btn{flex:1}.commercial-sheet .crm-kpi-grid{grid-template-columns:1fr!important}.commercial-sheet .chart-box{height:260px!important}.commercial-sheet .objective-grid{grid-template-columns:1fr!important}.commercial-sheet .crm-pagination{flex-wrap:wrap}.commercial-sheet .crm-pagination .btn{flex:1}.commercial-sheet .section-heading{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.commercial-sheet tbody tr,.commercial-sheet .crm-kpi-grid .kpi-card,.commercial-sheet .objective-item{transition:none}.commercial-sheet .crm-kpi-grid .kpi-card:hover,.commercial-sheet .objective-item:hover{transform:none}}
