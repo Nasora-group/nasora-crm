@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -21,9 +22,16 @@ class BaseConfig:
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     WTF_CSRF_ENABLED = True
+
+    # Session applicative : expiration après 8 h, avec renouvellement pendant
+    # l'activité. Les cookies restent inaccessibles au JavaScript et limitent
+    # les envois cross-site.
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+    SESSION_REFRESH_EACH_REQUEST = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
 
 
 class DevelopmentConfig(BaseConfig):
@@ -34,6 +42,7 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
 
 
 class TestingConfig(BaseConfig):
