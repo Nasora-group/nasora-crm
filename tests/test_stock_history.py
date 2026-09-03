@@ -4,6 +4,7 @@ def test_stock_available_keeps_historical_products_visible(monkeypatch):
     from app.routes import stock as stock_routes
 
     app = create_app(TestingConfig)
+    app.config["LOGIN_DISABLED"] = True
 
     class Entry:
         division = "nasmedic"
