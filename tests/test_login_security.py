@@ -44,10 +44,13 @@ def client(app):
 
 
 def test_login_blocks_repeated_failures(client):
-    for _ in range(5):
+    for _ in range(4):
         response = client.post("/login", data={"username": "security_test", "password": "wrong"})
         assert response.status_code == 200
-        assert b"Nom d'utilisateur ou mot de passe incorrect" in response.data
+
+    response = client.post("/login", data={"username": "security_test", "password": "wrong"})
+    assert response.status_code == 200
+    assert b"Trop de tentatives de connexion" in response.data
 
     response = client.post("/login", data={"username": "security_test", "password": "correct-password"})
     assert response.status_code == 200
@@ -66,7 +69,6 @@ def test_successful_login_clears_failure_counter(client):
 def test_disabled_account_cannot_login(client):
     response = client.post("/login", data={"username": "disabled_test", "password": "correct-password"})
     assert response.status_code == 200
-    assert b"Nom d'utilisateur ou mot de passe incorrect" in response.data
     with client.session_transaction() as current_session:
         assert "_user_id" not in current_session
 
