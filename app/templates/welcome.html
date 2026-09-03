@@ -1,11 +1,111 @@
 {% extends "base.html" %}
 
+{% block title %}Accueil — NASORA HEALTH &amp; SKINCARE{% endblock %}
+
 {% block content %}
-<h1>Bienvenue sur le CRM NASORA-GROUP</h1>
-<p>Connectez-vous pour accéder à votre tableau de bord.</p>
-{% if not current_user.is_authenticated %}
-    <div class="center-container">
-        <a href="{{ url_for('auth.login') }}" class="btn">Se connecter</a>
+<section class="welcome-shell" aria-labelledby="welcome-title">
+    <div class="welcome-hero">
+        <div>
+            <div class="welcome-kicker"><span class="welcome-kicker-dot"></span> NASORA CRM · SaaS</div>
+            <h1 id="welcome-title" class="welcome-title">Pilotez votre activité commerciale <span>avec une seule plateforme.</span></h1>
+            <p class="welcome-copy">NASORA CRM centralise le suivi terrain, les prospections, les plannings, les performances commerciales et les stocks dans une expérience simple, professionnelle et pensée pour vos équipes.</p>
+
+            <div class="welcome-actions">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn">Accéder au tableau de bord</a>
+                    {% else %}
+                        <a href="{{ url_for('dashboard.index') }}" class="btn">Accéder à mon tableau de bord</a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn">Se connecter</a>
+                {% endif %}
+            </div>
+
+            <div class="welcome-trust" aria-label="Points forts de la plateforme">
+                <span><b>✓</b> Données centralisées</span>
+                <span><b>✓</b> Suivi terrain</span>
+                <span><b>✓</b> Pilotage par KPI</span>
+            </div>
+        </div>
+
+        <div class="welcome-visual" aria-hidden="true">
+            <div class="welcome-orbit">
+                <div class="welcome-core">NASORA</div>
+                <div class="welcome-node n1">KPI</div>
+                <div class="welcome-node n2">CRM</div>
+                <div class="welcome-node n3">CA</div>
+            </div>
+        </div>
     </div>
-{% endif %}
+
+    <div class="welcome-section">
+        <div class="welcome-section-head">
+            <div>
+                <h2>Un espace de travail pensé pour l'action</h2>
+                <p>Retrouvez rapidement les fonctions essentielles de votre CRM.</p>
+            </div>
+        </div>
+
+        <div class="welcome-modules">
+            <article class="welcome-module">
+                <div class="welcome-module-icon">▥</div>
+                <h3>Tableau de bord</h3>
+                <p>Visualisez les indicateurs clés et l'activité de votre équipe en un coup d'œil.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('admin.dashboard') if current_user.role == 'admin' else url_for('dashboard.index') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+
+            <article class="welcome-module">
+                <div class="welcome-module-icon">▦</div>
+                <h3>Planning &amp; terrain</h3>
+                <p>Organisez les journées terrain et suivez l'exécution des visites planifiées.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('planning.admin_plannings') if current_user.role == 'admin' else url_for('planning.visualiser') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+
+            <article class="welcome-module">
+                <div class="welcome-module-icon">▤</div>
+                <h3>Prospections</h3>
+                <p>Centralisez les informations recueillies sur le terrain et facilitez leur exploitation.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('prospections_export.export_prospections') if current_user.role == 'admin' else url_for('dashboard.prospections') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+
+            <article class="welcome-module">
+                <div class="welcome-module-icon">♙</div>
+                <h3>Base NASORA</h3>
+                <p>Accédez à une base structurée pour mieux connaître et suivre vos professionnels.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('clients.list_clients') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+
+            <article class="welcome-module">
+                <div class="welcome-module-icon">▣</div>
+                <h3>Stocks</h3>
+                <p>Consultez les disponibilités produits depuis un espace unique et lisible.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('stock.available') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+
+            <article class="welcome-module">
+                <div class="welcome-module-icon">★</div>
+                <h3>Performance</h3>
+                <p>Suivez les évaluations, les objectifs et les indicateurs qui font progresser l'équipe.</p>
+                {% if current_user.is_authenticated %}
+                    <a class="welcome-module-link" href="{{ url_for('evaluations.list_commercials') if current_user.role == 'admin' else url_for('commercial_evaluations.my_evaluations') }}">Ouvrir →</a>
+                {% endif %}
+            </article>
+        </div>
+    </div>
+
+    {% if not current_user.is_authenticated %}
+        <div class="welcome-public-note">Accédez à votre espace sécurisé avec vos identifiants NASORA. Les fonctionnalités affichées après connexion dépendent de votre profil et de vos droits.</div>
+    {% endif %}
+</section>
 {% endblock %}
