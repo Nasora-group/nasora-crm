@@ -48,7 +48,7 @@
 <a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Saisie / Stocks</span></a>
 {% else %}
 <a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a>
-<a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>
+{% if current_user.project|lower == 'nasmedic' %}<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% else %}<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% endif %}
 <a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span><span>Mon planning</span></a>
 <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Ma base</span></a>
 <a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span><span>Mes prospections</span></a>
