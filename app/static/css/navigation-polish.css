@@ -1,18 +1,21 @@
-/* NASORA CRM — navigation polish: compact, aligned, lively and readable */
-.site-nav{background:#1f6b45!important}
+/* NASORA CRM — navigation premium SaaS */
+.site-nav{background:linear-gradient(90deg,#185f3e 0%,#1f6b45 52%,#195f40 100%)!important;box-shadow:0 4px 16px rgba(15,52,31,.14)!important}
 .site-nav .nav-inner{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent}
 .site-nav .nav-inner::-webkit-scrollbar{height:4px}
 .site-nav .nav-inner::-webkit-scrollbar-track{background:transparent}
 .site-nav .nav-inner::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:99px}
+.site-nav a,.site-nav button{position:relative!important;transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease!important}
 @media (min-width:901px){
-  .site-nav a,.site-nav button{font-size:.68rem!important;font-weight:700!important;letter-spacing:.005em!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.16)!important}
-  .site-nav .nav-icon{font-size:.82rem!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;background:rgba(255,255,255,.10)!important;color:#fff!important}
-  .site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2d7d54!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:0 3px 9px rgba(0,0,0,.10)!important}
-  .site-nav .nav-divider{background:rgba(255,255,255,.32)!important;margin:0 3px!important}
-  .site-nav .nav-spacer{min-width:8px!important}
-  .site-nav .nav-logout-form button{background:#fff!important;color:#1f6b45!important;border-color:rgba(255,255,255,.8)!important;text-shadow:none!important}
-  .site-nav .nav-logout-form button .nav-icon{background:#eaf4ed!important;color:#1f6b45!important;text-shadow:none!important}
+.site-nav .nav-inner{align-items:center!important;min-height:48px!important}
+.site-nav a,.site-nav button{font-size:.68rem!important;font-weight:700!important;letter-spacing:.005em!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.16)!important;border:1px solid transparent!important;border-radius:9px!important}
+.site-nav .nav-icon{font-size:.82rem!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;background:rgba(255,255,255,.10)!important;color:#fff!important;border-radius:6px!important}
+.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:rgba(255,255,255,.13)!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:0 4px 10px rgba(0,0,0,.11)!important;border-color:rgba(255,255,255,.10)!important}
+.site-nav a:focus-visible,.site-nav button:focus-visible{outline:2px solid rgba(255,255,255,.8)!important;outline-offset:1px!important}
+.site-nav .nav-divider{background:rgba(255,255,255,.28)!important;margin:0 4px!important;height:22px!important}
+.site-nav .nav-spacer{min-width:8px!important}
+.site-nav .nav-logout-form button{background:#fff!important;color:#185f3e!important;border-color:rgba(255,255,255,.9)!important;text-shadow:none!important;box-shadow:0 2px 7px rgba(0,0,0,.08)!important}
+.site-nav .nav-logout-form button .nav-icon{background:#eaf4ed!important;color:#185f3e!important;text-shadow:none!important}
 }
 @media (min-width:1201px){.site-nav .nav-inner{gap:3px!important;padding-left:12px!important;padding-right:12px!important}.site-nav a,.site-nav button{padding-left:7px!important;padding-right:7px!important}}
 @media (min-width:901px) and (max-width:1200px){.site-nav .nav-inner{gap:1px!important;padding-left:5px!important;padding-right:5px!important}.site-nav a,.site-nav button{font-size:.62rem!important;padding-left:4px!important;padding-right:4px!important;gap:3px!important}.site-nav .nav-icon{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;font-size:.7rem!important}.site-nav .nav-divider{margin:0 2px!important}}
-@media (max-width:900px){.site-nav{background:#1f6b45!important;box-shadow:0 12px 30px rgba(15,52,31,.18)!important}.site-nav a,.site-nav button{color:#fff!important;font-weight:700!important}.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:#2d7d54!important;color:#fff!important}.site-nav .nav-divider{background:rgba(255,255,255,.25)!important}}
+@media (max-width:900px){.site-nav{background:linear-gradient(180deg,#185f3e,#1f6b45)!important;box-shadow:0 12px 30px rgba(15,52,31,.18)!important}.site-nav a,.site-nav button{color:#fff!important;font-weight:700!important;border-radius:10px!important}.site-nav a:hover,.site-nav a:focus-visible,.site-nav button:hover,.site-nav button:focus-visible{background:rgba(255,255,255,.13)!important;color:#fff!important}.site-nav .nav-divider{background:rgba(255,255,255,.25)!important}}
