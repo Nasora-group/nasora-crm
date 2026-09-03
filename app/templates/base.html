@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-dashboard-polish.css', v='20260901-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-saas-polish.css', v='20260903-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-welcome-saas.css', v='20260903-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-saas-navigation.css', v='20260903-1') }}">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20260901-1') }}"></script>
@@ -29,32 +30,32 @@
 <body>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
 <header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health &amp; Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div><button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
-<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner"><a href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span>Accueil</a>
+<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner"><div class="nav-section-label">{{ 'ESPACE ADMINISTRATION' if current_user.is_authenticated and current_user.role == 'admin' else 'ESPACE COMMERCIAL' }}</div><a href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span><span>Accueil</span></a>
 {% if current_user.is_authenticated %}
 {% if current_user.role == 'admin' %}
-<a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span>Tableau de bord</a>
-<a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span>Activité terrain</a>
-<a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span>Extraction prospections</a>
-<a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span>Plannings</a>
-<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span>Base de données NASORA</a>
-<span class="nav-divider"></span>
-<a href="{{ url_for('users.list_users') }}"><span class="nav-icon">♟</span>Utilisateurs</a>
-<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon">★</span>Évaluations</a>
-<a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon">♛</span>Classement</a>
-<span class="nav-divider"></span>
-<a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span>Fiches produits</a>
-<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span>Stocks disponibles</a>
+<a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a>
+<a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span><span>Activité terrain</span></a>
+<a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span><span>Extraction prospections</span></a>
+<a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span><span>Plannings</span></a>
+<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Base NASORA</span></a>
+<span class="nav-divider"></span><span class="nav-group-title">Administration</span>
+<a href="{{ url_for('users.list_users') }}"><span class="nav-icon">♟</span><span>Utilisateurs</span></a>
+<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon">★</span><span>Évaluations</span></a>
+<a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon">♛</span><span>Classement</span></a>
+<span class="nav-divider"></span><span class="nav-group-title">Gestion CRM</span>
+<a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span><span>Fiches produits</span></a>
+<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Saisie / Stocks</span></a>
 {% else %}
-<a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span>Tableau de bord</a>
-<a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon">◷</span>Visualisation du CA</a>
-<a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span>Mon planning</a>
-<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span>Ma base de données</a>
-<a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span>Mes prospections</a>
-<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span>Mes évaluations</a>
-<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span>Stocks disponibles</a>
+<a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a>
+<a href="{{ url_for('admin.commercial_detail', username=current_user.username) }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>
+<a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span><span>Mon planning</span></a>
+<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Ma base</span></a>
+<a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span><span>Mes prospections</span></a>
+<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span><span>Mes évaluations</span></a>
+<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Stocks disponibles</span></a>
 {% endif %}
-<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">{{ csrf_token() }}<button type="submit"><span class="nav-icon">↪</span>Déconnexion</button></form>
-{% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span>Connexion</a>{% endif %}</div></nav>
+<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">{{ csrf_token() }}<button type="submit"><span class="nav-icon">↪</span><span>Déconnexion</span></button></form>
+{% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span><span>Connexion</span></a>{% endif %}</div></nav>
 <main id="main-content" class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
 {% if messages %}<div class="flash-messages" role="status" aria-live="polite">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
