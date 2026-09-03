@@ -8,6 +8,7 @@ from app.extensions import db
 from app.forms import UserForm, CSRFOnlyForm
 from app.models import User
 from app.utils import roles_required
+from app.audit_log import audit
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,11 @@ def create_user():
                 db.session.add(user)
                 db.session.commit()
                 flash(f"Compte « {user.username} » créé avec succès.", "success")
+                audit(
+                    "admin.user.create",
+                    target=user.username,
+                    details=f"role={user.role} project={user.project} active={user.is_active_account}",
+                )
                 logger.info("Compte créé par %s : %s (%s/%s)", current_user.username, user.username, user.role, user.project)
                 return redirect(url_for("users.list_users"))
             except Exception:
@@ -106,15 +112,42 @@ def edit_user(user_id):
             flash("Impossible de retirer ou désactiver le dernier administrateur actif.", "error")
         else:
             try:
+                old_username = user.username
+                old_role = user.role
+                old_project = user.project
+                old_zone = user.zone
+                old_active = user.is_active_account
+                password_changed = bool(form.password.data)
+
                 user.username = new_username
                 user.role = form.role.data
                 user.project = form.project.data
                 user.zone = form.zone.data or None
                 user.is_active_account = form.is_active_account.data
-                if form.password.data:
+                if password_changed:
                     user.password = generate_password_hash(form.password.data, method="pbkdf2:sha256")
                 db.session.commit()
                 flash(f"Compte « {user.username} » mis à jour.", "success")
+
+                changes = []
+                if old_username != user.username:
+                    changes.append("username")
+                if old_role != user.role:
+                    changes.append(f"role:{old_role}->{user.role}")
+                if old_project != user.project:
+                    changes.append(f"project:{old_project}->{user.project}")
+                if old_zone != user.zone:
+                    changes.append("zone")
+                if old_active != user.is_active_account:
+                    changes.append(f"active:{old_active}->{user.is_active_account}")
+                if password_changed:
+                    changes.append("password_changed")
+
+                audit(
+                    "admin.user.update",
+                    target=user.username,
+                    details=f"changes={','.join(changes) if changes else 'none'}",
+                )
                 logger.info("Compte modifié par %s : %s", current_user.username, user.username)
                 return redirect(url_for("users.list_users"))
             except Exception:
@@ -148,5 +181,10 @@ def toggle_active(user_id):
     db.session.commit()
     etat = "activé" if user.is_active_account else "désactivé"
     flash(f"Compte « {user.username} » {etat}.", "success")
+    audit(
+        "admin.user.status",
+        target=user.username,
+        details=f"active={user.is_active_account}",
+    )
     logger.info("Compte %s %s par %s", user.username, etat, current_user.username)
     return redirect(url_for("users.list_users"))
