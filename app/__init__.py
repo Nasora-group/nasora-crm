@@ -27,6 +27,15 @@ def create_app(config_object=None):
     install_readonly_objective_reader()
     from app import visit_sync  # noqa: F401
     _register_error_handlers(app)
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(self), microphone=(), camera=()")
+        if os.environ.get("FLASK_ENV", "").lower() == "production":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
     @app.context_processor
     def inject_globals():
         from datetime import datetime, UTC
