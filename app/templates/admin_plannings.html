@@ -30,11 +30,22 @@
                 <div class="planning-avatar">{{ commercial.username[:1]|upper }}</div>
                 <div><strong>{{ commercial.username }}</strong><span>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</span></div>
             </div>
-            <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" class="planning-generate-form">
+            <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" class="planning-generate-form" data-planning-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <label><span>Début du cycle</span><input type="date" name="start_date" required></label>
-                <label><span>Visites / jour</span><input type="number" name="visits_per_day" value="5" min="1" max="20" required></label>
-                <button type="submit" class="btn" onclick="return confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.');">Générer le cycle IA</button>
+                <label>
+                    <span>Début du cycle</span>
+                    <input type="date" name="start_date" required data-start-date aria-describedby="planning-date-help-{{ commercial.id }}">
+                    <small id="planning-date-help-{{ commercial.id }}" class="planning-field-help">Prérempli sur le prochain lundi.</small>
+                </label>
+                <label>
+                    <span>Visites / jour</span>
+                    <input type="number" name="visits_per_day" value="5" min="1" max="20" required data-visits-input>
+                    <small class="planning-presets" aria-label="Raccourcis visites par jour">
+                        <button type="button" data-visits-preset="5">5</button>
+                        <button type="button" data-visits-preset="10">10</button>
+                    </small>
+                </label>
+                <button type="submit" class="btn">Générer le cycle IA</button>
             </form>
             <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Voir le planning <span>→</span></a>
         </article>
@@ -43,4 +54,55 @@
     {% endfor %}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function nextMonday() {
+        const date = new Date();
+        const day = date.getDay();
+        const daysUntilMonday = day === 0 ? 1 : (8 - day) % 7 || 7;
+        date.setDate(date.getDate() + daysUntilMonday);
+        return date.toISOString().slice(0, 10);
+    }
+
+    document.querySelectorAll('[data-planning-form]').forEach(function (form) {
+        const startDate = form.querySelector('[data-start-date]');
+        const visitsInput = form.querySelector('[data-visits-input]');
+        if (!startDate || !visitsInput) return;
+
+        if (!startDate.value) startDate.value = nextMonday();
+
+        startDate.addEventListener('change', function () {
+            if (!startDate.value) return;
+            const selected = new Date(startDate.value + 'T12:00:00');
+            const day = selected.getDay();
+            if (day === 0 || day === 6) {
+                alert('Le début du cycle doit être un jour ouvré (du lundi au vendredi).');
+                startDate.value = nextMonday();
+            }
+        });
+
+        form.querySelectorAll('[data-visits-preset]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                visitsInput.value = button.dataset.visitsPreset;
+                visitsInput.focus();
+            });
+        });
+
+        form.addEventListener('submit', function (event) {
+            const selected = new Date(startDate.value + 'T12:00:00');
+            const day = selected.getDay();
+            if (day === 0 || day === 6) {
+                event.preventDefault();
+                alert('Choisissez un jour ouvré pour démarrer le cycle.');
+                startDate.focus();
+                return;
+            }
+            if (!window.confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.')) {
+                event.preventDefault();
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
