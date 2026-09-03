@@ -1,0 +1,21 @@
+/* NASORA CRM — Dashboard SaaS foundation */
+:root{--ns-ink:#17352a;--ns-muted:#687871;--ns-border:#dce8e1;--ns-green:#167a56;--ns-pale:#f3f8f5;--ns-shadow:0 8px 24px rgba(24,50,42,.055)}
+.container{max-width:1500px}
+.page-hero,.crm-page-hero{border-radius:16px}
+.kpi-card,.summary-card,.chart-card,.crm-surface,.crm-table-card{border-color:var(--ns-border)}
+.kpi-card,.summary-card,.chart-card,.crm-table-card{box-shadow:var(--ns-shadow)}
+.kpi-label{font-size:.72rem!important;font-weight:700!important;color:var(--ns-muted)!important;letter-spacing:.015em}
+.kpi-value{font-weight:800!important;color:var(--ns-ink)!important;letter-spacing:-.025em}
+.kpi-sub{font-size:.7rem!important;color:#7b8983!important}
+.btn{border-radius:9px!important;font-weight:700!important;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}
+.btn:hover{transform:translateY(-1px)}
+.form-input,input,select,textarea{border-radius:9px!important;border-color:#d5e2da!important}
+.form-input:focus,input:focus,select:focus,textarea:focus{border-color:#86b69d!important;box-shadow:0 0 0 3px rgba(22,122,86,.1)!important;outline:none}
+.crm-table-card{background:#fff}
+.responsive-table thead th{background:#f4f8f5!important;color:#40534a!important;font-weight:800!important}
+.responsive-table tbody tr{transition:background-color .14s ease}
+.responsive-table tbody tr:hover{background:#f8fbf9!important}
+.flash-messages{max-width:1500px;margin:12px auto 0}
+.skip-link:focus{z-index:9999}
+@media(max-width:760px){.page-hero,.crm-page-hero{border-radius:12px}.btn{min-height:40px}.responsive-table{min-width:680px}}
+@media(prefers-reduced-motion:reduce){.btn,.responsive-table tbody tr{transition:none}.btn:hover{transform:none}}
