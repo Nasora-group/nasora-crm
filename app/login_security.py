@@ -7,7 +7,7 @@ shared cache backend (for example Redis) so limits are shared by all workers.
 import hashlib
 import time
 
-from flask import current_app, request
+from flask import current_app, has_request_context, request
 
 from app.extensions import cache
 
@@ -23,7 +23,9 @@ def _digest(value):
 
 
 def client_ip():
-    """Return the direct peer address; do not trust arbitrary forwarded headers."""
+    """Return the direct peer address, or a stable fallback outside HTTP requests."""
+    if not has_request_context():
+        return "no-request-context"
     return request.remote_addr or "unknown"
 
 
