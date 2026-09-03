@@ -48,7 +48,38 @@
 .direction-dashboard-page .filter-form label{font-size:.72rem;font-weight:700;color:#53645e;margin-bottom:5px}
 .direction-dashboard-page .filter-form .form-input{min-height:38px;border-color:#d5e1da;background:#fff}
 .direction-dashboard-page .crm-pagination{padding:14px 0 2px}
+
+/* EXECUTIVE COCKPIT — couche additive, sans modification de la logique métier */
+.direction-dashboard-page .kpi-grid{gap:14px!important}
+.direction-dashboard-page .kpi-card{position:relative;overflow:hidden;border:1px solid #dce8e1!important;background:linear-gradient(145deg,#fff 0%,#fbfdfc 100%)!important;box-shadow:0 7px 20px rgba(24,50,42,.05)!important;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.direction-dashboard-page .kpi-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#167a56;opacity:.9}
+.direction-dashboard-page .kpi-card:nth-child(2):before{background:#356f8a}
+.direction-dashboard-page .kpi-card:nth-child(3):before{background:#7a9b62}
+.direction-dashboard-page .kpi-card:nth-child(4):before{background:#8a6f9b}
+.direction-dashboard-page .kpi-card:nth-child(5):before{background:#a47a45}
+.direction-dashboard-page .kpi-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(24,50,42,.09)!important;border-color:#cbdcd2!important}
+.direction-dashboard-page .direction-division-card{border-radius:16px!important;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease}
+.direction-dashboard-page .direction-division-card:hover{transform:translateY(-2px);box-shadow:0 13px 30px rgba(24,50,42,.09)}
+.direction-dashboard-page .direction-division-head{padding-bottom:14px!important;border-bottom:1px solid #edf2ef}
+.direction-dashboard-page .division-badge{border:1px solid #d6e8dd}
+.direction-dashboard-page .direction-metric{border-radius:10px!important;padding:12px!important;transition:background .15s ease,border-color .15s ease}
+.direction-dashboard-page .direction-metric:hover{background:#f1f8f4;border-color:#d1e3d8}
+.direction-dashboard-page .dashboard-summary{gap:16px!important}
+.direction-dashboard-page .summary-card{border-radius:16px!important;overflow:hidden}
+.direction-dashboard-page .summary-card .quick-actions{gap:9px!important}
+.direction-dashboard-page .quick-actions .btn{box-shadow:0 2px 7px rgba(24,50,42,.06)!important}
+.direction-dashboard-page .crm-table-card{border:1px solid #dce8e1;border-radius:16px;overflow:hidden;background:#fff}
+.direction-dashboard-page .responsive-table thead th{background:#f3f7f4!important;color:#40534a!important;border-bottom:1px solid #dce8e1!important}
+.direction-dashboard-page .responsive-table tbody tr:hover{background:#f7fbf8!important}
+.direction-dashboard-page .responsive-table tbody td{border-bottom-color:#edf2ef!important}
+.direction-dashboard-page .filter-form{display:flex;align-items:end;gap:12px}
+.direction-dashboard-page .filter-form>div{min-width:0}
+.direction-dashboard-page .filter-form .btn{min-height:38px;white-space:nowrap}
+.direction-dashboard-page .page-hero h1{letter-spacing:-.025em}
+.direction-dashboard-page .dashboard-nav-actions .btn{border:1px solid #d5e3da!important;box-shadow:0 3px 9px rgba(24,50,42,.045)!important}
+.direction-dashboard-page .dashboard-nav-actions .btn:hover{border-color:#b9d3c4!important}
+
 @media(max-width:1100px){.direction-dashboard-page .direction-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.direction-dashboard-page .chart-grid{grid-template-columns:1fr}.direction-dashboard-page .chart-card{height:350px}.direction-dashboard-page .chart-card canvas{height:285px!important}}
-@media(max-width:900px){.direction-dashboard-page .direction-division-grid,.direction-dashboard-page .dashboard-summary{grid-template-columns:1fr}.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direction-dashboard-page .chart-card{height:340px}.direction-dashboard-page .chart-card canvas{height:275px!important}}
-@media(max-width:640px){.direction-dashboard-page .direction-metrics,.direction-dashboard-page .kpi-grid{grid-template-columns:1fr}.direction-dashboard-page .direction-division-card,.direction-dashboard-page .summary-card,.direction-dashboard-page .chart-card{box-shadow:0 4px 14px rgba(24,50,42,.04)}.direction-dashboard-page .crm-section-title:has(+ .crm-chart-grid){padding:13px 14px}.direction-dashboard-page .crm-section-title:has(+ .crm-chart-grid) h2{font-size:1.08rem}.direction-dashboard-page .chart-card{height:295px;padding:17px}.direction-dashboard-page .chart-card h3{font-size:.82rem}.direction-dashboard-page .chart-card h3:after{display:none}.direction-dashboard-page .chart-card canvas{height:230px!important}.direction-dashboard-page .filter-form{padding:12px}.direction-dashboard-page .quick-actions .btn{min-height:42px}}
-@media(prefers-reduced-motion:reduce){.direction-dashboard-page .responsive-table tbody tr{transition:none}}
+@media(max-width:900px){.direction-dashboard-page .direction-division-grid,.direction-dashboard-page .dashboard-summary{grid-template-columns:1fr}.direction-dashboard-page .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direction-dashboard-page .chart-card{height:340px}.direction-dashboard-page .chart-card canvas{height:275px!important}.direction-dashboard-page .filter-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end}}
+@media(max-width:640px){.direction-dashboard-page .direction-metrics,.direction-dashboard-page .kpi-grid{grid-template-columns:1fr}.direction-dashboard-page .direction-division-card,.direction-dashboard-page .summary-card,.direction-dashboard-page .chart-card{box-shadow:0 4px 14px rgba(24,50,42,.04)}.direction-dashboard-page .crm-section-title:has(+ .crm-chart-grid){padding:13px 14px}.direction-dashboard-page .crm-section-title:has(+ .crm-chart-grid) h2{font-size:1.08rem}.direction-dashboard-page .chart-card{height:295px;padding:17px}.direction-dashboard-page .chart-card h3{font-size:.82rem}.direction-dashboard-page .chart-card h3:after{display:none}.direction-dashboard-page .chart-card canvas{height:230px!important}.direction-dashboard-page .filter-form{display:flex;flex-direction:column;align-items:stretch;padding:12px}.direction-dashboard-page .filter-form .btn{width:100%;min-height:42px}.direction-dashboard-page .quick-actions .btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){.direction-dashboard-page .responsive-table tbody tr,.direction-dashboard-page .kpi-card,.direction-dashboard-page .direction-division-card{transition:none}.direction-dashboard-page .kpi-card:hover,.direction-dashboard-page .direction-division-card:hover{transform:none}}
