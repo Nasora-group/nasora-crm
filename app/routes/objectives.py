@@ -8,6 +8,7 @@ from app.extensions import db
 from app.forms import ObjectiveForm
 from app.models import SalesObjective, SUPPLIERS
 from app.utils import roles_required
+from app.audit_log import audit
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,22 @@ def edit_objectives(division):
                 _upsert_objective(division, year, month_index, value)
 
             db.session.commit()
+            audit(
+                "objectives.update",
+                target=f"{DIVISION_LABELS[division]}:{year}",
+                details="annual_and_monthly_targets_updated",
+            )
             flash(f"Objectifs {DIVISION_LABELS[division]} {year} enregistrés.", "success")
             logger.info("Objectifs %s %s mis à jour", division, year)
             return redirect(url_for("objectives.edit_objectives", division=division, year=year))
         except Exception:
             db.session.rollback()
+            audit(
+                "objectives.update",
+                target=f"{DIVISION_LABELS[division]}:{year}",
+                outcome="failure",
+                details="transaction_rolled_back",
+            )
             logger.exception("Erreur lors de l'enregistrement des objectifs")
             flash("Erreur lors de l'enregistrement des objectifs.", "error")
 
