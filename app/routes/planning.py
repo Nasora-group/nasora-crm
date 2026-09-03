@@ -8,6 +8,7 @@ from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
 from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS
 from app.services.planning_ai import PlanningCandidate, generate_two_weeks, planning_entries_for_week
+from app.permissions import owns_record
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
 
 planning_bp = Blueprint("planning", __name__)
@@ -126,9 +127,6 @@ def saisie():
             flash("La date de début doit être un lundi.", "error")
             return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
 
-        # Serialize manual creations for the same commercial. The database
-        # row lock prevents two simultaneous requests from both passing the
-        # duplicate-week check before either one inserts its planning.
         User.query.filter_by(id=current_user.id).with_for_update().first()
         if _planning_date_already_exists(current_user.id, formulaire.date.data, lock=True):
             db.session.rollback()
@@ -158,7 +156,7 @@ def saisie():
 @roles_required("commercial")
 def edit_planning(planning_id):
     planning = Planning.query.get_or_404(planning_id)
-    if planning.commercial_id != current_user.id:
+    if not owns_record(current_user, planning):
         flash("Accès non autorisé : ce planning ne t'appartient pas.", "error")
         return render_template("403.html"), 403
 
@@ -176,8 +174,6 @@ def edit_planning(planning_id):
                 existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
             )
 
-        # Lock the commercial row before checking the target week so two
-        # simultaneous edits cannot both move planning onto the same Monday.
         User.query.filter_by(id=current_user.id).with_for_update().first()
         if _planning_date_already_exists(current_user.id, formulaire.date.data, exclude_id=planning.id, lock=True):
             db.session.rollback()
@@ -234,7 +230,7 @@ def delete_planning(planning_id):
     form = CSRFOnlyForm()
     planning = Planning.query.get_or_404(planning_id)
 
-    if planning.commercial_id != current_user.id:
+    if not owns_record(current_user, planning):
         flash("Accès non autorisé : ce planning ne t'appartient pas.", "error")
         return redirect(url_for("planning.visualiser"))
 
@@ -259,8 +255,6 @@ def admin_plannings():
 @roles_required("admin")
 def admin_planning_detail(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
-    # Only Monday-start rows are legitimate planning weeks. This also keeps
-    # legacy weekend/non-Monday rows out of the admin presentation.
     plannings = _monday_plannings(
         Planning.query.filter_by(commercial_id=commercial_id).order_by(Planning.date.desc())
     )
@@ -306,8 +300,6 @@ def admin_planning_generate(commercial_id):
     complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
     empty_slot = encode_planning_slot([])
 
-    # Lock the commercial row for the transaction so two concurrent generations
-    # for the same commercial cannot both pass the overlap check before insert.
     try:
         User.query.filter_by(id=commercial.id).with_for_update().first()
         if _cycle_already_exists(commercial.id, cycle_dates, lock=True):
