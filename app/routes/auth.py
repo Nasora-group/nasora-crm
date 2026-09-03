@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 
@@ -36,6 +36,7 @@ def login():
 
         if user and user.is_active_account and check_password_hash(user.password, password):
             login_user(user)
+            session.permanent = True
             audit("login", target=username)
             logger.info("Connexion réussie pour %s", username)
             if user.role == "admin":
@@ -54,5 +55,6 @@ def login():
 def logout():
     audit("logout", target=current_user.username)
     logout_user()
+    session.clear()
     flash("Déconnexion réussie", "success")
     return redirect(url_for("auth.home"))
