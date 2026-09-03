@@ -47,7 +47,7 @@
 <a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span>Mon planning</a>
 <a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span>Ma base de données</a>
 <a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span>Mes prospections</a>
-<a href="{{ url_for('evaluations.my_evaluations') }}"><span class="nav-icon">★</span>Mes évaluations</a>
+<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span>Mes évaluations</a>
 <a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span>Stocks disponibles</a>
 {% endif %}
 <span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><button type="submit"><span class="nav-icon">↪</span>Déconnexion</button></form>
