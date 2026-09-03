@@ -1,0 +1,1 @@
+Objective changes now emit an audit event through the existing application audit logger.
