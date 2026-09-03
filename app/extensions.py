@@ -13,3 +13,5 @@ cache = Cache()
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Merci de vous connecter pour accéder à cette page."
 login_manager.login_message_category = "info"
+# Détecte les changements d'identité/session et invalide une session suspecte.
+login_manager.session_protection = "strong"
