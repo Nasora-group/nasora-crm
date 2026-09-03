@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-saas-navigation.css', v='20260903-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-saas-dashboard.css', v='20260903-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-error-pages.css', v='20260903-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/navigation-simplified.css', v='20260903-1') }}">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20260901-1') }}"></script>
@@ -32,31 +33,19 @@
 <body>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
 <header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health &amp; Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else current_user.project|upper }}</span><span class="header-user-name">{{ current_user.username }}</span></div><button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
-<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner"><div class="nav-section-label">{{ 'ESPACE ADMINISTRATION' if current_user.is_authenticated and current_user.role == 'admin' else 'ESPACE COMMERCIAL' }}</div><a href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span><span>Accueil</span></a>
+<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
+<a class="nav-home" href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span><span>Accueil</span></a>
 {% if current_user.is_authenticated %}
 {% if current_user.role == 'admin' %}
-<a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a>
-<a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span><span>Activité terrain</span></a>
-<a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span><span>Extraction prospections</span></a>
-<a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span><span>Plannings</span></a>
-<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Base NASORA</span></a>
-<span class="nav-divider"></span><span class="nav-group-title">Administration</span>
-<a href="{{ url_for('users.list_users') }}"><span class="nav-icon">♟</span><span>Utilisateurs</span></a>
-<a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon">★</span><span>Évaluations</span></a>
-<a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon">♛</span><span>Classement</span></a>
-<span class="nav-divider"></span><span class="nav-group-title">Gestion CRM</span>
-<a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span><span>Fiches produits</span></a>
-<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Saisie / Stocks</span></a>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">▥</span><span>Pilotage</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a><a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span><span>Activité terrain</span></a><a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span><span>Extraction prospections</span></a><a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span><span>Plannings</span></a></div></div>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">◇</span><span>Gestion CRM</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Base NASORA</span></a><a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span><span>Fiches produits</span></a><a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Saisie / Stocks</span></a></div></div>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">★</span><span>Management</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('users.list_users') }}"><span class="nav-icon">♟</span><span>Utilisateurs</span></a><a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon">★</span><span>Évaluations</span></a><a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon">♛</span><span>Classement</span></a></div></div>
 {% else %}
-<a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a>
-{% if current_user.project|lower == 'nasmedic' %}<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% else %}<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% endif %}
-<a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span><span>Mon planning</span></a>
-<a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Ma base</span></a>
-<a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span><span>Mes prospections</span></a>
-<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span><span>Mes évaluations</span></a>
-<a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Stocks disponibles</span></a>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">▥</span><span>Mon activité</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a><a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span><span>Mon planning</span></a><a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span><span>Mes prospections</span></a></div></div>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">◇</span><span>CRM</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Ma base</span></a><a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Stocks disponibles</span></a></div></div>
+<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">★</span><span>Performance</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu">{% if current_user.project|lower == 'nasmedic' %}<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% else %}<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% endif %}<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span><span>Mes évaluations</span></a></div></div>
 {% endif %}
-<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">{{ csrf_token() }}<button type="submit"><span class="nav-icon">↪</span><span>Déconnexion</span></button></form>
+<span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit"><span class="nav-icon">↪</span><span>Déconnexion</span></button></form>
 {% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span><span>Connexion</span></a>{% endif %}</div></nav>
 <main id="main-content" class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
@@ -64,5 +53,5 @@
 {% block content %}{% endblock %}
 </main>
 <footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
-<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');if(toggle&&nav){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰'});nav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){nav.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰'})})}});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');if(!nav)return;const dropdowns=nav.querySelectorAll('.nav-dropdown');dropdowns.forEach(function(dropdown){const trigger=dropdown.querySelector('.nav-dropdown-trigger');trigger.addEventListener('click',function(){const open=dropdown.classList.toggle('is-open');dropdowns.forEach(function(other){if(other!==dropdown){other.classList.remove('is-open');const otherTrigger=other.querySelector('.nav-dropdown-trigger');if(otherTrigger)otherTrigger.setAttribute('aria-expanded','false')}});trigger.setAttribute('aria-expanded',open?'true':'false')})});document.addEventListener('click',function(event){if(!nav.contains(event.target))dropdowns.forEach(function(dropdown){dropdown.classList.remove('is-open');const trigger=dropdown.querySelector('.nav-dropdown-trigger');if(trigger)trigger.setAttribute('aria-expanded','false')})});if(toggle){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰'})}});</script>
 </body></html>
