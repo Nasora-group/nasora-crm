@@ -14,6 +14,21 @@ logger = logging.getLogger(__name__)
 users_bp = Blueprint("users", __name__, url_prefix="/admin/utilisateurs")
 
 
+def _would_remove_last_admin(user, new_role=None, new_active=None):
+    """Empêche de laisser l'application sans administrateur actif."""
+    role = user.role if new_role is None else new_role
+    active = user.is_active_account if new_active is None else new_active
+    if role == "admin" and active:
+        return False
+    if user.role != "admin" or not user.is_active_account:
+        return False
+    return User.query.filter(
+        User.role == "admin",
+        User.is_active_account.is_(True),
+        User.id != user.id,
+    ).count() == 0
+
+
 @users_bp.route("/")
 @login_required
 @roles_required("admin")
@@ -87,6 +102,8 @@ def edit_user(user_id):
             flash("Tu ne peux pas désactiver ton propre compte.", "error")
         elif user.id == current_user.id and form.role.data != "admin":
             flash("Tu ne peux pas retirer ton propre rôle administrateur.", "error")
+        elif _would_remove_last_admin(user, new_role=form.role.data, new_active=form.is_active_account.data):
+            flash("Impossible de retirer ou désactiver le dernier administrateur actif.", "error")
         else:
             try:
                 user.username = new_username
@@ -121,6 +138,10 @@ def toggle_active(user_id):
 
     if user.id == current_user.id:
         flash("Tu ne peux pas désactiver ton propre compte.", "error")
+        return redirect(url_for("users.list_users"))
+
+    if _would_remove_last_admin(user, new_active=not user.is_active_account):
+        flash("Impossible de désactiver le dernier administrateur actif.", "error")
         return redirect(url_for("users.list_users"))
 
     user.is_active_account = not user.is_active_account
