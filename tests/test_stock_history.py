@@ -1,5 +1,9 @@
 def test_stock_available_keeps_historical_products_visible(monkeypatch):
+    from app import create_app
+    from app.config import TestingConfig
     from app.routes import stock as stock_routes
+
+    app = create_app(TestingConfig)
 
     class Entry:
         division = "nasmedic"
@@ -25,16 +29,12 @@ def test_stock_available_keeps_historical_products_visible(monkeypatch):
     )
     monkeypatch.setattr(
         stock_routes,
-        "request",
-        type("Request", (), {"args": {}})(),
-    )
-    monkeypatch.setattr(
-        stock_routes,
         "current_user",
         type("User", (), {"role": "commercial", "project": "nasmedic"})(),
     )
 
-    assert stock_routes.available() == "ok"
+    with app.test_request_context("/stock/disponible"):
+        assert stock_routes.available() == "ok"
     row = captured["groups"][0]["products"][0]
     assert row["product"] == "Produit archive"
     assert row["stocks"]["duopharm"]["quantity"] == 7
