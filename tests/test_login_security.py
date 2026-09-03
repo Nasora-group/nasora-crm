@@ -48,6 +48,12 @@ def test_login_blocks_repeated_failures(client):
         response = client.post("/login", data={"username": "security_test", "password": "wrong"})
         assert response.status_code == 200
 
+    # The fifth failed attempt reaches the configured threshold.
+    response = client.post("/login", data={"username": "security_test", "password": "wrong"})
+    assert response.status_code == 200
+    assert b"Nom d'utilisateur ou mot de passe incorrect" in response.data
+
+    # The following request is rejected by the temporary lockout.
     response = client.post("/login", data={"username": "security_test", "password": "wrong"})
     assert response.status_code == 200
     assert b"Trop de tentatives de connexion" in response.data
