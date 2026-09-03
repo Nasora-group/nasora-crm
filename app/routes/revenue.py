@@ -9,6 +9,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
+from app.permissions import require_division
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,7 @@ def _division_suppliers(division):
 
 
 def _ensure_division_access(division):
-    if current_user.role == "commercial" and current_user.project != division:
-        abort(403)
+    require_division(division)
 
 
 def _month_expression(sale_model):
@@ -140,14 +140,14 @@ def _month_bounds(month):
     return start, end
 
 
-def _product_sales_detail(sale_model, product_model, month):
+def _product_sales_detail(sale_model, product_model, month, division):
     start, end = _month_bounds(month); amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-    rows = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"), func.coalesce(func.sum(amount_expr), 0).label("total_revenue")).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.date >= start, sale_model.date < end).group_by(product_model.id, product_model.name).order_by(product_model.name.asc()).all()
+    rows = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"), func.coalesce(func.sum(amount_expr), 0).label("total_revenue")).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end).group_by(product_model.id, product_model.name).order_by(product_model.name.asc()).all()
     return [ProductSaleRow(name=name, total_quantity=quantity, total_revenue=float(revenue or 0)) for name, quantity, revenue in rows]
 
 
 def _monthly_revenue_detail_route(division, month, template_name):
-    _ensure_division_access(division); suppliers = _division_suppliers(division); details = {slug: _product_sales_detail(sale_model, product_model, month) for slug, _label, sale_model, product_model in suppliers}
+    _ensure_division_access(division); suppliers = _division_suppliers(division); details = {slug: _product_sales_detail(sale_model, product_model, month, division) for slug, _label, sale_model, product_model in suppliers}
     return render_template(template_name, month=month, suppliers=suppliers, details=details)
 
 
