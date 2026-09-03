@@ -26,6 +26,11 @@ def _ensure_division_access(division):
     require_division(division)
 
 
+def _commercial_only_scope():
+    """True when the current user must only see their own commercial data."""
+    return getattr(current_user, "role", None) == "commercial"
+
+
 def _month_expression(sale_model):
     """Expression mensuelle compatible PostgreSQL et SQLite (utilisé par la CI)."""
     if db.engine.dialect.name == "sqlite":
@@ -38,7 +43,10 @@ def _monthly_revenue_for_division(division):
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
         month_expr = _month_expression(sale_model)
         amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-        rows = db.session.query(month_expr.label("month"), func.coalesce(func.sum(amount_expr), 0).label("revenue")).filter(sale_model.project == division).group_by(month_expr).order_by(month_expr).all()
+        query = db.session.query(month_expr.label("month"), func.coalesce(func.sum(amount_expr), 0).label("revenue")).filter(sale_model.project == division)
+        if _commercial_only_scope():
+            query = query.filter(sale_model.commercial_id == current_user.id)
+        rows = query.group_by(month_expr).order_by(month_expr).all()
         for month, revenue in rows:
             combined.setdefault(month, {})[slug] = float(revenue or 0)
     labels = sorted(combined.keys())
@@ -63,14 +71,23 @@ def _objectives_kpis(division, labels, totals):
 
 
 def _division_visit_ranking(division, limit=5):
-    return db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites")).join(Prospection, Prospection.commercial_id == User.id).filter(User.project == division, User.role == "commercial").group_by(User.id, User.username, User.zone).order_by(func.count(Prospection.id).desc(), User.username.asc()).limit(limit).all()
+    query = db.session.query(User.username, User.zone, func.count(Prospection.id).label("nombre_visites")).join(Prospection, Prospection.commercial_id == User.id).filter(User.project == division, User.role == "commercial")
+    if _commercial_only_scope():
+        query = query.filter(User.id == current_user.id)
+    return query.group_by(User.id, User.username, User.zone).order_by(func.count(Prospection.id).desc(), User.username.asc()).limit(limit).all()
 
 
 def _division_dashboard(division, template_name):
     _ensure_division_access(division)
-    prospections = Prospection.query.join(User).filter(User.project == division).order_by(Prospection.date.desc()).all()
+    prospection_query = Prospection.query.join(User).filter(User.project == division)
+    if _commercial_only_scope():
+        prospection_query = prospection_query.filter(Prospection.commercial_id == current_user.id)
+    prospections = prospection_query.order_by(Prospection.date.desc()).all()
     labels, totals, _ = _monthly_revenue_for_division(division); objectives_kpis = _objectives_kpis(division, labels, totals); top_5_commerciaux = _division_visit_ranking(division)
-    commerciaux = User.query.filter_by(project=division, role="commercial").order_by(User.username).all(); suppliers = _division_suppliers(division)
+    commerciaux_query = User.query.filter_by(project=division, role="commercial")
+    if _commercial_only_scope():
+        commerciaux_query = commerciaux_query.filter(User.id == current_user.id)
+    commerciaux = commerciaux_query.order_by(User.username).all(); suppliers = _division_suppliers(division)
     return render_template(template_name, monthly_revenue_labels=labels, monthly_revenue_data=totals, top_5_commerciaux=top_5_commerciaux, commerciaux=commerciaux, prospections=prospections, suppliers=suppliers, division=division, kpis=objectives_kpis)
 
 
@@ -142,7 +159,10 @@ def _month_bounds(month):
 
 def _product_sales_detail(sale_model, product_model, month, division):
     start, end = _month_bounds(month); amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-    rows = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"), func.coalesce(func.sum(amount_expr), 0).label("total_revenue")).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end).group_by(product_model.id, product_model.name).order_by(product_model.name.asc()).all()
+    query = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"), func.coalesce(func.sum(amount_expr), 0).label("total_revenue")).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end)
+    if _commercial_only_scope():
+        query = query.filter(sale_model.commercial_id == current_user.id)
+    rows = query.group_by(product_model.id, product_model.name).order_by(product_model.name.asc()).all()
     return [ProductSaleRow(name=name, total_quantity=quantity, total_revenue=float(revenue or 0)) for name, quantity, revenue in rows]
 
 
