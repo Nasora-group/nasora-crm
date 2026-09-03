@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash
 
 from app.forms import LoginForm
 from app.models import User
+from app.audit_log import audit
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +36,14 @@ def login():
 
         if user and user.is_active_account and check_password_hash(user.password, password):
             login_user(user)
+            audit("login", target=username)
             logger.info("Connexion réussie pour %s", username)
             if user.role == "admin":
                 return redirect(url_for("admin.dashboard"))
             return redirect(url_for("dashboard.index"))
 
         flash("Nom d'utilisateur ou mot de passe incorrect", "error")
+        audit("login", target=username, outcome="failure")
         logger.warning("Tentative de connexion échouée pour '%s'", username)
 
     return render_template("login.html", form=form)
@@ -49,6 +52,7 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    audit("logout", target=current_user.username)
     logout_user()
     flash("Déconnexion réussie", "success")
     return redirect(url_for("auth.home"))
