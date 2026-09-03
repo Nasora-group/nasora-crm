@@ -255,6 +255,8 @@ def admin_plannings():
 @roles_required("admin")
 def admin_planning_detail(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
+    if commercial.role != "commercial":
+        abort(404)
     plannings = _monday_plannings(
         Planning.query.filter_by(commercial_id=commercial_id).order_by(Planning.date.desc())
     )
@@ -266,6 +268,8 @@ def admin_planning_detail(commercial_id):
 @roles_required("admin")
 def admin_planning_generate(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
+    if commercial.role != "commercial":
+        abort(404)
     try:
         visits_per_day = int(request.form.get("visits_per_day", "5"))
     except ValueError:
