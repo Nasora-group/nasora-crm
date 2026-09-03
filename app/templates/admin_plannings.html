@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Plannings — NASORA CRM{% endblock %}
 {% block content %}
+<style>
+.planning-field-help{display:block;margin-top:5px;font-size:.72rem;line-height:1.35;color:var(--nasora-muted,#6b7280)}
+.planning-presets{display:flex;gap:5px;margin-top:5px}
+.planning-presets button{border:1px solid rgba(16,185,129,.28);background:rgba(16,185,129,.08);border-radius:7px;padding:3px 9px;font-size:.72rem;font-weight:700;cursor:pointer}
+.planning-presets button:hover,.planning-presets button:focus-visible{background:rgba(16,185,129,.16);outline:2px solid rgba(16,185,129,.25);outline-offset:1px}
+</style>
 <div class="planning-page">
     <section class="planning-hero">
         <div>
