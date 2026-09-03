@@ -4,7 +4,7 @@ from app.routes.objectives import edit_objectives
 
 
 def test_objectives_route_is_admin_protected():
-    assert edit_objectives is not None
+    assert edit_objectives.methods == {"GET", "POST", "OPTIONS", "HEAD"}
 
 
 def test_objective_audit_action_name_is_defined():
