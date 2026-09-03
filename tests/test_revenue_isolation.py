@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -19,7 +20,7 @@ def app():
         nasderm = User(username="commercial_nasderm_test", password=generate_password_hash("password"), role="commercial", project="nasderm", is_active_account=True)
         db.session.add_all([admin, nasmedic, other_nasmedic, nasderm])
         db.session.flush()
-        db.session.add(Prospection(commercial_id=other_nasmedic.id, date="2026-08-15", nom_client="Prospect autre commercial", specialite="PHARMACIEN", structure="PHARMACIES", telephone="770000000"))
+        db.session.add(Prospection(commercial_id=other_nasmedic.id, date=date(2026, 8, 15), nom_client="Prospect autre commercial", specialite="PHARMACIEN", structure="PHARMACIES", telephone="770000000"))
         db.session.commit()
         yield app
         db.session.remove()
