@@ -9,12 +9,22 @@ def roles_required(*roles):
     """Restreint l'accès à une route aux rôles listés.
     Usage : @roles_required('admin') ou @roles_required('admin', 'commercial')
     """
+    allowed_roles = {role.strip().lower() for role in roles if role and role.strip()}
+
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for("auth.login"))
-            if current_user.role not in roles:
+
+            # Défense en profondeur : un compte désactivé ne doit jamais
+            # conserver un accès à une route protégée via une session existante.
+            if not getattr(current_user, "is_active_account", False):
+                flash("Votre compte est désactivé. Contactez un administrateur.", "error")
+                return redirect(url_for("auth.login"))
+
+            current_role = (getattr(current_user, "role", "") or "").strip().lower()
+            if current_role not in allowed_roles:
                 flash("Accès non autorisé.", "error")
                 return redirect(url_for("auth.home"))
             return view_func(*args, **kwargs)
@@ -24,7 +34,13 @@ def roles_required(*roles):
 
 def division_matches(user, division):
     """Un commercial ne doit voir/agir que sur les données de sa propre division."""
-    return user.role == "admin" or user.project == division
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if (getattr(user, "role", "") or "").strip().lower() == "admin":
+        return True
+    user_division = (getattr(user, "project", "") or "").strip().lower()
+    target_division = (division or "").strip().lower()
+    return bool(user_division and target_division and user_division == target_division)
 
 
 def encode_planning_slot(entries):
