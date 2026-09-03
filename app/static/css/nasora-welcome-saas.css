@@ -1,0 +1,37 @@
+/* NASORA CRM — SaaS Welcome Experience */
+.welcome-shell{max-width:1180px;margin:0 auto;padding:34px 0 54px;}
+.welcome-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:28px;align-items:stretch;padding:42px;border:1px solid #dce8df;border-radius:24px;background:linear-gradient(135deg,#ffffff 0%,#f4faf6 58%,#eaf5ee 100%);box-shadow:0 16px 44px rgba(20,32,25,.08);}
+.welcome-hero:before{content:"";position:absolute;width:320px;height:320px;right:-120px;top:-160px;border-radius:50%;background:rgba(23,100,63,.08);pointer-events:none;}
+.welcome-kicker{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:7px 11px;border:1px solid #cfe2d5;border-radius:999px;background:#fff;color:#17643f;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+.welcome-kicker-dot{width:7px;height:7px;border-radius:50%;background:#17643f;box-shadow:0 0 0 4px #edf6f0;}
+.welcome-title{position:relative;z-index:1;margin:0;max-width:720px;color:#142019;font-size:clamp(2rem,4vw,3.25rem);line-height:1.08;letter-spacing:-.045em;}
+.welcome-title span{color:#17643f;}
+.welcome-copy{position:relative;z-index:1;max-width:650px;margin:18px 0 26px;color:#5f6d64;font-size:1rem;line-height:1.75;}
+.welcome-actions{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px;}
+.welcome-actions .btn{min-width:150px;text-align:center;}
+.welcome-trust{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:14px;margin-top:24px;color:#6b786f;font-size:.74rem;font-weight:600;}
+.welcome-trust span{display:inline-flex;align-items:center;gap:6px;}
+.welcome-trust b{color:#17643f;font-size:.9rem;}
+.welcome-visual{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:260px;}
+.welcome-orbit{position:relative;width:230px;height:230px;border:1px solid #cfe2d5;border-radius:50%;background:radial-gradient(circle,#fff 0 38%,#f0f8f3 39% 68%,#e5f2e9 69%);box-shadow:inset 0 0 0 16px rgba(255,255,255,.55),0 18px 38px rgba(23,100,63,.12);}
+.welcome-orbit:before,.welcome-orbit:after{content:"";position:absolute;inset:24px;border:1px dashed #b9d4c1;border-radius:50%;}
+.welcome-orbit:after{inset:52px;border-style:solid;opacity:.55;}
+.welcome-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:92px;height:92px;display:flex;align-items:center;justify-content:center;border-radius:24px;background:#17643f;color:#fff;font-size:1.45rem;font-weight:800;letter-spacing:-.04em;box-shadow:0 14px 30px rgba(23,100,63,.25);}
+.welcome-node{position:absolute;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border:1px solid #cfe2d5;border-radius:14px;background:#fff;color:#17643f;font-weight:800;box-shadow:0 8px 18px rgba(20,32,25,.08);}
+.welcome-node.n1{left:18px;top:86px}.welcome-node.n2{right:18px;top:86px}.welcome-node.n3{left:92px;bottom:8px}
+.welcome-section{margin-top:28px;}
+.welcome-section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:14px;}
+.welcome-section-head h2{margin:0;color:#142019;font-size:1.05rem;letter-spacing:-.02em;}
+.welcome-section-head p{margin:0;color:#738077;font-size:.78rem;}
+.welcome-modules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.welcome-module{display:flex;flex-direction:column;min-height:170px;padding:20px;border:1px solid #dfe7e1;border-radius:16px;background:#fff;box-shadow:0 8px 26px rgba(20,32,25,.045);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;}
+.welcome-module:hover{transform:translateY(-2px);border-color:#c9ddd0;box-shadow:0 14px 30px rgba(20,32,25,.08);}
+.welcome-module-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#edf6f0;color:#17643f;font-size:1.05rem;font-weight:800;}
+.welcome-module h3{margin:15px 0 6px;color:#1a2820;font-size:.92rem;}
+.welcome-module p{margin:0;color:#6b786f;font-size:.75rem;line-height:1.55;}
+.welcome-module-link{margin-top:auto;padding-top:14px;color:#17643f;font-size:.73rem;font-weight:800;text-decoration:none;}
+.welcome-module-link:hover{text-decoration:underline;}
+.welcome-public-note{margin-top:22px;padding:13px 16px;border:1px solid #dfe7e1;border-radius:12px;background:#fff;color:#69766e;font-size:.74rem;line-height:1.55;}
+@media(max-width:850px){.welcome-hero{grid-template-columns:1fr;padding:30px}.welcome-visual{min-height:210px}.welcome-modules{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:560px){.welcome-shell{padding:22px 0 36px}.welcome-hero{padding:24px;border-radius:18px}.welcome-title{font-size:2rem}.welcome-actions{flex-direction:column}.welcome-actions .btn{width:100%}.welcome-modules{grid-template-columns:1fr}.welcome-orbit{width:190px;height:190px}.welcome-core{width:78px;height:78px}.welcome-node.n1{left:8px}.welcome-node.n2{right:8px}.welcome-node.n3{left:72px}}
+@media(prefers-reduced-motion:reduce){.welcome-module{transition:none}.welcome-module:hover{transform:none}}
