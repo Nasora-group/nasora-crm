@@ -38,7 +38,6 @@ class ClientVisit(db.Model):
     products_prescribed = db.Column(db.Text, nullable=True)
     report = db.Column(db.Text, nullable=True)
     next_visit = db.Column(db.Date, nullable=True, index=True)
-    # Historical exact duplicates are flagged, never deleted automatically.
     is_duplicate = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     client = db.relationship("Client", back_populates="visits")
@@ -57,7 +56,7 @@ def _track_changed_client_visits(session, flush_context, instances):
     changed = list(session.new) + list(session.dirty) + list(session.deleted)
     prospection_changes = {
         prospection.id
-        for prospection in list(session.dirty) + list(session.deleted)
+        for prospection in list(session.new) + list(session.dirty) + list(session.deleted)
         if prospection.__class__.__name__ == "Prospection" and prospection.id is not None
     }
     for visit in changed:
