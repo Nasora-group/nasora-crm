@@ -23,7 +23,10 @@
 
   <section class="revenue-chart-card" aria-labelledby="revenue-chart-title">
     <div class="revenue-section-head"><div><span class="crm-overline">ÉVOLUTION</span><h2 id="revenue-chart-title">Historique du CA mensuel</h2><p>La courbe reprend tous les mois disponibles, sans limitation aux derniers mois.</p></div><span class="revenue-sort-note">Du plus ancien au plus récent</span></div>
-    <div class="revenue-chart-wrap"><canvas id="nasmedicRevenueChart" aria-label="Évolution mensuelle du chiffre d'affaires NASMEDIC"></canvas></div>
+    <div class="revenue-chart-wrap" id="nasmedicRevenueChartWrap">
+      <svg id="nasmedicRevenueChart" role="img" aria-label="Évolution mensuelle du chiffre d'affaires NASMEDIC" viewBox="0 0 1000 360" preserveAspectRatio="none"></svg>
+      <div id="nasmedicRevenueChartEmpty" class="revenue-chart-empty" hidden>Aucune donnée mensuelle disponible pour afficher la courbe.</div>
+    </div>
   </section>
 
   <section class="revenue-history-card" aria-labelledby="revenue-history-title">
@@ -36,12 +39,67 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const canvas = document.getElementById('nasmedicRevenueChart');
-  if (!canvas || typeof Chart === 'undefined') return;
+  const svg = document.getElementById('nasmedicRevenueChart');
+  const empty = document.getElementById('nasmedicRevenueChartEmpty');
+  if (!svg) return;
+
   const rows = {{ rows|tojson }};
-  const labels = rows.map(row => row.month);
-  const values = rows.map(row => Number(row.total || 0));
-  new Chart(canvas, {type:'line', data:{labels:labels,datasets:[{label:'CA mensuel (€)',data:values,fill:true,tension:.28,borderWidth:2,pointRadius:3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true},tooltip:{callbacks:{label:function(ctx){return 'CA : '+Number(ctx.parsed.y||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(value){return Number(value).toLocaleString('fr-FR')+' €';}}}}});
+  const data = rows.map(function (row) {
+    return { month: String(row.month || ''), value: Number(row.total || 0) };
+  });
+
+  if (!data.length) {
+    svg.style.display = 'none';
+    if (empty) empty.hidden = false;
+    return;
+  }
+
+  const W = 1000, H = 360;
+  const pad = { top: 24, right: 28, bottom: 58, left: 82 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+  const maxValue = Math.max.apply(null, data.map(function (d) { return d.value; })) || 1;
+  const scaleMax = maxValue * 1.12;
+  const x = function (i) { return data.length === 1 ? pad.left + innerW / 2 : pad.left + (i * innerW / (data.length - 1)); };
+  const y = function (v) { return pad.top + innerH - (v / scaleMax) * innerH; };
+  const ns = 'http://www.w3.org/2000/svg';
+  const make = function (tag, attrs) {
+    const el = document.createElementNS(ns, tag);
+    Object.keys(attrs).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+    return el;
+  };
+  const formatMoney = function (v) { return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €'; };
+
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Grille et axe Y.
+  for (let i = 0; i <= 4; i++) {
+    const value = scaleMax * i / 4;
+    const yy = y(value);
+    svg.appendChild(make('line', { x1: pad.left, y1: yy, x2: W - pad.right, y2: yy, class: 'revenue-chart-gridline' }));
+    const label = make('text', { x: pad.left - 12, y: yy + 4, 'text-anchor': 'end', class: 'revenue-chart-axis-label' });
+    label.textContent = formatMoney(value);
+    svg.appendChild(label);
+  }
+
+  // Zone remplie sous la courbe.
+  const linePoints = data.map(function (d, i) { return x(i) + ',' + y(d.value); }).join(' ');
+  const areaPoints = x(0) + ',' + (pad.top + innerH) + ' ' + linePoints + ' ' + x(data.length - 1) + ',' + (pad.top + innerH);
+  svg.appendChild(make('polygon', { points: areaPoints, class: 'revenue-chart-area' }));
+  svg.appendChild(make('polyline', { points: linePoints, class: 'revenue-chart-line' }));
+
+  data.forEach(function (d, i) {
+    const cx = x(i), cy = y(d.value);
+    const point = make('circle', { cx: cx, cy: cy, r: 5, class: 'revenue-chart-point' });
+    const title = make('title', {});
+    title.textContent = d.month + ' : ' + Number(d.value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    point.appendChild(title);
+    svg.appendChild(point);
+
+    const month = make('text', { x: cx, y: H - 24, 'text-anchor': 'middle', class: 'revenue-chart-month-label' });
+    month.textContent = d.month;
+    svg.appendChild(month);
+  });
 });
 </script>
 {% endblock %}
