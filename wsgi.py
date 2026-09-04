@@ -16,16 +16,16 @@ def _run_render_migrations():
     # Gunicorn may import this module in multiple worker processes. The
     # advisory lock serializes migration execution across those workers.
     lock_key = 846217391
-    conn = app.extensions["migrate"].db.engine.connect()
-    try:
-        conn.execute(text("SELECT pg_advisory_lock(:lock_key)"), {"lock_key": lock_key})
-        with app.app_context():
-            upgrade()
-    finally:
+    with app.app_context():
+        conn = app.extensions["migrate"].db.engine.connect()
         try:
-            conn.execute(text("SELECT pg_advisory_unlock(:lock_key)"), {"lock_key": lock_key})
+            conn.execute(text("SELECT pg_advisory_lock(:lock_key)"), {"lock_key": lock_key})
+            upgrade()
         finally:
-            conn.close()
+            try:
+                conn.execute(text("SELECT pg_advisory_unlock(:lock_key)"), {"lock_key": lock_key})
+            finally:
+                conn.close()
 
 
 _run_render_migrations()
