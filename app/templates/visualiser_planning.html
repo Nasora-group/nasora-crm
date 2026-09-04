@@ -1,17 +1,26 @@
 {% extends "base.html" %}
-
+{% block title %}Mon planning — NASORA CRM{% endblock %}
 {% block content %}
-<h1>Mon planning hebdomadaire</h1>
-
-<div class="dashboard-links">
+<div class="planning-page">
+  <section class="planning-hero">
+    <div>
+      <span class="planning-kicker">NASORA CRM · MON ACTIVITÉ</span>
+      <h1>Mon planning hebdomadaire</h1>
+      <p>Consultez vos cycles de visites et gardez une vision claire de vos journées terrain.</p>
+    </div>
     <a href="{{ url_for('planning.saisie') }}" class="btn">+ Saisir un nouveau planning</a>
-</div>
-
-{% if plannings %}
+  </section>
+  {% if plannings %}
     {% for planning in plannings %}
-        {% include "_planning_week_card.html" %}
+      {% include "_planning_week_card.html" %}
     {% endfor %}
-{% else %}
-    <p>Aucun planning saisi pour le moment.</p>
-{% endif %}
+  {% else %}
+    <section class="planning-empty-card">
+      <div class="planning-empty-icon">□</div>
+      <h2>Aucun planning enregistré</h2>
+      <p>Créez votre premier planning hebdomadaire pour organiser vos visites du lundi au vendredi.</p>
+      <a href="{{ url_for('planning.saisie') }}" class="btn">Créer mon planning</a>
+    </section>
+  {% endif %}
+</div>
 {% endblock %}
