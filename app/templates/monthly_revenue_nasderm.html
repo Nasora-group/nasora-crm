@@ -2,23 +2,46 @@
 
 {% block title %}CA NASDERM — NASORA CRM{% endblock %}
 {% block content %}
-<div class="page-hero crm-page-hero">
-  <span class="hero-eyebrow">NASORA CRM · PERFORMANCE</span>
-  <h1>CA mensuel · NASDERM</h1>
-  <p class="crm-subtitle">Suivi du chiffre d'affaires mensuel de la division NASDERM.</p>
-  <div class="dashboard-nav-actions">
-    <a href="{{ url_for('revenue.nasmedic_dashboard') }}" class="btn btn-outline">NASMEDIC</a>
-    <a href="{{ url_for('revenue.nasderm_dashboard') }}" class="btn">NASDERM</a>
-    <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn btn-outline">CA NASMEDIC</a>
-    <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn">CA NASDERM</a>
+<div class="revenue-page">
+  <div class="page-hero crm-page-hero revenue-hero">
+    <span class="hero-eyebrow">NASORA CRM · PERFORMANCE</span>
+    <h1>Chiffre d'affaires · NASDERM</h1>
+    <p class="crm-subtitle">Historique complet du CA mensuel disponible pour votre périmètre NASDERM, avec détail par fournisseur.</p>
+    <div class="revenue-actions">
+      <a href="{{ url_for('revenue.nasderm_dashboard') }}" class="btn">Tableau NASDERM</a>
+      <a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn btn-outline">CA NASMEDIC</a>
+      <a href="{{ url_for('revenue.monthly_revenue_nasderm') }}" class="btn btn-outline">CA NASDERM</a>
+    </div>
   </div>
+
+  <section class="revenue-kpi-grid" aria-label="Indicateurs de chiffre d'affaires NASDERM">
+    <article class="revenue-kpi"><span class="revenue-kpi-label">CA cumulé</span><span class="revenue-kpi-value">{{ "%.2f"|format(rows|sum(attribute='total')) }} €</span><span class="revenue-kpi-note">Toutes les périodes disponibles</span></article>
+    <article class="revenue-kpi"><span class="revenue-kpi-label">Moyenne mensuelle</span><span class="revenue-kpi-value">{{ "%.2f"|format(kpis.monthly_avg) }} €</span><span class="revenue-kpi-note">Sur {{ rows|length }} mois enregistré{% if rows|length != 1 %}s{% endif %}</span></article>
+    <article class="revenue-kpi"><span class="revenue-kpi-label">CA mois en cours</span><span class="revenue-kpi-value">{{ "%.2f"|format(kpis.current_month_revenue) }} €</span><span class="revenue-kpi-note">{{ kpis.current_month_label }}</span></article>
+    <article class="revenue-kpi"><span class="revenue-kpi-label">CA année en cours</span><span class="revenue-kpi-value">{{ "%.2f"|format(kpis.current_year_revenue) }} €</span><span class="revenue-kpi-note">Exercice {{ kpis.current_year }}</span></article>
+  </section>
+
+  <section class="revenue-chart-card" aria-labelledby="revenue-chart-title">
+    <div class="revenue-section-head"><div><span class="crm-overline">ÉVOLUTION</span><h2 id="revenue-chart-title">Historique du CA mensuel</h2><p>La courbe reprend tous les mois disponibles, sans limitation aux derniers mois.</p></div><span class="revenue-sort-note">Du plus ancien au plus récent</span></div>
+    <div class="revenue-chart-wrap"><canvas id="nasdermRevenueChart" aria-label="Évolution mensuelle du chiffre d'affaires NASDERM"></canvas></div>
+  </section>
+
+  <section class="revenue-history-card" aria-labelledby="revenue-history-title">
+    <div class="revenue-section-head"><div><span class="crm-overline">ARCHIVE</span><h2 id="revenue-history-title">Historique détaillé</h2><p>{{ rows|length }} période{% if rows|length != 1 %}s{% endif %} disponible{% if rows|length != 1 %}s{% endif %} dans le CRM.</p></div></div>
+    <div class="revenue-table-wrap">
+      <table class="revenue-history-table" aria-describedby="revenue-history-title"><thead><tr><th>Mois</th>{% for slug, label, sale_model, product_model in suppliers %}<th>{{ label }} (€)</th>{% endfor %}<th>Total (€)</th><th>Action</th></tr></thead>
+      <tbody>{% for row in rows|reverse %}<tr{% if row.month == kpis.current_month_label %} class="revenue-current"{% endif %}><td class="revenue-month">{{ row.month }}</td>{% for slug, label, sale_model, product_model in suppliers %}<td>{{ "%.2f"|format(row.amounts.get(slug, 0)) }} €</td>{% endfor %}<td class="revenue-total">{{ "%.2f"|format(row.total) }} €</td><td><a class="btn btn-outline revenue-detail-link" href="{{ url_for('revenue.monthly_revenue_detail_nasderm', month=row.month) }}">Voir le détail</a></td></tr>{% else %}<tr><td class="revenue-empty" colspan="{{ suppliers|length + 3 }}"><strong>Aucun chiffre d'affaires enregistré</strong>Les données mensuelles apparaîtront ici dès qu'une vente sera saisie.</td></tr>{% endfor %}</tbody></table>
+    </div>
+  </section>
 </div>
-<section class="crm-surface" style="padding:20px;border-radius:16px;margin-bottom:20px;">
-  <div class="section-heading"><div><span class="crm-overline">INDICATEURS</span><h2>Performance NASDERM</h2></div></div>
-  {% include "_division_kpis.html" %}
-</section>
-<section class="crm-surface crm-table-card">
-<table class="responsive-table"><thead><tr><th>Mois</th>{% for slug, label, sale_model, product_model in suppliers %}<th>{{ label }} (€)</th>{% endfor %}<th>Total (€)</th><th>Détails</th></tr></thead>
-<tbody>{% for row in rows %}<tr><td><strong>{{ row.month }}</strong></td>{% for slug, label, sale_model, product_model in suppliers %}<td>{{ "%.2f"|format(row.amounts.get(slug, 0)) }} €</td>{% endfor %}<td><strong>{{ "%.2f"|format(row.total) }} €</strong></td><td><a class="btn btn-outline" href="{{ url_for('revenue.monthly_revenue_detail_nasderm', month=row.month) }}">Voir les détails</a></td></tr>{% else %}<tr><td colspan="{{ suppliers|length + 3 }}">Aucune vente enregistrée pour le moment.</td></tr>{% endfor %}</tbody></table>
-</section>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const canvas = document.getElementById('nasdermRevenueChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const rows = {{ rows|tojson }};
+  const labels = rows.map(row => row.month);
+  const values = rows.map(row => Number(row.total || 0));
+  new Chart(canvas, {type:'line', data:{labels:labels,datasets:[{label:'CA mensuel (€)',data:values,fill:true,tension:.28,borderWidth:2,pointRadius:3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true},tooltip:{callbacks:{label:function(ctx){return 'CA : '+Number(ctx.parsed.y||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(value){return Number(value).toLocaleString('fr-FR')+' €';}}}}});
+});
+</script>
 {% endblock %}
