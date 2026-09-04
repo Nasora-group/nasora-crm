@@ -4,8 +4,8 @@ from flask_login import UserMixin
 from app.extensions import db
 
 DIVISIONS=("nasderm","nasmedic"); ROLES=("admin","commercial"); WHOLESALERS=("duopharm","ubipharm","laborex","sodipharm")
-STRUCTURES=[("HOPITAL","HOPITAL"),("POSTE DE SANTE","POSTE DE SANTE"),("CENTRE DE SANTE","CENTRE DE SANTE"),("CLINIQUE","CLINIQUE"),("SAPEUR POMPIER","SAPEUR POMPIER"),("GENDARMERIE","GENDARMERIE"),("PHARMACIES","PHARMACIES")]
-STRUCTURE_SLUGS={value:value.replace(" ","_") for value,_ in STRUCTURES}; STRUCTURE_BY_SLUG={slug:value for value,slug in STRUCTURE_SLUGS.items()}; STRUCTURE_COLORS={"HOPITAL":"#4a6741","POSTE DE SANTE":"#8faf6d","CENTRE DE SANTE":"#2b6cb0","CLINIQUE":"#8e5fd1","SAPEUR POMPIER":"#c0392b","GENDARMERIE":"#5b6b5e","PHARMACIES":"#c98a2c"}
+STRUCTURES=[("HOPITAL","HOPITAL"),("POSTE DE SANTE","POSTE DE SANTE"),("CENTRE DE SANTE","CENTRE DE SANTE"),("CLINIQUE","CLINIQUE"),("SAPEUR POMPIER","SAPEUR POMPIER"),("GENDARMERIE","GENDARMERIE"),("PHARMACIES","PHARMACIES"),("ENTREPRISE","ENTREPRISE"),("CABINET","CABINET"),("PLATEAU MEDICAL","PLATEAU MEDICAL")]
+STRUCTURE_SLUGS={value:value.replace(" ","_") for value,_ in STRUCTURES}; STRUCTURE_BY_SLUG={slug:value for value,slug in STRUCTURE_SLUGS.items()}; STRUCTURE_COLORS={"HOPITAL":"#4a6741","POSTE DE SANTE":"#8faf6d","CENTRE DE SANTE":"#2b6cb0","CLINIQUE":"#8e5fd1","SAPEUR POMPIER":"#c0392b","GENDARMERIE":"#5b6b5e","PHARMACIES":"#c98a2c","ENTREPRISE":"#3b82f6","CABINET":"#7c3aed","PLATEAU MEDICAL":"#0f766e"}
 JOURS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]; JOURS_LABELS={"lundi":"Lundi","mardi":"Mardi","mercredi":"Mercredi","jeudi":"Jeudi","vendredi":"Vendredi","samedi":"Samedi","dimanche":"Dimanche"}
 
 class User(UserMixin,db.Model):
@@ -14,7 +14,6 @@ class User(UserMixin,db.Model):
 
 class Prospection(db.Model):
     id=db.Column(db.Integer,primary_key=True); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); date=db.Column(db.Date,nullable=False,index=True); nom_client=db.Column(db.String(150),nullable=False); specialite=db.Column(db.String(150),nullable=False); structure=db.Column(db.String(150),nullable=False); telephone=db.Column(db.String(30),nullable=False); profils_prospect=db.Column(db.Text,nullable=True); produits_presentes=db.Column(db.Text,nullable=True); produits_prescrits=db.Column(db.Text,nullable=True)
-    # Legacy/CRM linkage fields intentionally retained: they already exist in PostgreSQL and are used by the historical prospection linkage migration.
     establishment=db.Column(db.String(200),nullable=True,index=True)
     client_id=db.Column(db.Integer,db.ForeignKey("crm_client.id",name="fk_prospection_client"),nullable=True,index=True)
     planning_id=db.Column(db.Integer,db.ForeignKey("planning.id",name="fk_prospection_planning"),nullable=True,index=True)
@@ -42,7 +41,7 @@ class GilbertSale(SaleMixin,db.Model):
 class EricFavreSale(SaleMixin,db.Model):
     __tablename__="eric_favre_sale"; product_id=db.Column(db.Integer,db.ForeignKey("eric_favre_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("EricFavreProduct"); commercial=db.relationship("User")
 class TroisCheneSale(SaleMixin,db.Model):
-    __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("TroisCheneProduct"); commercial=db.relationship("User")
+    __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("User")
 SUPPLIERS={"nova_pharma":{"label":"Nova Pharma","division":"nasderm","product_model":NovaPharmaProduct,"sale_model":NovaPharmaSale,"archived":True},"gilbert":{"label":"Gilbert","division":"nasderm","product_model":GilbertProduct,"sale_model":GilbertSale,"archived":False},"eric_favre":{"label":"Eric Favre","division":"nasmedic","product_model":EricFavreProduct,"sale_model":EricFavreSale,"archived":False},"trois_chene":{"label":"3 Chênes Pharma","division":"nasmedic","product_model":TroisCheneProduct,"sale_model":TroisCheneSale,"archived":False}}
 DIVISION_SUPPLIERS={"nasderm":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasderm" and not s["archived"]],"nasmedic":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasmedic" and not s["archived"]]}
 class SalesObjective(db.Model):
