@@ -39,16 +39,7 @@ def _month_expression(sale_model):
 
 
 def _monthly_revenue_for_division(division, scope_to_commercial=True):
-    """Retourne le CA mensuel directement depuis les tables de ventes.
-
-    Cette lecture SQL volontairement simple évite qu'une relation ORM ou une
-    différence de mapping entre environnements empêche la remontée du CA.
-    Aucune écriture n'est effectuée.
-
-    ``scope_to_commercial`` permet aux écrans de CA mensuel dédiés de montrer
-    le CA global de la division, tout en conservant le cloisonnement commercial
-    sur les autres tableaux de bord.
-    """
+    """Retourne le CA mensuel directement depuis les tables de ventes."""
     combined = {}
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
         table_name = sale_model.__tablename__
@@ -128,9 +119,6 @@ def nasmedic_dashboard():
 def _monthly_revenue_route(division, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    # La page dédiée au CA mensuel doit afficher le CA global de la division,
-    # même lorsque l'utilisateur connecté est un commercial. Le contrôle
-    # d'accès à la division reste assuré par _ensure_division_access().
     labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=False)
     rows = [
         {
@@ -198,17 +186,19 @@ def _month_bounds(month):
     return start, end
 
 
-def _product_sales_detail(sale_model, product_model, month, division):
+def _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False):
     start, end = _month_bounds(month); amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
     query = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0).label("total_quantity"), func.coalesce(func.sum(amount_expr), 0).label("total_revenue")).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end)
-    if _commercial_only_scope():
+    if scope_to_commercial and _commercial_only_scope():
         query = query.filter(sale_model.commercial_id == current_user.id)
     rows = query.group_by(product_model.id, product_model.name).order_by(product_model.name.asc()).all()
     return [ProductSaleRow(name=name, total_quantity=quantity, total_revenue=float(revenue or 0)) for name, quantity, revenue in rows]
 
 
 def _monthly_revenue_detail_route(division, month, template_name):
-    _ensure_division_access(division); suppliers = _division_suppliers(division); details = {slug: _product_sales_detail(sale_model, product_model, month, division) for slug, _label, sale_model, product_model in suppliers}
+    _ensure_division_access(division)
+    suppliers = _division_suppliers(division)
+    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False) for slug, _label, sale_model, product_model in suppliers}
     return render_template(template_name, month=month, suppliers=suppliers, details=details)
 
 
@@ -223,3 +213,9 @@ def monthly_revenue_detail_nasderm(month):
 @roles_required("admin", "commercial")
 def monthly_revenue_detail_nasmedic(month):
     return _monthly_revenue_detail_route("nasmedic", month, "monthly_revenue_detail_nasmedic.html")
+
+@revenue_bp.route("/monthly_revenue_detail_nasmedic")
+@login_required
+@roles_required("admin", "commercial")
+def monthly_revenue_detail_nasmedic_current():
+    return _monthly_revenue_detail_route("nasmedic", date.today().strftime("%Y-%m"), "monthly_revenue_detail_nasmedic.html")
