@@ -3,9 +3,9 @@ from calendar import monthrange
 from collections import namedtuple
 from datetime import date, datetime
 
-from flask import Blueprint, render_template, flash, request, abort, jsonify
+from flask import Blueprint, render_template, flash, request, abort, jsonify, make_response
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from app.extensions import db
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
@@ -39,18 +39,35 @@ def _month_expression(sale_model):
 
 
 def _monthly_revenue_for_division(division):
+    """Retourne le CA mensuel directement depuis les tables de ventes.
+
+    Cette lecture SQL volontairement simple évite qu'une relation ORM ou une
+    différence de mapping entre environnements empêche la remontée du CA.
+    Aucune écriture n'est effectuée.
+    """
     combined = {}
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
-        month_expr = _month_expression(sale_model)
-        amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-        query = db.session.query(month_expr.label("month"), func.coalesce(func.sum(amount_expr), 0).label("revenue")).filter(sale_model.project == division)
+        table_name = sale_model.__tablename__
+        conditions = ["project = :division"]
+        params = {"division": division}
         if _commercial_only_scope():
-            query = query.filter(sale_model.commercial_id == current_user.id)
-        rows = query.group_by(month_expr).order_by(month_expr).all()
-        for month, revenue in rows:
-            combined.setdefault(month, {})[slug] = float(revenue or 0)
+            conditions.append("commercial_id = :commercial_id")
+            params["commercial_id"] = current_user.id
+        sql = text(
+            f"SELECT TO_CHAR(date, 'YYYY-MM') AS month, "
+            f"COALESCE(SUM(COALESCE(quantity, 0) * COALESCE(price, 0)), 0) AS revenue "
+            f"FROM {table_name} WHERE {' AND '.join(conditions)} "
+            f"GROUP BY TO_CHAR(date, 'YYYY-MM') ORDER BY TO_CHAR(date, 'YYYY-MM')"
+        )
+        rows = db.session.execute(sql, params).mappings().all()
+        for row in rows:
+            month = row["month"]
+            combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
+
     labels = sorted(combined.keys())
-    return labels, [sum(combined[m].values()) for m in labels], combined
+    totals = [sum(combined[month].values()) for month in labels]
+    logger.info("CA mensuel %s chargé: %s mois, %.2f EUR", division, len(labels), sum(totals))
+    return labels, totals, combined
 
 
 def _objectives_kpis(division, labels, totals):
@@ -106,9 +123,28 @@ def nasmedic_dashboard():
 
 
 def _monthly_revenue_route(division, template_name):
-    _ensure_division_access(division); suppliers = _division_suppliers(division); labels, totals, combined = _monthly_revenue_for_division(division)
-    rows = [{"month": month, "amounts": {slug: combined[month].get(slug, 0.0) for slug, *_ in suppliers}, "total": sum(combined[month].get(slug, 0.0) for slug, *_ in suppliers)} for month in labels]
-    return render_template(template_name, rows=rows, suppliers=suppliers, kpis=_objectives_kpis(division, labels, totals), division=division, monthly_revenue_labels=labels)
+    _ensure_division_access(division)
+    suppliers = _division_suppliers(division)
+    labels, totals, combined = _monthly_revenue_for_division(division)
+    rows = [
+        {
+            "month": month,
+            "amounts": {slug: combined[month].get(slug, 0.0) for slug, *_ in suppliers},
+            "total": sum(combined[month].get(slug, 0.0) for slug, *_ in suppliers),
+        }
+        for month in labels
+    ]
+    response = make_response(render_template(
+        template_name,
+        rows=rows,
+        suppliers=suppliers,
+        kpis=_objectives_kpis(division, labels, totals),
+        division=division,
+        monthly_revenue_labels=labels,
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @revenue_bp.route("/monthly_revenue_nasderm")
