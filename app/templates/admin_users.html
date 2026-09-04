@@ -4,99 +4,45 @@
 <style>
     .users-page{max-width:1280px;margin:0 auto;padding:8px 0 32px}
     .users-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;margin-bottom:18px;border-radius:18px;background:linear-gradient(135deg,#0f5132,#198754);color:#fff;box-shadow:0 10px 28px rgba(15,81,50,.16)}
-    .users-hero h1{margin:0 0 6px;font-size:1.65rem;font-weight:800;letter-spacing:-.02em}
-    .users-hero p{margin:0;opacity:.9;font-size:.92rem}
-    .users-primary{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:10px;background:#fff;color:#0f5132!important;text-decoration:none;font-weight:800;white-space:nowrap;box-shadow:0 5px 14px rgba(0,0,0,.12)}
-    .users-primary:hover{transform:translateY(-1px);text-decoration:none}
+    .users-hero h1{margin:0 0 6px;font-size:1.65rem;font-weight:800;letter-spacing:-.02em}.users-hero p{margin:0;opacity:.9;font-size:.92rem}
+    .users-primary{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:10px;background:#fff;color:#0f5132!important;text-decoration:none;font-weight:800;white-space:nowrap;box-shadow:0 5px 14px rgba(0,0,0,.12)}.users-primary:hover{transform:translateY(-1px);text-decoration:none}
     .users-filters{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;padding:18px;margin-bottom:18px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.05)}
-    .users-field label{display:block;margin:0 0 7px;font-size:.78rem;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.04em}
-    .users-field select{width:100%;min-height:42px;padding:9px 12px;border:1px solid #dbe2e8;border-radius:9px;background:#f8fafc;color:#172033;font-size:.9rem}
-    .users-filter-actions{display:flex;gap:8px;align-items:center}
-    .users-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:0;border-radius:9px;background:#198754;color:#fff!important;text-decoration:none;font-size:.84rem;font-weight:750;cursor:pointer;white-space:nowrap}
-    .users-btn:hover{filter:brightness(.96);text-decoration:none}
-    .users-btn.secondary{background:#eef2f5;color:#334155!important}
-    .users-btn.warning{background:#fff3cd;color:#856404}
-    .users-btn.danger{background:#f8d7da;color:#842029}
-    .users-table-card{overflow:hidden;border:1px solid #e5e7eb;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.05)}
-    .users-table-wrap{overflow-x:auto}
-    .users-table{width:100%;border-collapse:collapse;min-width:850px}
-    .users-table th{padding:13px 15px;background:#f8fafc;border-bottom:1px solid #e5e7eb;color:#64748b;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:850}
-    .users-table td{padding:14px 15px;border-bottom:1px solid #edf0f2;color:#263244;font-size:.86rem;vertical-align:middle}
-    .users-table tbody tr:last-child td{border-bottom:0}
-    .users-table tbody tr:hover{background:#fbfdfc}
-    .user-name{font-weight:800;color:#172033}
-    .user-you{font-size:.72rem;color:#198754;font-style:normal;font-weight:800}
-    .user-role,.user-division{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef7f2;color:#146c43;font-size:.74rem;font-weight:800}
-    .user-division{background:#eef4ff;color:#2856a6}
-    .user-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:.74rem;font-weight:800}
-    .user-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-    .user-status.active{background:#e8f7ee;color:#198754}.user-status.inactive{background:#fbeaec;color:#b4232f}
-    .user-actions{display:flex;flex-wrap:wrap;gap:7px}
-    .users-empty{padding:34px!important;text-align:center;color:#64748b}
+    .users-field label{display:block;margin:0 0 7px;font-size:.78rem;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.04em}.users-field select{width:100%;min-height:42px;padding:9px 12px;border:1px solid #dbe2e8;border-radius:9px;background:#f8fafc;color:#172033;font-size:.9rem}
+    .users-filter-actions{display:flex;gap:8px;align-items:center}.users-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:0;border-radius:9px;background:#198754;color:#fff!important;text-decoration:none;font-size:.84rem;font-weight:750;cursor:pointer;white-space:nowrap}.users-btn:hover{filter:brightness(.96);text-decoration:none}.users-btn.secondary{background:#eef2f5;color:#334155!important}.users-btn.warning{background:#fff3cd;color:#856404}.users-btn.danger{background:#f8d7da;color:#842029}
+    .users-table-card{overflow:hidden;border:1px solid #e5e7eb;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.05)}.users-table-wrap{overflow-x:auto}.users-table{width:100%;border-collapse:collapse;min-width:850px}.users-table caption{text-align:left;padding:15px 16px;background:#fff;color:#475569;font-size:.76rem;border-bottom:1px solid #edf0f2}.users-table th{padding:13px 15px;background:#f8fafc;border-bottom:1px solid #e5e7eb;color:#64748b;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:850}.users-table td{padding:14px 15px;border-bottom:1px solid #edf0f2;color:#263244;font-size:.86rem;vertical-align:middle}.users-table tbody tr:last-child td{border-bottom:0}.users-table tbody tr:hover{background:#fbfdfc}.user-name{font-weight:800;color:#172033}.user-you{font-size:.72rem;color:#198754;font-style:normal;font-weight:800}.user-role,.user-division{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef7f2;color:#146c43;font-size:.74rem;font-weight:800}.user-division{background:#eef4ff;color:#2856a6}.user-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:.74rem;font-weight:800}.user-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}.user-status.active{background:#e8f7ee;color:#198754}.user-status.inactive{background:#fbeaec;color:#b4232f}.user-actions{display:flex;flex-wrap:wrap;gap:7px}.users-empty{padding:34px!important;text-align:center;color:#64748b}
+    .users-count{display:inline-flex;align-items:center;margin-bottom:10px;padding:6px 10px;border-radius:999px;background:#eef7f2;color:#146c43;font-size:.72rem;font-weight:800}.users-filter-status{margin:0 0 12px;color:#64748b;font-size:.76rem}
     @media(max-width:760px){.users-hero{align-items:flex-start;flex-direction:column;padding:20px}.users-hero h1{font-size:1.4rem}.users-primary{width:100%}.users-filters{grid-template-columns:1fr}.users-filter-actions{width:100%}.users-filter-actions .users-btn{flex:1}.users-page{padding-bottom:20px}}
 </style>
 
 <div class="users-page">
-    <section class="users-hero">
-        <div>
-            <h1>Gestion des utilisateurs</h1>
-            <p>Administrez les comptes, rôles, divisions et statuts depuis un espace unique.</p>
-        </div>
+    <section class="users-hero" aria-labelledby="users-title">
+        <div><h1 id="users-title">Gestion des utilisateurs</h1><p>Administrez les comptes, rôles, divisions et statuts depuis un espace unique.</p></div>
         <a href="{{ url_for('users.create_user') }}" class="users-primary">＋ Nouveau compte</a>
     </section>
 
-    <form method="GET" class="users-filters">
-        <div class="users-field">
-            <label for="role">Rôle</label>
-            <select id="role" name="role">
-                <option value="">Tous les rôles</option>
-                <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Administrateur</option>
-                <option value="commercial" {% if request.args.get('role') == 'commercial' %}selected{% endif %}>Commercial</option>
-            </select>
-        </div>
-        <div class="users-field">
-            <label for="project">Division</label>
-            <select id="project" name="project">
-                <option value="">Toutes les divisions</option>
-                <option value="nasderm" {% if request.args.get('project') == 'nasderm' %}selected{% endif %}>NASDERM</option>
-                <option value="nasmedic" {% if request.args.get('project') == 'nasmedic' %}selected{% endif %}>NASMEDIC</option>
-            </select>
-        </div>
-        <div class="users-filter-actions">
-            <button type="submit" class="users-btn">Filtrer</button>
-            <a href="{{ url_for('users.list_users') }}" class="users-btn secondary">Réinitialiser</a>
-        </div>
+    <form method="GET" class="users-filters" aria-label="Filtres utilisateurs">
+        <div class="users-field"><label for="role">Rôle</label><select id="role" name="role"><option value="">Tous les rôles</option><option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Administrateur</option><option value="commercial" {% if request.args.get('role') == 'commercial' %}selected{% endif %}>Commercial</option></select></div>
+        <div class="users-field"><label for="project">Division</label><select id="project" name="project"><option value="">Toutes les divisions</option><option value="nasderm" {% if request.args.get('project') == 'nasderm' %}selected{% endif %}>NASDERM</option><option value="nasmedic" {% if request.args.get('project') == 'nasmedic' %}selected{% endif %}>NASMEDIC</option></select></div>
+        <div class="users-filter-actions"><button type="submit" class="users-btn">Filtrer</button><a href="{{ url_for('users.list_users') }}" class="users-btn secondary">Réinitialiser</a></div>
     </form>
 
-    <section class="users-table-card">
+    <p class="users-filter-status" aria-live="polite"><span class="users-count">{{ users|length }} compte{% if users|length != 1 %}s{% endif %}</span> correspondant aux filtres sélectionnés.</p>
+
+    <section class="users-table-card" aria-labelledby="users-table-caption">
         <div class="users-table-wrap">
             <table class="users-table">
-                <thead>
-                    <tr><th>Utilisateur</th><th>Rôle</th><th>Division</th><th>Zone</th><th>Statut</th><th>Actions</th></tr>
-                </thead>
+                <caption id="users-table-caption">Comptes utilisateurs et actions d'administration</caption>
+                <thead><tr><th scope="col">Utilisateur</th><th scope="col">Rôle</th><th scope="col">Division</th><th scope="col">Zone</th><th scope="col">Statut</th><th scope="col">Actions</th></tr></thead>
                 <tbody>
                     {% for user in users %}
                     <tr>
                         <td><span class="user-name">{{ user.username }}</span>{% if user.id == current_user.id %} <span class="user-you">(toi)</span>{% endif %}</td>
                         <td><span class="user-role">{{ 'Administrateur' if user.role == 'admin' else 'Commercial' }}</span></td>
-                        <td><span class="user-division">{{ user.project|upper }}</span></td>
-                        <td>{{ user.zone or '—' }}</td>
+                        <td><span class="user-division">{{ user.project|upper }}</span></td><td>{{ user.zone or '—' }}</td>
                         <td>{% if user.is_active_account %}<span class="user-status active">Actif</span>{% else %}<span class="user-status inactive">Désactivé</span>{% endif %}</td>
-                        <td>
-                            <div class="user-actions">
-                                <a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="users-btn">Modifier</a>
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('users.toggle_active', user_id=user.id) }}">
-                                    {{ toggle_form.hidden_tag() }}
-                                    <button type="submit" class="users-btn {% if user.is_active_account %}danger{% else %}warning{% endif %}" onclick="return confirm('{{ 'Désactiver' if user.is_active_account else 'Réactiver' }} le compte {{ user.username }} ?');">{{ 'Désactiver' if user.is_active_account else 'Réactiver' }}</button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
+                        <td><div class="user-actions"><a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="users-btn">Modifier</a>{% if user.id != current_user.id %}<form method="POST" action="{{ url_for('users.toggle_active', user_id=user.id) }}"><span class="sr-only">Gestion du compte {{ user.username }}</span>{{ toggle_form.hidden_tag() }}<button type="submit" class="users-btn {% if user.is_active_account %}danger{% else %}warning{% endif %}" onclick="return confirm('{{ 'Désactiver' if user.is_active_account else 'Réactiver' }} le compte {{ user.username }} ?');">{{ 'Désactiver' if user.is_active_account else 'Réactiver' }}</button></form>{% endif %}</div></td>
                     </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="users-empty">Aucun utilisateur trouvé.</td></tr>
-                    {% endfor %}
+                    {% else %}<tr><td colspan="6" class="users-empty">Aucun utilisateur trouvé.</td></tr>{% endfor %}
                 </tbody>
             </table>
         </div>
