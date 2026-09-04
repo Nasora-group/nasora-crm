@@ -52,6 +52,12 @@ tbody tr:hover td{background:#f8fbf9;}
 .badge,.status-badge,.kpi-badge{border-radius:999px!important;font-weight:700!important;}
 .kpi-card{background:#fff;border:1px solid var(--ns-border)!important;}
 
+/* Navigation : repère visuel clair de la section courante. */
+.nav-dropdown-trigger[data-active="true"]{background:var(--ns-green-dark)!important;color:#fff!important;box-shadow:0 5px 14px rgba(15,63,42,.16);}
+.nav-dropdown-trigger[data-active="true"] .nav-icon,.nav-dropdown-trigger[data-active="true"] .nav-chevron{color:#fff!important;}
+.nav-dropdown-menu a[aria-current="page"]{background:var(--ns-green-soft)!important;color:var(--ns-green-dark)!important;font-weight:700!important;box-shadow:inset 3px 0 0 var(--ns-green);}
+.nav-home[aria-current="page"]{background:var(--ns-green-dark)!important;color:#fff!important;}
+
 /* Liens et états */
 a{color:var(--ns-green);}
 a:hover{color:var(--ns-green-dark);}
