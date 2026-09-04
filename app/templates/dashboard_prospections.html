@@ -11,7 +11,7 @@
 </div>
 
 <div class="crm-surface crm-list-header">
-  <div><span class="crm-overline">SUIVI</span><h2><span id="prospection-visible-count">{{ prospections|length }}</span> prospection(s)</h2></div>
+  <div><span class="crm-overline">SUIVI</span><h2><span id="prospection-visible-count" aria-live="polite">{{ prospections|length }}</span> prospection(s)</h2></div>
   <span class="muted">Les plus récentes apparaissent en premier</span>
 </div>
 
@@ -20,22 +20,22 @@
   <div style="display:grid;grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) auto;gap:12px;align-items:end;">
     <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
       Rechercher
-      <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, produit…" autocomplete="off">
+      <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, produit…" autocomplete="off" aria-label="Rechercher une prospection">
     </label>
     <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
       Date
-      <input id="prospection-date" type="date" class="form-control">
+      <input id="prospection-date" type="date" class="form-control" aria-label="Filtrer les prospections par date">
     </label>
-    <button id="prospection-reset" type="button" class="btn btn-outline">Réinitialiser</button>
+    <button id="prospection-reset" type="button" class="btn btn-outline" aria-label="Réinitialiser les filtres de prospection">Réinitialiser</button>
   </div>
-  <div id="prospection-no-result" class="muted" style="display:none;margin-top:12px;">Aucune prospection ne correspond aux critères.</div>
+  <div id="prospection-no-result" class="muted" style="display:none;margin-top:12px;" role="status" aria-live="polite">Aucune prospection ne correspond aux critères.</div>
 </div>
 {% endif %}
 
 <div class="crm-table-card">
 {% if prospections %}
   <div class="table-responsive">
-    <table class="data-table responsive-table" id="prospection-table">
+    <table class="data-table responsive-table" id="prospection-table" aria-label="Liste des prospections">
       <thead><tr><th>Date</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead>
       <tbody>
       {% for p in prospections %}

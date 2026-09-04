@@ -1,0 +1,17 @@
+/* NASORA CRM — UX consultation prospections */
+.prospections-toolbar{display:grid;grid-template-columns:minmax(240px,2fr) minmax(160px,1fr) auto;gap:12px;align-items:end}
+.prospections-toolbar .filter-field{display:flex;flex-direction:column;gap:6px;font-weight:600}
+.prospections-toolbar .filter-field input{min-height:44px}
+.prospections-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.prospections-status[hidden]{display:none}
+.prospections-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.prospections-table{min-width:1080px}
+.prospections-table td{vertical-align:middle}
+.prospections-table .table-actions{white-space:nowrap}
+.prospections-empty{padding:32px 20px;text-align:center}
+@media (max-width:820px){
+ .prospections-toolbar{grid-template-columns:1fr}
+ .prospections-status{align-items:flex-start;flex-direction:column}
+ .prospections-table{min-width:900px}
+}
+@media (prefers-reduced-motion:reduce){.prospections-table *{scroll-behavior:auto!important}}
