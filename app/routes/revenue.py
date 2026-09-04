@@ -38,19 +38,23 @@ def _month_expression(sale_model):
     return func.to_char(sale_model.date, "YYYY-MM")
 
 
-def _monthly_revenue_for_division(division):
+def _monthly_revenue_for_division(division, scope_to_commercial=True):
     """Retourne le CA mensuel directement depuis les tables de ventes.
 
     Cette lecture SQL volontairement simple évite qu'une relation ORM ou une
     différence de mapping entre environnements empêche la remontée du CA.
     Aucune écriture n'est effectuée.
+
+    ``scope_to_commercial`` permet aux écrans de CA mensuel dédiés de montrer
+    le CA global de la division, tout en conservant le cloisonnement commercial
+    sur les autres tableaux de bord.
     """
     combined = {}
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
         table_name = sale_model.__tablename__
         conditions = ["project = :division"]
         params = {"division": division}
-        if _commercial_only_scope():
+        if scope_to_commercial and _commercial_only_scope():
             conditions.append("commercial_id = :commercial_id")
             params["commercial_id"] = current_user.id
         sql = text(
@@ -114,7 +118,6 @@ def _division_dashboard(division, template_name):
 def nasderm_dashboard():
     return _division_dashboard("nasderm", "nasderm_dashboard.html")
 
-
 @revenue_bp.route("/nasmedic_dashboard")
 @login_required
 @roles_required("admin", "commercial")
@@ -125,7 +128,10 @@ def nasmedic_dashboard():
 def _monthly_revenue_route(division, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    labels, totals, combined = _monthly_revenue_for_division(division)
+    # La page dédiée au CA mensuel doit afficher le CA global de la division,
+    # même lorsque l'utilisateur connecté est un commercial. Le contrôle
+    # d'accès à la division reste assuré par _ensure_division_access().
+    labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=False)
     rows = [
         {
             "month": month,
@@ -152,7 +158,6 @@ def _monthly_revenue_route(division, template_name):
 @roles_required("admin", "commercial")
 def monthly_revenue_nasderm():
     return _monthly_revenue_route("nasderm", "monthly_revenue_nasderm.html")
-
 
 @revenue_bp.route("/monthly_revenue_nasmedic")
 @login_required
@@ -212,7 +217,6 @@ def _monthly_revenue_detail_route(division, month, template_name):
 @roles_required("admin", "commercial")
 def monthly_revenue_detail_nasderm(month):
     return _monthly_revenue_detail_route("nasderm", month, "monthly_revenue_detail_nasderm.html")
-
 
 @revenue_bp.route("/monthly_revenue_detail_nasmedic/<month>")
 @login_required
