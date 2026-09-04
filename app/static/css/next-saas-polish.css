@@ -1,0 +1,8 @@
+:root{--nasora-focus:rgba(23,100,63,.22)}
+:focus-visible{outline:3px solid var(--nasora-focus);outline-offset:2px}
+button,.btn,a{transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease,color .14s ease,border-color .14s ease}
+.btn:hover,button:hover{transform:translateY(-1px)}
+.card,.panel,.kpi-card{border-color:var(--nasora-border,#dfe7e2)!important}
+.flash-message,.alert{border-radius:12px;border:1px solid var(--nasora-border,#dfe7e2);box-shadow:0 6px 20px rgba(20,32,25,.06)}
+@media(max-width:820px){.btn,button{min-height:40px}.table-responsive{border-radius:12px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
