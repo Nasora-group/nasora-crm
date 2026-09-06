@@ -44,7 +44,9 @@ def upgrade():
                   AND table_class.relname = 'planning'
                   AND i.indisunique
             LOOP
-                IF idx.columns = ARRAY['commercial_id', 'date'] THEN
+                -- pg_attribute.attname uses the PostgreSQL 'name' type,
+                -- so cast the generated name[] to text[] before comparing.
+                IF idx.columns::text[] = ARRAY['commercial_id', 'date']::text[] THEN
                     SELECT c.conname
                     INTO constraint_name
                     FROM pg_constraint c
