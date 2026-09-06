@@ -1,7 +1,7 @@
 """Compatibility marker for the production Alembic revision.
 
 Revision ID: 20260906_audit_logs
-Revises: 20260904_merge_prospection_link_head
+Revises: 20260904_merge_prosp_visit
 
 The SaaS audit trail is application-log based and deliberately does not use a
 new database table. Production was previously stamped with this revision, so
@@ -10,7 +10,7 @@ any production schema or data.
 """
 
 revision = "20260906_audit_logs"
-down_revision = "20260904_merge_prospection_link_head"
+down_revision = "20260904_merge_prosp_visit"
 branch_labels = None
 depends_on = None
 
