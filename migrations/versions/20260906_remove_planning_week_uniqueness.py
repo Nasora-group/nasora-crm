@@ -14,10 +14,9 @@ depends_on = None
 
 
 def upgrade():
-    # Older production schemas may still contain a unique constraint/index on
-    # (commercial_id, date), even though the SQLAlchemy model no longer does.
-    # Remove only that exact two-column uniqueness so several planning rows can
-    # legitimately coexist for the same commercial and week.
+    # PostgreSQL exposes index names through pg_class, not pg_index.
+    # Drop only unique constraints/indexes whose columns are exactly
+    # (commercial_id, date). This leaves all other indexes and constraints intact.
     op.execute(
         """
         DO $$
@@ -28,20 +27,21 @@ def upgrade():
             FOR idx IN
                 SELECT
                     i.indexrelid,
-                    i.relname AS index_name,
+                    t.relname AS index_name,
                     ARRAY(
                         SELECT a.attname
                         FROM unnest(i.indkey) WITH ORDINALITY AS k(attnum, ordinality)
                         JOIN pg_attribute a
                           ON a.attrelid = i.indrelid
                          AND a.attnum = k.attnum
-                        ORDER BY a.attname
+                        ORDER BY k.ordinality
                     ) AS columns
                 FROM pg_index i
-                JOIN pg_class t ON t.oid = i.indrelid
-                JOIN pg_namespace n ON n.oid = t.relnamespace
+                JOIN pg_class t ON t.oid = i.indexrelid
+                JOIN pg_class table_class ON table_class.oid = i.indrelid
+                JOIN pg_namespace n ON n.oid = table_class.relnamespace
                 WHERE n.nspname = current_schema()
-                  AND t.relname = 'planning'
+                  AND table_class.relname = 'planning'
                   AND i.indisunique
             LOOP
                 IF idx.columns = ARRAY['commercial_id', 'date'] THEN
