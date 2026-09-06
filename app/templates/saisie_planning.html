@@ -4,6 +4,13 @@
 <h1>{{ 'Modifier le planning du ' ~ planning.date.strftime('%d/%m/%Y') if mode == 'edit' else 'Saisie du planning hebdomadaire' }}</h1>
 <p style="color:var(--ink-soft);">Sélectionne les structures prévues pour chaque jour, puis précise le nom exact de chacune (ex : sélectionner « HOPITAL » puis indiquer « Hôpital Principal de Dakar »).</p>
 
+{% if mode == 'create' %}
+<div class="planning-help" style="margin:16px 0;padding:14px 18px;border-radius:10px;background:rgba(34,139,94,.08);border:1px solid rgba(34,139,94,.2);">
+    <strong>💡 Important :</strong> si la semaine choisie a déjà été préparée ou générée, elle ne sera pas créée une deuxième fois.
+    Dans ce cas, utilise <a href="{{ url_for('planning.visualiser') }}" style="font-weight:700;">Visualiser mon planning</a> pour ouvrir et modifier la semaine existante.
+</div>
+{% endif %}
+
 <form method="POST" id="planning-form">
     {{ formulaire.hidden_tag() }}
     <div class="form-group" style="max-width:280px;">
