@@ -8,25 +8,16 @@ old duplicate-week restriction.
 """
 
 from alembic import op
-import sqlalchemy as sa
 
-revision = "20260906_fix_planning_tenant_default"
+revision = "20260906_fix_plan_tenant"
 down_revision = "20260906_audit_logs"
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    op.alter_column(
-        "planning",
-        "tenant_id",
-        server_default=sa.text("116"),
-    )
+    op.execute("ALTER TABLE planning ALTER COLUMN tenant_id SET DEFAULT 116")
 
 
 def downgrade():
-    op.alter_column(
-        "planning",
-        "tenant_id",
-        server_default=None,
-    )
+    op.execute("ALTER TABLE planning ALTER COLUMN tenant_id DROP DEFAULT")
