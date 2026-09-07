@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.permissions import account_is_active, division_matches, has_role, is_admin, is_commercial, owns_record
+from app.permissions import account_is_active, division_matches, is_admin, is_commercial, owns_record
 
 
 def user(user_id=1, role="commercial", project="nasmedic", active=True):
@@ -49,8 +49,6 @@ def test_admin_owns_any_record():
 def test_animateur_is_not_a_medical_visitor():
     animateur = user(role="animateur")
     assert not is_commercial(animateur)
-    assert not has_role("commercial")
-    assert has_role("animateur") is False  # has_role uses current_user; covered by route-level tests
 
 
 def test_inactive_user_has_no_permissions():
