@@ -1,10 +1,9 @@
 """Synchronisation fiable entre Prospection et ClientVisit.
 
 Règle métier NASORA : une visite réelle = 1 Prospection = 1 ClientVisit.
-La synchronisation des nouvelles prospections est préparée pendant le flush,
-puis finalisée juste avant le commit. Cela évite les doublons lorsque les deux
-objets sont créés dans la même transaction et permet aussi les flush explicites
-utilisés par certains écrans/tests.
+La prospection est détectée pendant le flush, puis son miroir CRM est créé
+après attribution de son ID. Cela évite les doublons et les erreurs liées aux
+relations/foreign keys encore non persistées.
 """
 
 from sqlalchemy import event
@@ -143,7 +142,7 @@ def _has_linked_visit(session, prospection):
 
 
 def _prepare_prospection_mirror(session, prospection):
-    """Ajoute le miroir uniquement si aucune visite liée n'existe déjà."""
+    """Crée le client et la visite miroir après le flush de la prospection."""
     if _has_linked_visit(session, prospection):
         return
     client = _find_client_for_prospection(prospection)
@@ -163,7 +162,7 @@ def _prepare_prospection_mirror(session, prospection):
 
 @event.listens_for(Session, "before_flush")
 def prepare_visit_synchronization(session, flush_context, instances):
-    """Prépare les liens sans lancer de requête de miroir pendant le flush."""
+    """Prépare les liens et mémorise les prospections à synchroniser."""
     if session.info.get("visit_sync_running"):
         return
 
@@ -185,6 +184,7 @@ def prepare_visit_synchronization(session, flush_context, instances):
     for visit in new_visits:
         if visit.prospection is not None or visit.prospection_id is not None:
             continue
+
         matched = None
         for prospect in pending:
             if _same_visit_payload(visit, prospect, _find_client_for_visit(visit)):
@@ -216,19 +216,19 @@ def prepare_visit_synchronization(session, flush_context, instances):
         visit.prospection = prospect
 
 
-@event.listens_for(Session, "before_commit")
-def finalize_prospection_synchronization(session):
-    """Crée les miroirs des prospections juste avant le commit."""
+@event.listens_for(Session, "after_flush_postexec")
+def finalize_prospection_synchronization(session, flush_context):
+    """Crée les miroirs après que les nouvelles prospections ont leurs IDs."""
     if session.info.get("visit_sync_running"):
         return
-    pending = session.info.get("pending_prospection_sync", [])
+
+    pending = session.info.pop("pending_prospection_sync", [])
     if not pending:
         return
 
     session.info["visit_sync_running"] = True
     try:
-        for prospect in list(pending):
+        for prospect in pending:
             _prepare_prospection_mirror(session, prospect)
-        session.info.pop("pending_prospection_sync", None)
     finally:
         session.info.pop("visit_sync_running", None)
