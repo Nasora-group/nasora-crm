@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 
@@ -67,10 +68,8 @@ def new_animation_sale():
     return render_template("animation_sale_form.html", products=products, prices=prices, form_data={})
 
 
-@animation_sales_bp.route("/historique")
-@login_required
-@roles_required("admin", "commercial", "animateur")
-def my_history():
+def _animation_sales_query():
+    """Return the animation sales query restricted to the current user's scope."""
     from app.models import AnimationSale
 
     query = AnimationSale.query
@@ -78,26 +77,62 @@ def my_history():
         query = query.filter_by(animateur_id=current_user.id)
     elif current_user.role != "admin":
         query = query.filter_by(project=(current_user.project or "").strip().lower())
+    return query
+
+
+@animation_sales_bp.route("/historique")
+@login_required
+@roles_required("admin", "commercial", "animateur")
+def my_history():
+    from app.models import AnimationSale
+
+    selected_month = (request.args.get("month") or "").strip()
+    month_date = None
+    if selected_month:
+        try:
+            month_date = datetime.strptime(selected_month, "%Y-%m").date()
+        except ValueError:
+            selected_month = ""
+
+    query = _animation_sales_query()
+    if month_date:
+        if month_date.month == 12:
+            next_month = month_date.replace(year=month_date.year + 1, month=1, day=1)
+        else:
+            next_month = month_date.replace(month=month_date.month + 1, day=1)
+        query = query.filter(
+            AnimationSale.animation_date >= month_date,
+            AnimationSale.animation_date < next_month,
+        )
 
     sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.id.desc()).all()
-    grouped = []
-    groups = {}
+
+    # One line per date. The detail button opens the complete sales breakdown for that date.
+    by_date = {}
     for sale in sales:
-        key = (sale.animateur_id, sale.pharmacy_name, sale.animation_date)
-        groups.setdefault(key, []).append(sale)
-    for (animateur_id, pharmacy, animation_date), items in groups.items():
-        grouped.append({
-            "animateur": User.query.get(animateur_id),
-            "pharmacy_name": pharmacy,
+        by_date.setdefault(sale.animation_date, []).append(sale)
+
+    days = []
+    for animation_date, items in by_date.items():
+        days.append({
             "animation_date": animation_date,
             "items": items,
             "total_quantity": sum(i.quantity for i in items),
-            "total_amount": sum((i.total_amount for i in items), 0),
+            "total_amount": sum((i.total_amount for i in items), Decimal("0.00")),
         })
 
-    return render_template("animation_sales_history.html", groups=grouped,
-                           is_admin=current_user.role == "admin",
-                           current_user_id=current_user.id)
+    general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
+    general_quantity = sum(day["total_quantity"] for day in days)
+
+    return render_template(
+        "animation_sales_history.html",
+        days=days,
+        general_total=general_total,
+        general_quantity=general_quantity,
+        selected_month=selected_month,
+        is_admin=current_user.role == "admin",
+        current_user_id=current_user.id,
+    )
 
 
 @animation_sales_bp.route("/<int:sale_id>/modifier", methods=["GET", "POST"])
@@ -122,7 +157,6 @@ def edit_animation_sale(sale_id):
             quantity = int(raw_quantity)
             if quantity <= 0:
                 raise ValueError
-            from decimal import Decimal
             unit_price = Decimal(raw_price)
             if unit_price < 0:
                 raise ValueError
@@ -156,15 +190,24 @@ def animateur_history(user_id):
         AnimationSale.animation_date.desc(), AnimationSale.id.desc()
     ).all()
 
-    groups = {}
+    by_date = {}
     for sale in sales:
-        key = (sale.pharmacy_name, sale.animation_date)
-        groups.setdefault(key, []).append(sale)
-    history = [
-        {"pharmacy_name": pharmacy, "animation_date": date, "items": items,
+        by_date.setdefault(sale.animation_date, []).append(sale)
+    days = [
+        {"animation_date": date, "items": items,
          "total_quantity": sum(i.quantity for i in items),
-         "total_amount": sum((i.total_amount for i in items), 0)}
-        for (pharmacy, date), items in groups.items()
+         "total_amount": sum((i.total_amount for i in items), Decimal("0.00"))}
+        for date, items in by_date.items()
     ]
-    return render_template("animation_sales_history.html", groups=history, is_admin=True, animateur=animateur,
-                           current_user_id=current_user.id)
+    general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
+    general_quantity = sum(day["total_quantity"] for day in days)
+    return render_template(
+        "animation_sales_history.html",
+        days=days,
+        general_total=general_total,
+        general_quantity=general_quantity,
+        selected_month="",
+        is_admin=True,
+        animateur=animateur,
+        current_user_id=current_user.id,
+    )
