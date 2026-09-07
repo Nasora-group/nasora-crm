@@ -49,6 +49,7 @@
           <thead>
             <tr>
               <th style="text-align:left;padding:14px;">Date de vente</th>
+              {% if is_admin %}<th style="text-align:left;padding:14px;">Animateur(trice)</th>{% endif %}
               <th style="text-align:right;padding:14px;">Montant total</th>
               <th style="text-align:right;padding:14px;">Quantité</th>
               <th style="text-align:center;padding:14px;">Détail</th>
@@ -58,6 +59,13 @@
           {% for day in days %}
             <tr>
               <td style="padding:14px;border-top:1px solid #eee;font-weight:600;">{{ day['animation_date'].strftime('%d/%m/%Y') }}</td>
+              {% if is_admin %}
+                <td style="padding:14px;border-top:1px solid #eee;font-weight:600;">
+                  {% for name in day['animateurs'] %}
+                    <span style="display:inline-block;margin-right:6px;">{{ name }}</span>{% if not loop.last %}, {% endif %}
+                  {% endfor %}
+                </td>
+              {% endif %}
               <td style="padding:14px;border-top:1px solid #eee;text-align:right;font-weight:700;">{{ '%.2f'|format(day['total_amount']|float) }} €</td>
               <td style="padding:14px;border-top:1px solid #eee;text-align:right;">{{ day['total_quantity'] }}</td>
               <td style="padding:14px;border-top:1px solid #eee;text-align:center;">
@@ -65,7 +73,7 @@
               </td>
             </tr>
             <tr id="detail-{{ loop.index }}" style="display:none;background:#fafafa;">
-              <td colspan="4" style="padding:0 14px 16px 14px;">
+              <td colspan="{{ 5 if is_admin else 4 }}" style="padding:0 14px 16px 14px;">
                 <div style="padding:16px;border-left:4px solid #198754;">
                   <div style="font-weight:700;margin-bottom:10px;">Détail des ventes du {{ day['animation_date'].strftime('%d/%m/%Y') }}</div>
                   <div style="overflow-x:auto;">
@@ -110,6 +118,7 @@
           <tfoot>
             <tr>
               <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">TOTAL GÉNÉRAL</td>
+              {% if is_admin %}<td style="padding:14px;border-top:2px solid #ddd;"></td>{% endif %}
               <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ '%.2f'|format(general_total|float) }} €</td>
               <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ general_quantity }}</td>
               <td style="border-top:2px solid #ddd;"></td>
