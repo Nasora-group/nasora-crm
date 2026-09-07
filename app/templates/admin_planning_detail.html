@@ -5,21 +5,27 @@
     <div class="planning-detail-head">
         <div>
             <span class="planning-kicker">Organisation · Tournées</span>
-            <h1>Planning de {{ commercial.username }}</h1>
+            <h1>Les visites de {{ commercial.username }}</h1>
             <p>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</p>
         </div>
         <a href="{{ url_for('planning.admin_plannings') }}" class="btn btn-outline">← Retour à l'équipe</a>
     </div>
 
     {% if plannings %}
+        <div class="planning-section-head">
+            <div>
+                <h2>Cycles de visites</h2>
+                <p>Retrouvez ici les tournées prévues pour ce commercial, semaine par semaine.</p>
+            </div>
+        </div>
         {% for planning in plannings %}
             {% include "_planning_week_card.html" %}
         {% endfor %}
     {% else %}
         <section class="planning-empty-card">
             <div class="planning-empty-icon">□</div>
-            <h2>Pas encore de planning</h2>
-            <p>Aucune tournée n'est encore enregistrée pour ce commercial.</p>
+            <h2>Le planning est encore vide</h2>
+            <p>Aucune tournée n'est encore enregistrée pour ce commercial. Vous pouvez créer un cycle de visites en quelques clics.</p>
             <a href="{{ url_for('planning.admin_plannings') }}" class="btn">Créer un cycle de visites</a>
         </section>
     {% endif %}
