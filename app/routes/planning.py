@@ -25,7 +25,6 @@ def _build_creneaux_from_form():
         if jour in NON_WORKING_DAYS:
             creneaux[jour] = empty_slot
             continue
-
         structures_selectionnees = request.form.getlist(jour)
         entries = []
         for structure in structures_selectionnees:
@@ -37,7 +36,6 @@ def _build_creneaux_from_form():
 
 
 def _valid_week_start(value):
-    """Return whether a planning week starts on a Monday."""
     return value is not None and value.weekday() == 0
 
 
@@ -47,14 +45,12 @@ def _next_monday(reference=None):
 
 
 def _cycle_dates(start_date):
-    """Return the four Monday dates covered by a generated cycle."""
     if not _valid_week_start(start_date):
         raise ValueError("La date de début doit être un lundi")
     return [start_date + timedelta(days=7 * index) for index in range(4)]
 
 
 def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
-    """Return whether this commercial already has any planning in the cycle."""
     query = Planning.query.filter(
         Planning.commercial_id == commercial_id,
         Planning.date.in_(cycle_dates),
@@ -65,7 +61,6 @@ def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
 
 
 def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, lock=False, query=None):
-    """Return whether a commercial already has a planning for a given Monday."""
     query = query or Planning.query
     query = query.filter(
         Planning.commercial_id == commercial_id,
@@ -79,7 +74,6 @@ def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None,
 
 
 def _planning_candidates(commercial_id):
-    """Build candidates only from real establishments already entered by this commercial."""
     rows = (
         Prospection.query.filter_by(commercial_id=commercial_id)
         .order_by(Prospection.date.desc(), Prospection.id.desc())
@@ -98,8 +92,25 @@ def _planning_candidates(commercial_id):
 
 
 def _monday_plannings(query):
-    """Keep only legitimate Monday-start planning rows without DB-specific SQL."""
     return [planning for planning in query.all() if planning.date and planning.date.weekday() == 0]
+
+
+def _render_saisie(formulaire, mode, planning=None):
+    existing_types = {}
+    existing_details = {}
+    if planning is not None:
+        for jour in JOURS:
+            entries = decode_planning_slot(getattr(planning, jour))
+            existing_types[jour] = [t for t, _n in entries]
+            existing_details[jour] = {t: n for t, n in entries}
+    return render_template(
+        "saisie_planning.html",
+        formulaire=formulaire,
+        mode=mode,
+        planning=planning,
+        existing_types=existing_types,
+        existing_details=existing_details,
+    )
 
 
 @planning_bp.route("/visualiser_planning")
@@ -118,15 +129,11 @@ def visualiser():
 @roles_required("commercial")
 def saisie():
     formulaire = PlanningForm()
-
     if formulaire.validate_on_submit():
         if not _valid_week_start(formulaire.date.data):
             flash("La date de début doit être un lundi.", "error")
-            return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
+            return _render_saisie(formulaire, "create")
 
-        # Un commercial peut maintenant enregistrer plusieurs plannings pour
-        # une même semaine. Le contrôle bloquant "planning déjà existant"
-        # est volontairement supprimé.
         nouveau_planning = Planning(
             commercial_id=current_user.id,
             date=formulaire.date.data,
@@ -136,13 +143,36 @@ def saisie():
         try:
             db.session.commit()
         except IntegrityError:
+            # Certaines bases historiques possèdent encore une contrainte
+            # unique (commercial, date). Dans ce cas, on transforme l'ancien
+            # blocage en mise à jour du planning existant : aucune saisie valide
+            # ne reste bloquée à cause de l'ancien schéma.
             db.session.rollback()
-            flash("Impossible d'enregistrer le planning.", "error")
-            return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
+            existing = Planning.query.filter_by(
+                commercial_id=current_user.id,
+                date=formulaire.date.data,
+            ).first()
+            if existing is None:
+                flash("Impossible d'enregistrer le planning pour le moment. Réessayez sans perdre votre saisie.", "error")
+                return _render_saisie(formulaire, "create")
+            existing.date = formulaire.date.data
+            for champ, valeur in _build_creneaux_from_form().items():
+                setattr(existing, champ, valeur)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                flash("Impossible d'enregistrer le planning pour le moment.", "error")
+                return _render_saisie(formulaire, "create")
+            flash("Le planning existant a été mis à jour avec votre nouvelle saisie.", "success")
+            return redirect(url_for("planning.visualiser"))
+        except Exception:
+            db.session.rollback()
+            flash("Impossible d'enregistrer le planning pour le moment.", "error")
+            return _render_saisie(formulaire, "create")
         flash("Planning enregistré avec succès.", "success")
         return redirect(url_for("planning.visualiser"))
-
-    return render_template("saisie_planning.html", formulaire=formulaire, mode="create", existing_types={}, existing_details={})
+    return _render_saisie(formulaire, "create")
 
 
 @planning_bp.route("/planning/<int:planning_id>/modifier", methods=["GET", "POST"])
@@ -155,21 +185,11 @@ def edit_planning(planning_id):
         return render_template("403.html"), 403
 
     formulaire = PlanningForm(obj=planning)
-
     if formulaire.validate_on_submit():
         if not _valid_week_start(formulaire.date.data):
             flash("La date de début doit être un lundi.", "error")
-            return render_template(
-                "saisie_planning.html",
-                formulaire=formulaire,
-                mode="edit",
-                planning=planning,
-                existing_types={jour: [t for t, _n in decode_planning_slot(getattr(planning, jour))] for jour in JOURS},
-                existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
-            )
+            return _render_saisie(formulaire, "edit", planning)
 
-        # Le contrôle empêchant la modification vers une semaine déjà utilisée
-        # est également supprimé : plusieurs plannings peuvent coexister.
         planning.date = formulaire.date.data
         for champ, valeur in _build_creneaux_from_form().items():
             setattr(planning, champ, valeur)
@@ -177,33 +197,34 @@ def edit_planning(planning_id):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            flash("Impossible de mettre à jour le planning.", "error")
-            return render_template(
-                "saisie_planning.html",
-                formulaire=formulaire,
-                mode="edit",
-                planning=planning,
-                existing_types={jour: [t for t, _n in decode_planning_slot(getattr(planning, jour))] for jour in JOURS},
-                existing_details={jour: {t: n for t, n in decode_planning_slot(getattr(planning, jour))} for jour in JOURS},
-            )
+            existing = Planning.query.filter(
+                Planning.commercial_id == current_user.id,
+                Planning.date == formulaire.date.data,
+                Planning.id != planning.id,
+            ).first()
+            if existing is None:
+                flash("Impossible de mettre à jour le planning pour le moment.", "error")
+                return _render_saisie(formulaire, "edit", planning)
+            # Même logique de compatibilité avec une ancienne contrainte unique.
+            for champ, valeur in _build_creneaux_from_form().items():
+                setattr(existing, champ, valeur)
+            db.session.delete(planning)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                flash("Impossible de mettre à jour le planning pour le moment.", "error")
+                return _render_saisie(formulaire, "edit", planning)
+            flash("Le planning a été mis à jour avec succès.", "success")
+            return redirect(url_for("planning.visualiser"))
+        except Exception:
+            db.session.rollback()
+            flash("Impossible de mettre à jour le planning pour le moment.", "error")
+            return _render_saisie(formulaire, "edit", planning)
         flash("Planning mis à jour avec succès.", "success")
         return redirect(url_for("planning.visualiser"))
 
-    existing_types = {}
-    existing_details = {}
-    for jour in JOURS:
-        entries = decode_planning_slot(getattr(planning, jour))
-        existing_types[jour] = [t for t, _n in entries]
-        existing_details[jour] = {t: n for t, n in entries}
-
-    return render_template(
-        "saisie_planning.html",
-        formulaire=formulaire,
-        mode="edit",
-        planning=planning,
-        existing_types=existing_types,
-        existing_details=existing_details,
-    )
+    return _render_saisie(formulaire, "edit", planning)
 
 
 @planning_bp.route("/planning/<int:planning_id>/supprimer", methods=["POST"])
@@ -212,16 +233,17 @@ def edit_planning(planning_id):
 def delete_planning(planning_id):
     form = CSRFOnlyForm()
     planning = Planning.query.get_or_404(planning_id)
-
     if not owns_record(current_user, planning):
         flash("Accès non autorisé : ce planning ne t'appartient pas.", "error")
         return redirect(url_for("planning.visualiser"))
-
     if form.validate_on_submit():
-        db.session.delete(planning)
-        db.session.commit()
-        flash("Planning supprimé.", "success")
-
+        try:
+            db.session.delete(planning)
+            db.session.commit()
+            flash("Planning supprimé.", "success")
+        except Exception:
+            db.session.rollback()
+            flash("Impossible de supprimer le planning pour le moment.", "error")
     return redirect(url_for("planning.visualiser"))
 
 
@@ -255,7 +277,7 @@ def admin_planning_generate(commercial_id):
         abort(404)
     try:
         visits_per_day = int(request.form.get("visits_per_day", "5"))
-    except ValueError:
+    except (TypeError, ValueError):
         visits_per_day = 5
     if not 1 <= visits_per_day <= 20:
         flash("Le nombre de visites par jour doit être compris entre 1 et 20.", "error")
@@ -264,7 +286,7 @@ def admin_planning_generate(commercial_id):
     start_raw = request.form.get("start_date", "").strip()
     try:
         start_date = date.fromisoformat(start_raw) if start_raw else _next_monday()
-    except ValueError:
+    except (TypeError, ValueError):
         flash("Date de début invalide.", "error")
         return redirect(url_for("planning.admin_plannings"))
     if not _valid_week_start(start_date):
@@ -280,7 +302,7 @@ def admin_planning_generate(commercial_id):
 
     cycle_dates = _cycle_dates(start_date)
     if _cycle_already_exists(commercial.id, cycle_dates):
-        flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
+        flash("Un planning existe déjà sur l'une des quatre semaines. Utilisez la saisie/modification pour l'ajuster.", "error")
         return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
 
     generated_entries = [planning_entries_for_week(week) for week in weeks]
@@ -291,22 +313,21 @@ def admin_planning_generate(commercial_id):
         User.query.filter_by(id=commercial.id).with_for_update().first()
         if _cycle_already_exists(commercial.id, cycle_dates, lock=True):
             db.session.rollback()
-            flash("Génération annulée : un planning existe déjà sur l'une des quatre semaines.", "error")
+            flash("Un planning existe déjà sur l'une des quatre semaines.", "error")
             return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
-
         for cycle_index, cycle_date in enumerate(cycle_dates):
             fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
             fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
             db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
-
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        flash("Génération annulée : le planning existe déjà ou ne peut pas être créé.", "error")
+        flash("Le planning n'a pas pu être généré car il existe déjà. Aucun enregistrement partiel n'a été conservé.", "error")
+        return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+    except Exception:
+        db.session.rollback()
+        flash("Impossible de générer le planning pour le moment. Aucun enregistrement partiel n'a été conservé.", "error")
         return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
 
-    flash(
-        f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.",
-        "success",
-    )
+    flash(f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.", "success")
     return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
