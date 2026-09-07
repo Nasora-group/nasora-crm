@@ -120,25 +120,38 @@ def _prepare_prospection_mirror(session, prospection):
 
 
 def _replace_auto_mirror_with_explicit_visit(session, visit):
-    """Conserver la visite explicitement saisie et retirer son miroir automatique."""
+    """Garder la visite saisie et éliminer tout autre miroir de la prospection."""
     prospect = visit.prospection
     if prospect is None or prospect.id is None:
         return False
-    existing = (
-        ClientVisit.query
-        .filter_by(prospection_id=prospect.id, is_duplicate=False)
-        .order_by(ClientVisit.id.asc())
-        .first()
-    )
-    if existing is None or existing is visit:
-        return False
 
-    # Le garde-fou de models_clients.py interdit la suppression directe d'une
-    # visite liée. On retire temporairement le lien avant de supprimer uniquement
-    # le miroir automatique; la visite explicitement saisie reste l'objet suivi.
-    existing.prospection_id = None
-    session.delete(existing)
-    return True
+    linked = ClientVisit.query.filter_by(
+        prospection_id=prospect.id,
+        is_duplicate=False,
+    ).order_by(ClientVisit.id.asc()).all()
+
+    # Les visites nouvellement ajoutées dans le flush ne sont pas toujours
+    # visibles par la requête SQL; les inclure explicitement.
+    linked.extend(
+        obj for obj in session.new
+        if isinstance(obj, ClientVisit)
+        and not obj.is_duplicate
+        and obj is not visit
+        and obj.prospection is prospect
+        and obj not in linked
+    )
+
+    removed = False
+    for existing in linked:
+        if existing is visit or existing in session.deleted:
+            continue
+        # Le garde-fou métier interdit la suppression directe d'une visite
+        # liée. Le lien est donc retiré temporairement avant suppression du
+        # miroir automatique; la visite explicitement saisie reste intacte.
+        existing.prospection_id = None
+        session.delete(existing)
+        removed = True
+    return removed
 
 
 @event.listens_for(Session, "before_flush")
