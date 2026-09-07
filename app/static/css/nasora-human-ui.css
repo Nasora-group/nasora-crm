@@ -15,19 +15,15 @@
   --ns-human-shadow:0 8px 26px rgba(18,42,29,.06);
 }
 
-/* Ton général : moins administratif, plus accueillant. */
 body{background:var(--ns-human-bg)!important;color:var(--ns-human-ink)!important;line-height:1.5;}
 main.container{padding-top:22px;padding-bottom:28px;}
 h1,h2,h3,h4{font-weight:700;}
 h1{font-size:clamp(1.45rem,2.4vw,2rem);}
 h2{font-size:clamp(1.15rem,1.8vw,1.45rem);}
 p{color:inherit;}
-
-/* Titres : donner un contexte humain aux écrans. */
 .page-title,.section-title{margin-bottom:6px;}
 .page-subtitle,.section-subtitle,.subtitle,.muted{color:var(--ns-human-muted);}
 
-/* Surfaces plus douces et plus lisibles. */
 .card,.panel,.dashboard-card,.kpi-card,.chart-card,.summary-card,.crm-surface,.data-card,.page-hero,.crm-page-hero,.filter-form{
   border:1px solid var(--ns-human-border)!important;
   border-radius:var(--ns-human-radius)!important;
@@ -35,26 +31,29 @@ p{color:inherit;}
   background:var(--ns-human-surface)!important;
 }
 
-/* KPI : priorité au chiffre et à son sens. */
 .kpi-card{padding:18px!important;}
 .kpi-card .kpi-value,.kpi-card .value,.kpi-card strong{letter-spacing:-.025em;}
 .kpi-card .kpi-label,.kpi-card .label{color:var(--ns-human-muted);font-weight:600;}
 
-/* Formulaires : chaque champ doit sembler guidé, pas imposé. */
 form label{display:block;margin-bottom:5px;}
 input:not([type="hidden"]),select,textarea{font-size:.94rem!important;}
 input::placeholder,textarea::placeholder{color:#98a49d;}
 button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .btn-primary,.btn-success,.btn-submit,[class*="btn-primary"]{background:var(--ns-human-green)!important;border-color:var(--ns-human-green)!important;}
 .btn-primary:hover,.btn-success:hover,.btn-submit:hover,[class*="btn-primary"]:hover{background:var(--ns-human-green-dark)!important;border-color:var(--ns-human-green-dark)!important;}
-
-/* Actions secondaires : hiérarchie visuelle nette. */
 .btn-secondary,.btn-light,.btn-outline-secondary{background:#fff!important;color:#344239!important;border-color:#cfdad3!important;}
 
-/* Tables : faciliter le balayage visuel. */
+/* Tables : lecture rapide, survol discret et alignement plus confortable. */
 thead th{font-size:.74rem!important;letter-spacing:.045em!important;}
 tbody tr{transition:background .12s ease;}
 tbody tr:hover td{background:#f5faf7!important;}
+
+/* Focus clavier clairement visible sans modifier le fonctionnement. */
+:where(a,button,input,select,textarea):focus-visible{
+  outline:3px solid rgba(23,100,63,.22)!important;
+  outline-offset:2px!important;
+  border-color:var(--ns-human-green)!important;
+}
 
 /* Messages : parler à la personne plutôt qu'au système. */
 .flash{border-radius:12px!important;padding:12px 15px!important;font-weight:600;}
@@ -63,18 +62,13 @@ tbody tr:hover td{background:#f5faf7!important;}
 .flash-warning{background:#fff8e8!important;color:#76530b!important;border-color:#f0dfad!important;}
 .flash-danger,.flash-error{background:#fff1f0!important;color:#8a2f2a!important;border-color:#efcbc7!important;}
 
-/* États vides : éviter l'impression d'un écran cassé. */
 .empty-state,.no-data,.empty-message{text-align:center;padding:32px 18px;color:var(--ns-human-muted);}
 .empty-state strong,.no-data strong,.empty-message strong{display:block;color:var(--ns-human-ink);font-size:1.05rem;margin-bottom:5px;}
 
-/* Navigation : compacte, lisible, chaleureuse. */
 .site-nav{font-size:.88rem;}
 .nav-dropdown-trigger,.nav-logout-form button,.site-nav a{font-weight:600;}
-
-/* Footer discret. */
 footer{color:#7a857e!important;font-size:.82rem;}
 
-/* Mobile : priorité à l'action et à la lecture. */
 @media(max-width:820px){
   main.container{padding-top:14px;padding-left:12px!important;padding-right:12px!important;}
   .card,.panel,.dashboard-card,.kpi-card,.chart-card,.summary-card,.crm-surface,.data-card{border-radius:12px!important;}
