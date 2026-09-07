@@ -12,9 +12,9 @@ animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animati
 
 @animation_sales_bp.route("/nouvelle", methods=["GET", "POST"])
 @login_required
-@roles_required("admin", "commercial")
+@roles_required("admin", "commercial", "animateur")
 def new_animation_sale():
-    """Create an animation sale; animateurs use this flow, admins can test it."""
+    """Create an animation sale; animateurs can create their own sales."""
     if current_user.role not in {"animateur", "admin"}:
         abort(403)
 
@@ -69,12 +69,14 @@ def new_animation_sale():
 
 @animation_sales_bp.route("/historique")
 @login_required
-@roles_required("admin", "commercial")
+@roles_required("admin", "commercial", "animateur")
 def my_history():
     from app.models import AnimationSale
 
     query = AnimationSale.query
-    if current_user.role != "admin":
+    if current_user.role == "animateur":
+        query = query.filter_by(animateur_id=current_user.id)
+    elif current_user.role != "admin":
         query = query.filter_by(project=(current_user.project or "").strip().lower())
 
     sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.id.desc()).all()
@@ -93,7 +95,52 @@ def my_history():
             "total_amount": sum((i.total_amount for i in items), 0),
         })
 
-    return render_template("animation_sales_history.html", groups=grouped, is_admin=current_user.role == "admin")
+    return render_template("animation_sales_history.html", groups=grouped,
+                           is_admin=current_user.role == "admin",
+                           current_user_id=current_user.id)
+
+
+@animation_sales_bp.route("/<int:sale_id>/modifier", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "animateur")
+def edit_animation_sale(sale_id):
+    """Edit an animation sale: animateur only own sale; admin any sale."""
+    from app.models import AnimationSale
+
+    sale = AnimationSale.query.get_or_404(sale_id)
+
+    if current_user.role == "animateur" and sale.animateur_id != current_user.id:
+        abort(403)
+    if current_user.role not in {"animateur", "admin"}:
+        abort(403)
+
+    if request.method == "POST":
+        raw_quantity = (request.form.get("quantity") or "").strip()
+        raw_price = (request.form.get("unit_price") or "").strip().replace(",", ".")
+
+        try:
+            quantity = int(raw_quantity)
+            if quantity <= 0:
+                raise ValueError
+            from decimal import Decimal
+            unit_price = Decimal(raw_price)
+            if unit_price < 0:
+                raise ValueError
+        except (ValueError, TypeError, ArithmeticError):
+            flash("La quantité et le prix unitaire doivent être valides.", "error")
+            return render_template("animation_sale_edit.html", sale=sale)
+
+        sale.quantity = quantity
+        sale.unit_price = unit_price
+        try:
+            db.session.commit()
+            flash("Vente d’animation modifiée avec succès. Le montant total a été recalculé.", "success")
+            return redirect(url_for("animation_sales.my_history"))
+        except Exception:
+            db.session.rollback()
+            flash("Impossible de modifier la vente d’animation.", "error")
+
+    return render_template("animation_sale_edit.html", sale=sale)
 
 
 @animation_sales_bp.route("/animateur/<int:user_id>")
@@ -119,4 +166,5 @@ def animateur_history(user_id):
          "total_amount": sum((i.total_amount for i in items), 0)}
         for (pharmacy, date), items in groups.items()
     ]
-    return render_template("animation_sales_history.html", groups=history, is_admin=True, animateur=animateur)
+    return render_template("animation_sales_history.html", groups=history, is_admin=True, animateur=animateur,
+                           current_user_id=current_user.id)
