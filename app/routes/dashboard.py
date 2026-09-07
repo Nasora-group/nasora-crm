@@ -112,13 +112,7 @@ def _sync_professional_from_prospection(prospection, establishment=None, existin
     pr = prospection.produits_prescrits or None
     report = prospection.profils_prospect or None
 
-    visit = ClientVisit.query.filter_by(
-        prospection_id=prospection.id,
-        is_duplicate=False,
-    ).first()
-
-    # Legacy prospections created before the explicit link can be attached only
-    # to an exact old visit. Never guess from date alone.
+    visit = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first()
     if visit is None and previous_payload and previous_payload.get("client_id"):
         visit = ClientVisit.query.filter_by(
             client_id=previous_payload["client_id"],
@@ -152,31 +146,18 @@ def _sync_professional_from_prospection(prospection, establishment=None, existin
         visit.products_prescribed = pr
         visit.report = report
 
-    latest_client_visit_date = db.session.query(func.max(ClientVisit.date)).filter(
-        ClientVisit.client_id == client.id,
-        ClientVisit.is_duplicate.is_(False),
-    ).scalar()
-    client.last_visit = latest_client_visit_date or prospection.date
+    client.last_visit = prospection.date
 
 
 def _sync_professional_from_existing_prospection(prospection, establishment=None, existing_client=None, previous_payload=None):
-    return _sync_professional_from_prospection(
-        prospection,
-        establishment=establishment,
-        existing_client=existing_client,
-        previous_payload=previous_payload,
-    )
+    return _sync_professional_from_prospection(prospection, establishment=establishment, existing_client=existing_client, previous_payload=previous_payload)
 
 
 def _delete_linked_records_for_prospection(prospection):
-    visit = ClientVisit.query.filter_by(
-        prospection_id=prospection.id,
-        is_duplicate=False,
-    ).first()
+    visit = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first()
     if visit is not None:
         db.session.delete(visit)
         return
-
     client = _find_client_for_prospection(prospection)
     if client is None:
         return
@@ -229,9 +210,10 @@ def index():
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
                 establishment=form.nom_structure.data.strip(),
             )
+            # visit_sync.py prend en charge la création du Client + ClientVisit.
+            # L'ancienne route recréait une seconde visite après le before_flush,
+            # ce qui provoquait des doublons et des échecs en production.
             db.session.add(prospection)
-            db.session.flush()
-            _sync_professional_from_prospection(prospection, form.nom_structure.data)
             db.session.commit()
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
@@ -247,22 +229,12 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(
-        Prospection.date.desc(), Prospection.id.desc()
-    ).all()
+    rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(Prospection.date.desc(), Prospection.id.desc()).all()
     establishments_by_prospection = {}
     for row in rows:
         client = _find_client_for_prospection(row)
-        establishments_by_prospection[row.id] = (
-            (row.establishment or "").strip()
-            or (client.establishment if client and client.establishment else "")
-        )
-    return render_template(
-        "dashboard_prospections.html",
-        prospections=rows,
-        planning_statuses={},
-        establishments_by_prospection=establishments_by_prospection,
-    )
+        establishments_by_prospection[row.id] = ((row.establishment or "").strip() or (client.establishment if client and client.establishment else ""))
+    return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
@@ -284,19 +256,9 @@ def edit_prospection(prospection_id):
         form.nom_structure.data = (prospection.establishment or (client.establishment if client else "")) or ""
     if form.validate_on_submit():
         try:
-            linked_visit = ClientVisit.query.filter_by(
-                prospection_id=prospection.id,
-                is_duplicate=False,
-            ).first()
+            linked_visit = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first()
             previous_client = linked_visit.client if linked_visit is not None else _find_client_for_prospection(prospection)
-            previous_payload = {
-                "client_id": previous_client.id if previous_client else None,
-                "date": prospection.date,
-                "products_presented": prospection.produits_presentes or None,
-                "products_prescribed": prospection.produits_prescrits or None,
-                "report": prospection.profils_prospect or None,
-            }
-
+            previous_payload = {"client_id": previous_client.id if previous_client else None, "date": prospection.date, "products_presented": prospection.produits_presentes or None, "products_prescribed": prospection.produits_prescrits or None, "report": prospection.profils_prospect or None}
             prospection.date = form.date.data
             prospection.nom_client = form.nom_client.data.strip()
             prospection.specialite = form.specialite.data.strip()
@@ -306,12 +268,7 @@ def edit_prospection(prospection_id):
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
-            _sync_professional_from_existing_prospection(
-                prospection,
-                form.nom_structure.data,
-                existing_client=previous_client,
-                previous_payload=previous_payload,
-            )
+            _sync_professional_from_existing_prospection(prospection, form.nom_structure.data, existing_client=previous_client, previous_payload=previous_payload)
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             return redirect(url_for("dashboard.prospections"))
@@ -344,7 +301,6 @@ def delete_prospection(prospection_id):
 
 
 def _visit_targets_for_commercials(commercials):
-    """Read per-commercial visit targets with a safe 100-visit fallback."""
     targets = {commercial.id: 100 for commercial in commercials}
     if not commercials:
         return targets
@@ -363,81 +319,28 @@ def _visit_targets_for_commercials(commercials):
 @login_required
 @roles_required("admin")
 def direction():
-    """Dashboard Direction : pilotage de l'activité terrain, sans CA ni ventes."""
     date_start_raw = (request.args.get("date_start") or "").strip()
     date_end_raw = (request.args.get("date_end") or "").strip()
     commercial_raw = (request.args.get("commercial_id") or "").strip()
     zone = (request.args.get("zone") or "").strip()
     specialite = (request.args.get("specialite") or "").strip()
-
     def parse_date(value):
         try:
             return date.fromisoformat(value) if value else None
         except ValueError:
             return None
-
     date_start = parse_date(date_start_raw)
     date_end = parse_date(date_end_raw)
     commercial_id = int(commercial_raw) if commercial_raw.isdigit() else None
-
     query = Prospection.query.join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
-    if date_start:
-        query = query.filter(Prospection.date >= date_start)
-    if date_end:
-        query = query.filter(Prospection.date <= date_end)
-    if commercial_id:
-        query = query.filter(Prospection.commercial_id == commercial_id)
-    if zone:
-        query = query.filter(User.zone == zone)
-    if specialite:
-        query = query.filter(Prospection.specialite == specialite)
-
-    rows = query.all()
-    total_prospections = len(rows)
-    professionals = {professional_key(r) for r in rows if professional_key(r)}
-    structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
-    specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
-    zones_counter = Counter(((r.commercial.zone or "Non renseignée").strip() or "Non renseignée") for r in rows)
-    commercial_counter = Counter(r.commercial_id for r in rows)
-    evolution_counter = Counter(r.date.isoformat() for r in rows if r.date)
-
-    commercials = User.query.filter_by(role="commercial").order_by(User.username).all()
-    zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
-    specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
-
-    visit_targets = _visit_targets_for_commercials(commercials)
-    objectifs = []
-    for commercial in commercials:
-        if commercial_id and commercial.id != commercial_id:
-            continue
-        realise = commercial_counter.get(commercial.id, 0)
-        activity_target = visit_targets.get(commercial.id, 100)
-        taux = round(realise * 100 / activity_target, 1) if activity_target else 0
-        if taux >= 100:
-            statut, badge = "Objectif atteint", "bg-success"
-        elif taux >= 80:
-            statut, badge = "À surveiller", "bg-warning text-dark"
-        else:
-            statut, badge = "Insuffisant", "bg-danger"
-        objectifs.append({"name": commercial.username, "objectif": activity_target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
-
-    ordered_evolution = sorted(evolution_counter.items())
-    charts = {
-        "specialites": {"labels": list(specialites_counter.keys()), "values": list(specialites_counter.values())},
-        "zones": {"labels": list(zones_counter.keys()), "values": list(zones_counter.values())},
-        "commercials": {"labels": [next((c.username for c in commercials if c.id == cid), str(cid)) for cid, _ in commercial_counter.most_common()], "values": [count for _, count in commercial_counter.most_common()]},
-        "evolution": {"labels": [label for label, _ in ordered_evolution], "values": [count for _, count in ordered_evolution]},
-    }
-
-    return render_template(
-        "admin_dashboard_direction.html",
-        total_prospections=total_prospections,
-        total_professionals=len(professionals),
-        total_structures=len(structures),
-        objectifs=objectifs,
-        charts=charts,
-        commercials=commercials,
-        zones=zones,
-        specialites=specialites,
-        filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite},
-    )
+    if date_start: query = query.filter(Prospection.date >= date_start)
+    if date_end: query = query.filter(Prospection.date <= date_end)
+    if commercial_id: query = query.filter(Prospection.commercial_id == commercial_id)
+    if zone: query = query.filter(User.zone == zone)
+    if specialite: query = query.filter(Prospection.specialite == specialite)
+    rows = query.order_by(Prospection.date.desc(), Prospection.id.desc()).all()
+    establishments_by_prospection = {}
+    for row in rows:
+        client = _find_client_for_prospection(row)
+        establishments_by_prospection[row.id] = ((row.establishment or "").strip() or (client.establishment if client and client.establishment else ""))
+    return render_template("dashboard_direction.html", prospections=rows, establishments_by_prospection=establishments_by_prospection, commerciaux=User.query.filter_by(role="commercial").order_by(User.username).all(), date_start=date_start_raw, date_end=date_end_raw, commercial_id=commercial_id, zone=zone, specialite=specialite)
