@@ -34,13 +34,15 @@ def is_admin(user=None):
 
 
 def is_commercial(user=None):
-    """Return True only for a Visiteur médical.
+    """Return True for field users sharing the CRM/terrain permissions.
 
-    The database keeps the historical ``commercial`` role value for backward
-    compatibility; the business/UI label is "Visiteur médical". Animateurs
-    have their own role and must not inherit Visiteur médical permissions.
+    ``commercial`` is the historical database value displayed as
+    "Visiteur médical" in the UI. Animateurs use a separate database role but
+    intentionally share the same CRM/field permissions. Their additional
+    Sell-Out/animation-sales capability is enforced by the dedicated routes,
+    not by this generic CRM predicate.
     """
-    return normalized_role(user) == COMMERCIAL_ROLE
+    return normalized_role(user) in {COMMERCIAL_ROLE, ANIMATEUR_ROLE}
 
 
 def account_is_active(user=None):
@@ -49,9 +51,19 @@ def account_is_active(user=None):
 
 
 def has_role(*roles):
-    """Return whether the current user has one of the supplied roles."""
+    """Return whether the current user has one of the supplied roles.
+
+    For backward compatibility, the two field roles are interchangeable for
+    shared CRM permissions. Sell-Out-specific routes must still require
+    ``animateur`` explicitly when that capability is intended to be exclusive.
+    """
     allowed = {str(role).strip().lower() for role in roles if str(role).strip()}
-    return account_is_active() and normalized_role() in allowed
+    if not account_is_active():
+        return False
+    role = normalized_role()
+    if role in {COMMERCIAL_ROLE, ANIMATEUR_ROLE} and allowed.intersection({COMMERCIAL_ROLE, ANIMATEUR_ROLE}):
+        return True
+    return role in allowed
 
 
 def division_matches(user, division):
@@ -67,9 +79,8 @@ def division_matches(user, division):
 def owns_record(user, record, owner_field="commercial_id"):
     """Return True when a record belongs to the authenticated user.
 
-    Admins may access records across users. Visiteurs médicaux and animateurs
-    may only access records whose configured owner field matches their own
-    user id.
+    Admins, Visiteurs médicaux and animateurs may only access records whose
+    configured owner field matches their own user id.
     """
     if not account_is_active(user) or record is None:
         return False
@@ -90,8 +101,12 @@ def authorize_role(*roles):
             if not getattr(current_user, "is_active_account", False):
                 flash("Votre compte est désactivé. Contactez un administrateur.", "error")
                 return redirect(url_for("auth.login"))
-            if normalized_role() not in allowed:
-                abort(403)
+            role = normalized_role()
+            if role not in allowed:
+                # Shared CRM/terrain routes historically use the technical
+                # "commercial" role. Treat animateur as equivalent there.
+                if not (role in {COMMERCIAL_ROLE, ANIMATEUR_ROLE} and allowed.intersection({COMMERCIAL_ROLE, ANIMATEUR_ROLE})):
+                    abort(403)
             return view_func(*args, **kwargs)
         return wrapped
     return decorator
