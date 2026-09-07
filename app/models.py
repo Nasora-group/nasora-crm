@@ -42,6 +42,20 @@ class EricFavreSale(SaleMixin,db.Model):
     __tablename__="eric_favre_sale"; product_id=db.Column(db.Integer,db.ForeignKey("eric_favre_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("EricFavreProduct"); commercial=db.relationship("User")
 class TroisCheneSale(SaleMixin,db.Model):
     __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("TroisCheneProduct")
+
+class AnimationSale(db.Model):
+    __tablename__="animation_sale"
+    id=db.Column(db.Integer,primary_key=True)
+    animateur_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True)
+    pharmacy_name=db.Column(db.String(200),nullable=False,index=True)
+    animation_date=db.Column(db.Date,nullable=False,index=True)
+    product_name=db.Column(db.String(200),nullable=False)
+    quantity=db.Column(db.Integer,nullable=False)
+    project=db.Column(db.String(50),nullable=False,index=True)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow,nullable=False)
+    animateur=db.relationship("User",foreign_keys=[animateur_id],backref=db.backref("animation_sales",lazy="dynamic"))
+    __table_args__=(db.CheckConstraint("quantity > 0",name="ck_animation_sale_quantity_positive"),)
+
 SUPPLIERS={"nova_pharma":{"label":"Nova Pharma","division":"nasderm","product_model":NovaPharmaProduct,"sale_model":NovaPharmaSale,"archived":True},"gilbert":{"label":"Gilbert","division":"nasderm","product_model":GilbertProduct,"sale_model":GilbertSale,"archived":False},"eric_favre":{"label":"Eric Favre","division":"nasmedic","product_model":EricFavreProduct,"sale_model":EricFavreSale,"archived":False},"trois_chene":{"label":"3 Chênes Pharma","division":"nasmedic","product_model":TroisCheneProduct,"sale_model":TroisCheneSale,"archived":False}}
 DIVISION_SUPPLIERS={"nasderm":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasderm" and not s["archived"]],"nasmedic":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasmedic" and not s["archived"]]}
 class SalesObjective(db.Model):
