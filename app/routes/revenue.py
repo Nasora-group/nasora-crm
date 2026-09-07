@@ -31,16 +31,17 @@ def _commercial_only_scope():
     return getattr(current_user, "role", None) == "commercial"
 
 
-def _month_expression(sale_model):
-    """Expression mensuelle compatible PostgreSQL et SQLite (utilisé par la CI)."""
+def _month_sql_expression():
+    """Return a portable SQL expression for YYYY-MM month grouping."""
     if db.engine.dialect.name == "sqlite":
-        return func.strftime("%Y-%m", sale_model.date)
-    return func.to_char(sale_model.date, "YYYY-MM")
+        return "strftime('%Y-%m', date)"
+    return "TO_CHAR(date, 'YYYY-MM')"
 
 
 def _monthly_revenue_for_division(division, scope_to_commercial=True):
     """Retourne le CA mensuel directement depuis les tables de ventes."""
     combined = {}
+    month_expression = _month_sql_expression()
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
         table_name = sale_model.__tablename__
         conditions = ["project = :division"]
@@ -49,15 +50,16 @@ def _monthly_revenue_for_division(division, scope_to_commercial=True):
             conditions.append("commercial_id = :commercial_id")
             params["commercial_id"] = current_user.id
         sql = text(
-            f"SELECT TO_CHAR(date, 'YYYY-MM') AS month, "
+            f"SELECT {month_expression} AS month, "
             f"COALESCE(SUM(COALESCE(quantity, 0) * COALESCE(price, 0)), 0) AS revenue "
             f"FROM {table_name} WHERE {' AND '.join(conditions)} "
-            f"GROUP BY TO_CHAR(date, 'YYYY-MM') ORDER BY TO_CHAR(date, 'YYYY-MM')"
+            f"GROUP BY {month_expression} ORDER BY {month_expression}"
         )
         rows = db.session.execute(sql, params).mappings().all()
         for row in rows:
             month = row["month"]
-            combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
+            if month:
+                combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
 
     labels = sorted(combined.keys())
     totals = [sum(combined[month].values()) for month in labels]
