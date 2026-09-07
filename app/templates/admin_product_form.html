@@ -23,8 +23,8 @@
 
 <div class="product-form-page">
     <section class="product-form-hero">
-        <h1>{{ 'Nouvelle référence' if mode == 'create' else 'Modifier ' ~ product.name }} — {{ supplier.label }}</h1>
-        <p>Renseignez les informations de la référence et son statut de disponibilité.</p>
+        <h1>{{ 'Ajouter une référence' if mode == 'create' else 'Modifier ' ~ product.name }} — {{ supplier.label }}</h1>
+        <p>{{ 'Ajoutez une nouvelle référence en quelques informations.' if mode == 'create' else 'Mettez à jour les informations de cette référence sans perdre vos repères.' }}</p>
     </section>
 
     <section class="product-form-card">
@@ -33,6 +33,7 @@
 
             {% if form.errors %}
                 <div class="product-errors">
+                    <strong>Vérifiez les informations saisies :</strong>
                     <ul>
                         {% for field, errors in form.errors.items() %}
                             {% for error in errors %}
@@ -46,17 +47,17 @@
             <div class="product-form-grid">
                 <div class="product-field">
                     {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-input") }}
+                    {{ form.name(class="form-input", placeholder="Nom du produit") }}
                 </div>
 
                 <div class="product-field">
                     {{ form.reference.label(class="form-label") }}
-                    {{ form.reference(class="form-input", placeholder="ex : NP-2026-014 (facultatif)") }}
+                    {{ form.reference(class="form-input", placeholder="Ex. : NP-2026-014 (facultatif)") }}
                 </div>
 
                 <div class="product-field">
                     {{ form.default_price.label(class="form-label") }}
-                    {{ form.default_price(class="form-input", step="0.01") }}
+                    {{ form.default_price(class="form-input", step="0.01", placeholder="Prix de référence") }}
                 </div>
 
                 <div class="product-field full">
@@ -68,7 +69,7 @@
             </div>
 
             <div class="product-actions">
-                {{ form.submit(class="btn-submit") }}
+                {{ form.submit(class="btn-submit", value="Enregistrer la référence") }}
                 <a href="{{ url_for('products.list_products', slug=slug) }}" class="btn btn-outline">Annuler</a>
             </div>
         </form>
