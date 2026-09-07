@@ -13,7 +13,7 @@ from flask_login import current_user
 
 
 ADMIN_ROLE = "admin"
-COMMERCIAL_ROLE = "commercial"
+COMMERCIAL_ROLE = "commercial"  # valeur technique historique = Visiteur médical
 ANIMATEUR_ROLE = "animateur"
 
 
@@ -34,12 +34,13 @@ def is_admin(user=None):
 
 
 def is_commercial(user=None):
-    """Return True for both medical visitors and animateurs.
+    """Return True only for a Visiteur médical.
 
-    Animateur(trice) intentionally follows the same authorization rules as
-    the legacy ``commercial`` role, while keeping its own stored role value.
+    The database keeps the historical ``commercial`` role value for backward
+    compatibility; the business/UI label is "Visiteur médical". Animateurs
+    have their own role and must not inherit Visiteur médical permissions.
     """
-    return normalized_role(user) in {COMMERCIAL_ROLE, ANIMATEUR_ROLE}
+    return normalized_role(user) == COMMERCIAL_ROLE
 
 
 def account_is_active(user=None):
@@ -48,15 +49,8 @@ def account_is_active(user=None):
 
 
 def has_role(*roles):
-    """Return whether the current user has one of the supplied roles.
-
-    ``commercial`` and ``animateur`` are treated as equivalent permissions.
-    """
+    """Return whether the current user has one of the supplied roles."""
     allowed = {str(role).strip().lower() for role in roles if str(role).strip()}
-    if COMMERCIAL_ROLE in allowed:
-        allowed.add(ANIMATEUR_ROLE)
-    if ANIMATEUR_ROLE in allowed:
-        allowed.add(COMMERCIAL_ROLE)
     return account_is_active() and normalized_role() in allowed
 
 
@@ -73,7 +67,7 @@ def division_matches(user, division):
 def owns_record(user, record, owner_field="commercial_id"):
     """Return True when a record belongs to the authenticated user.
 
-    Admins may access records across users. Medical visitors and animateurs
+    Admins may access records across users. Visiteurs médicaux and animateurs
     may only access records whose configured owner field matches their own
     user id.
     """
@@ -85,16 +79,8 @@ def owns_record(user, record, owner_field="commercial_id"):
 
 
 def authorize_role(*roles):
-    """Decorator for routes requiring authentication and one of the roles.
-
-    ``commercial`` and ``animateur`` are interchangeable for authorization,
-    so existing routes protected for commercial users also accept animateurs.
-    """
+    """Decorator for routes requiring authentication and one of the roles."""
     allowed = {str(role).strip().lower() for role in roles if str(role).strip()}
-    if COMMERCIAL_ROLE in allowed:
-        allowed.add(ANIMATEUR_ROLE)
-    if ANIMATEUR_ROLE in allowed:
-        allowed.add(COMMERCIAL_ROLE)
 
     def decorator(view_func):
         @wraps(view_func)
