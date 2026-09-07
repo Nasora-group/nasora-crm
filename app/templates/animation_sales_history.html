@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Historique des ventes d’animations — NASORA CRM{% endblock %}
+{% block title %}Historique des ventes d’animations - NASORA CRM{% endblock %}
 {% block content %}
 <section class="crm-page" style="max-width:1200px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
@@ -33,7 +33,7 @@
   <div class="card" style="padding:22px;margin-bottom:20px;background:linear-gradient(135deg,#f4fff8,#ffffff);">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
       <div>
-        <div style="font-size:.9rem;opacity:.7;">TOTAL DES VENTES{% if selected_month %} — {{ selected_month }}{% endif %}</div>
+        <div style="font-size:.9rem;opacity:.7;">TOTAL DES VENTES{% if selected_month %} - {{ selected_month }}{% endif %}</div>
         <div style="font-size:2rem;font-weight:800;margin-top:4px;">{{ '%.2f'|format(general_total|float) }} €</div>
       </div>
       <div style="text-align:right;">
@@ -93,7 +93,7 @@
                       <tbody>
                         {% for sale in day['items'] %}
                           <tr>
-                            {% if is_admin %}<td style="padding:8px;border-top:1px solid #eee;">{{ sale.animateur.username if sale.animateur else '—' }}</td>{% endif %}
+                            {% if is_admin %}<td style="padding:8px;border-top:1px solid #eee;">{{ sale.animateur.username if sale.animateur else '-' }}</td>{% endif %}
                             <td style="padding:8px;border-top:1px solid #eee;">{{ sale.pharmacy_name }}</td>
                             <td style="padding:8px;border-top:1px solid #eee;">{{ sale.product_name }}</td>
                             <td style="padding:8px;border-top:1px solid #eee;text-align:right;">{{ '%.2f'|format(sale.unit_price|float) }} €</td>
@@ -103,7 +103,7 @@
                               {% if current_user.role == 'admin' or (current_user.role == 'animateur' and sale.animateur_id == current_user_id) %}
                                 <a class="btn btn-sm btn-primary" href="{{ url_for('animation_sales.edit_animation_sale', sale_id=sale.id) }}">Modifier</a>
                               {% else %}
-                                <span style="opacity:.55;">—</span>
+                                <span style="opacity:.55;">-</span>
                               {% endif %}
                             </td>
                           </tr>
