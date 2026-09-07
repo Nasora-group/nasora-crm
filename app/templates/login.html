@@ -3,19 +3,22 @@
 {% block content %}
 <div class="login-container">
     <form class="login-form" method="POST">
-        <h1>Connexion</h1>
+        <div class="login-eyebrow">NASORA CRM</div>
+        <h1>Bienvenue</h1>
+        <p class="login-intro">Connectez-vous pour retrouver votre espace de travail et votre activité.</p>
         {{ form.hidden_tag() }}
         <div class="form-group">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-input", autofocus=true) }}
+            {{ form.username.label(class="form-label", text="Identifiant") }}
+            {{ form.username(class="form-input", autofocus=true, placeholder="Votre identifiant") }}
         </div>
         <div class="form-group">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-input") }}
+            {{ form.password.label(class="form-label", text="Mot de passe") }}
+            {{ form.password(class="form-input", placeholder="Votre mot de passe") }}
         </div>
         <div class="form-group">
-            {{ form.submit(class="btn-submit") }}
+            {{ form.submit(class="btn-submit", value="Se connecter") }}
         </div>
+        <p class="login-help">Vos accès sont personnels. En cas de difficulté, rapprochez-vous de votre administrateur.</p>
     </form>
 </div>
 {% endblock %}
