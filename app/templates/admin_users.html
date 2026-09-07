@@ -21,7 +21,7 @@
     </section>
 
     <form method="GET" class="users-filters" aria-label="Filtres utilisateurs">
-        <div class="users-field"><label for="role">Rôle</label><select id="role" name="role"><option value="">Tous les rôles</option><option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Administrateur</option><option value="commercial" {% if request.args.get('role') == 'commercial' %}selected{% endif %}>Commercial</option></select></div>
+        <div class="users-field"><label for="role">Rôle</label><select id="role" name="role"><option value="">Tous les rôles</option><option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Administrateur</option><option value="commercial" {% if request.args.get('role') == 'commercial' %}selected{% endif %}>Visiteur médical</option><option value="animateur" {% if request.args.get('role') == 'animateur' %}selected{% endif %}>Animateur(trice)</option></select></div>
         <div class="users-field"><label for="project">Division</label><select id="project" name="project"><option value="">Toutes les divisions</option><option value="nasderm" {% if request.args.get('project') == 'nasderm' %}selected{% endif %}>NASDERM</option><option value="nasmedic" {% if request.args.get('project') == 'nasmedic' %}selected{% endif %}>NASMEDIC</option></select></div>
         <div class="users-filter-actions"><button type="submit" class="users-btn">Filtrer</button><a href="{{ url_for('users.list_users') }}" class="users-btn secondary">Réinitialiser</a></div>
     </form>
@@ -37,7 +37,7 @@
                     {% for user in users %}
                     <tr>
                         <td><span class="user-name">{{ user.username }}</span>{% if user.id == current_user.id %} <span class="user-you">(toi)</span>{% endif %}</td>
-                        <td><span class="user-role">{{ 'Administrateur' if user.role == 'admin' else 'Commercial' }}</span></td>
+                        <td><span class="user-role">{% if user.role == 'admin' %}Administrateur{% elif user.role == 'commercial' %}Visiteur médical{% elif user.role == 'animateur' %}Animateur(trice){% else %}{{ user.role }}{% endif %}</span></td>
                         <td><span class="user-division">{{ user.project|upper }}</span></td><td>{{ user.zone or '—' }}</td>
                         <td>{% if user.is_active_account %}<span class="user-status active">Actif</span>{% else %}<span class="user-status inactive">Désactivé</span>{% endif %}</td>
                         <td><div class="user-actions"><a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="users-btn">Modifier</a>{% if user.id != current_user.id %}<form method="POST" action="{{ url_for('users.toggle_active', user_id=user.id) }}"><span class="sr-only">Gestion du compte {{ user.username }}</span>{{ toggle_form.hidden_tag() }}<button type="submit" class="users-btn {% if user.is_active_account %}danger{% else %}warning{% endif %}" onclick="return confirm('{{ 'Désactiver' if user.is_active_account else 'Réactiver' }} le compte {{ user.username }} ?');">{{ 'Désactiver' if user.is_active_account else 'Réactiver' }}</button></form>{% endif %}</div></td>
