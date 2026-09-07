@@ -100,7 +100,7 @@ def _linked_visits(session, prospection):
     if prospection.id is None:
         return [obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and (obj.prospection is prospection or obj.prospection_id == prospection.id)]
     visits = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).order_by(ClientVisit.id.asc()).all()
-    visits.extend(obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and obj.prospection is prospection)
+    visits.extend(obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and obj.prospection is prospection and obj not in visits)
     return visits
 
 
@@ -124,14 +124,10 @@ def _replace_auto_mirror_with_explicit_visit(session, visit):
     prospect = visit.prospection
     if prospect is None or prospect.id is None:
         return False
-
     linked = ClientVisit.query.filter_by(
         prospection_id=prospect.id,
         is_duplicate=False,
     ).order_by(ClientVisit.id.asc()).all()
-
-    # Les visites nouvellement ajoutées dans le flush ne sont pas toujours
-    # visibles par la requête SQL; les inclure explicitement.
     linked.extend(
         obj for obj in session.new
         if isinstance(obj, ClientVisit)
@@ -140,14 +136,10 @@ def _replace_auto_mirror_with_explicit_visit(session, visit):
         and obj.prospection is prospect
         and obj not in linked
     )
-
     removed = False
     for existing in linked:
         if existing is visit or existing in session.deleted:
             continue
-        # Le garde-fou métier interdit la suppression directe d'une visite
-        # liée. Le lien est donc retiré temporairement avant suppression du
-        # miroir automatique; la visite explicitement saisie reste intacte.
         existing.prospection_id = None
         session.delete(existing)
         removed = True
@@ -197,16 +189,20 @@ def prepare_visit_synchronization(session, flush_context, instances):
         visit.prospection = prospect
 
 
-@event.listens_for(Session, "after_flush_postexec")
-def finalize_prospection_synchronization(session, flush_context):
+@event.listens_for(Session, "before_commit")
+def finalize_prospection_synchronization(session):
+    """Créer le miroir seulement au commit, après que les visites explicites ont été proposées."""
     if session.info.get("visit_sync_running"):
         return
-    pending = session.info.pop("pending_prospection_sync", [])
-    if not pending:
+    prospects = [obj for obj in session.new if isinstance(obj, Prospection)]
+    prospects.extend(obj for obj in session.dirty if isinstance(obj, Prospection) and obj.id is not None)
+    if not prospects:
         return
     session.info["visit_sync_running"] = True
     try:
-        for prospect in pending:
+        # Une requête ici peut provoquer le flush des Prospections; c'est voulu:
+        # l'identifiant est nécessaire pour le lien ClientVisit.
+        for prospect in prospects:
             _prepare_prospection_mirror(session, prospect)
     finally:
         session.info.pop("visit_sync_running", None)
