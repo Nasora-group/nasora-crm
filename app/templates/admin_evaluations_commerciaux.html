@@ -5,16 +5,16 @@
     <section class="eval-hero">
         <div>
             <span class="eval-kicker">Pilotage · Évaluations</span>
-            <h1>Évaluations des commerciaux</h1>
-            <p>Sélectionnez un commercial pour consulter son historique ou saisir une nouvelle évaluation mensuelle.</p>
+            <h1>Suivi des commerciaux</h1>
+            <p>Retrouvez chaque membre de l'équipe, consultez son parcours et préparez simplement son évaluation mensuelle.</p>
         </div>
-        <a href="{{ url_for('evaluations.classement') }}" class="btn eval-hero-action">🏆 Classement du mois</a>
+        <a href="{{ url_for('evaluations.classement') }}" class="btn eval-hero-action">🏆 Voir le classement</a>
     </section>
 
     <section class="eval-section-head">
         <div>
-            <h2>Équipe commerciale</h2>
-            <p>Accédez rapidement au suivi individuel de chaque commercial.</p>
+            <h2>Votre équipe</h2>
+            <p>Choisissez un commercial pour ouvrir son suivi individuel.</p>
         </div>
         <span class="eval-count">{{ commerciaux|length }} commercial{% if commerciaux|length != 1 %}aux{% endif %}</span>
     </section>
@@ -33,13 +33,13 @@
                 <span>Division</span><strong>{{ commercial.project|upper }}</strong>
                 <span>Zone</span><strong>{{ commercial.zone or '—' }}</strong>
             </div>
-            <a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline eval-full-action">Voir les évaluations <span>→</span></a>
+            <a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline eval-full-action">Ouvrir le suivi <span>→</span></a>
         </article>
         {% else %}
         <div class="eval-empty">
             <div class="eval-empty-icon">✓</div>
-            <h2>Aucun commercial trouvé</h2>
-            <p>La liste des commerciaux à évaluer est actuellement vide.</p>
+            <h2>Aucun commercial à afficher</h2>
+            <p>La liste de l'équipe est actuellement vide. Les commerciaux apparaîtront ici dès qu'ils seront disponibles.</p>
         </div>
         {% endfor %}
     </div>
