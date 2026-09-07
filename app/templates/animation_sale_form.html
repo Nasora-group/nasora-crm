@@ -5,7 +5,7 @@
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
     <div>
       <h1 style="margin-bottom:6px;">Ventes réalisées pendant une animation</h1>
-      <p style="margin:0;opacity:.75;">Renseignez la pharmacie, la date d’animation et les quantités vendues par produit.</p>
+      <p style="margin:0;opacity:.75;">Renseignez la pharmacie, la date et les quantités vendues. Le montant est calculé automatiquement avec le prix de chaque produit.</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
@@ -18,9 +18,11 @@
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:12px;">Produits vendus</h2>
-    <div style="display:grid;grid-template-columns:1fr 180px;gap:10px 18px;align-items:center;">
+    <div style="display:grid;grid-template-columns:1fr 140px 180px;gap:10px 18px;align-items:center;">
+      <strong>Produit</strong><strong>Prix unitaire</strong><strong>Quantité vendue</strong>
       {% for product in products %}
       <label for="q-{{ loop.index }}">{{ product }}</label>
+      <span>{{ '%.2f'|format(prices.get(product, 0)|float) }} €</span>
       <input id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Quantité vendue">
       {% else %}
       <p>Aucun produit actif n’est disponible pour votre division.</p>
