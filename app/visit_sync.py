@@ -1,7 +1,4 @@
-"""Synchronisation fiable entre Prospection et ClientVisit.
-
-Règle métier NASORA : une visite réelle = 1 Prospection = 1 ClientVisit.
-"""
+"""Synchronisation fiable entre Prospection et ClientVisit."""
 
 from sqlalchemy import event
 from sqlalchemy.orm import Session
@@ -99,39 +96,19 @@ def _sync_client_fields(prospection, client):
     return client
 
 
-def _has_linked_visit(session, prospection):
-    for obj in session.new:
-        if isinstance(obj, ClientVisit) and not obj.is_duplicate and (obj.prospection is prospection or obj.prospection_id == prospection.id):
-            return True
+def _linked_visits(session, prospection):
     if prospection.id is None:
-        return False
-    return ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first() is not None
-
-
-def _replace_auto_mirror_with_explicit_visit(session, visit):
-    """Remplace un miroir déjà créé par la visite explicitement saisie."""
-    prospect = visit.prospection
-    if prospect is None or prospect.id is None:
-        return
-    existing = (
-        ClientVisit.query
-        .filter_by(prospection_id=prospect.id, is_duplicate=False)
-        .order_by(ClientVisit.id.asc())
-        .first()
-    )
-    if existing is None or existing is visit:
-        return
-    # Détacher avant suppression afin que le garde-fou des visites liées ne
-    # considère pas cette opération comme une suppression directe interdite.
-    existing.prospection_id = None
-    session.delete(existing)
+        return [obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and (obj.prospection is prospection or obj.prospection_id == prospection.id)]
+    visits = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).order_by(ClientVisit.id.asc()).all()
+    visits.extend(obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and obj.prospection is prospection)
+    return visits
 
 
 def _prepare_prospection_mirror(session, prospection):
-    if _has_linked_visit(session, prospection):
+    linked = _linked_visits(session, prospection)
+    if linked:
         return
-    client = _find_client_for_prospection(prospection)
-    client = _sync_client_fields(prospection, client)
+    client = _sync_client_fields(prospection, _find_client_for_prospection(prospection))
     session.add(ClientVisit(
         client=client,
         prospection=prospection,
@@ -143,38 +120,52 @@ def _prepare_prospection_mirror(session, prospection):
     ))
 
 
+def _merge_new_linked_visit(session, visit):
+    """Une visite explicitement liée ne doit jamais créer une seconde ligne."""
+    prospect = visit.prospection or (db.session.get(Prospection, visit.prospection_id) if visit.prospection_id else None)
+    if prospect is None:
+        return False
+    existing = ClientVisit.query.filter_by(prospection_id=prospect.id, is_duplicate=False).order_by(ClientVisit.id.asc()).first()
+    if existing is None:
+        for obj in session.new:
+            if isinstance(obj, ClientVisit) and obj is not visit and not obj.is_duplicate and obj.prospection is prospect:
+                existing = obj
+                break
+    if existing is None or existing is visit:
+        return False
+    existing.client_id = visit.client_id or existing.client_id
+    existing.commercial_id = visit.commercial_id
+    existing.date = visit.date
+    existing.products_presented = visit.products_presented
+    existing.products_prescribed = visit.products_prescribed
+    existing.report = visit.report
+    existing.next_visit = visit.next_visit
+    session.expunge(visit)
+    return True
+
+
 @event.listens_for(Session, "before_flush")
 def prepare_visit_synchronization(session, flush_context, instances):
     if session.info.get("visit_sync_running"):
         return
-
     new_objects = list(session.new)
     new_prospects = [obj for obj in new_objects if isinstance(obj, Prospection)]
     new_visits = [obj for obj in new_objects if isinstance(obj, ClientVisit) and not obj.is_duplicate]
-
     pending = session.info.setdefault("pending_prospection_sync", [])
     for prospect in new_prospects:
         if prospect not in pending:
             pending.append(prospect)
-
     for visit in new_visits:
         if visit.prospection is not None or visit.prospection_id is not None:
-            if visit.prospection is not None:
-                _replace_auto_mirror_with_explicit_visit(session, visit)
+            if _merge_new_linked_visit(session, visit):
+                continue
             continue
-
-        matched = None
-        for prospect in pending:
-            if _same_visit_payload(visit, prospect, _find_client_for_visit(visit)):
-                matched = prospect
-                break
+        matched = next((prospect for prospect in pending if _same_visit_payload(visit, prospect, _find_client_for_visit(visit))), None)
         if matched is None:
             matched = _find_prospection_for_visit(visit)
         if matched is not None:
             visit.prospection = matched
-            _replace_auto_mirror_with_explicit_visit(session, visit)
             continue
-
         client = _find_client_for_visit(visit)
         if client is None:
             continue
