@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Plannings — NASORA CRM{% endblock %}
+{% block title %}Plannings de l'équipe — NASORA CRM{% endblock %}
 {% block content %}
 <style>
 .planning-field-help{display:block;margin-top:5px;font-size:.72rem;line-height:1.35;color:var(--nasora-muted,#6b7280)}
@@ -11,22 +11,22 @@
     <section class="planning-hero">
         <div>
             <span class="planning-kicker">NASORA CRM · ORGANISATION</span>
-            <h1>Plannings des commerciaux</h1>
-            <p>Générez et consultez les cycles de visites sur les jours ouvrés, du lundi au vendredi.</p>
+            <h1>Organiser les tournées</h1>
+            <p>Préparez facilement les cycles de visites de l'équipe, du lundi au vendredi.</p>
         </div>
     </section>
 
     <section class="planning-info-card">
         <div class="planning-info-icon">✦</div>
         <div>
-            <h2>Génération intelligente · cycle de 4 semaines</h2>
-            <p>Le système génère deux semaines originales à partir des établissements réellement saisis par le commercial, puis applique automatiquement <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.</p>
+            <h2>Un cycle simple sur 4 semaines</h2>
+            <p>NASORA prépare deux semaines de visites à partir des établissements déjà renseignés par le commercial, puis reprend automatiquement <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.</p>
             <div class="planning-rules"><span>✓ Lundi → Vendredi</span><span>✓ S3 = S1</span><span>✓ S4 = S2</span><span>✓ Week-end exclu</span></div>
         </div>
     </section>
 
     <section class="planning-section-head">
-        <div><h2>Équipe commerciale</h2><p>Choisissez une date de départ et le nombre de visites quotidiennes.</p></div>
+        <div><h2>Votre équipe</h2><p>Choisissez le début du cycle et le nombre de visites prévues chaque jour.</p></div>
     </section>
 
     <div class="planning-admin-list">
@@ -41,7 +41,7 @@
                 <label>
                     <span>Début du cycle</span>
                     <input type="date" name="start_date" required data-start-date aria-describedby="planning-date-help-{{ commercial.id }}">
-                    <small id="planning-date-help-{{ commercial.id }}" class="planning-field-help">Prérempli sur le prochain lundi.</small>
+                    <small id="planning-date-help-{{ commercial.id }}" class="planning-field-help">Le prochain lundi est proposé automatiquement.</small>
                 </label>
                 <label>
                     <span>Visites / jour</span>
@@ -51,12 +51,12 @@
                         <button type="button" data-visits-preset="10">10</button>
                     </small>
                 </label>
-                <button type="submit" class="btn">Générer le cycle IA</button>
+                <button type="submit" class="btn">Créer le cycle</button>
             </form>
-            <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Voir le planning <span>→</span></a>
+            <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Consulter le planning <span>→</span></a>
         </article>
     {% else %}
-        <div class="planning-empty">Aucun commercial disponible.</div>
+        <div class="planning-empty">Aucun commercial n'est disponible pour le moment.</div>
     {% endfor %}
     </div>
 </div>
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const selected = new Date(startDate.value + 'T12:00:00');
             const day = selected.getDay();
             if (day === 0 || day === 6) {
-                alert('Le début du cycle doit être un jour ouvré (du lundi au vendredi).');
+                alert('Choisissez un jour ouvré, du lundi au vendredi.');
                 startDate.value = nextMonday();
             }
         });
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 startDate.focus();
                 return;
             }
-            if (!window.confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings existants aux quatre dates concernées seront protégés.')) {
+            if (!window.confirm('Créer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings déjà présents sur les dates concernées resteront protégés.')) {
                 event.preventDefault();
             }
         });
