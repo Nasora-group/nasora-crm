@@ -97,10 +97,16 @@ def _sync_client_fields(prospection, client):
 
 
 def _linked_visits(session, prospection):
+    pending = [
+        obj for obj in session.new
+        if isinstance(obj, ClientVisit)
+        and not obj.is_duplicate
+        and (obj.prospection is prospection or obj.prospection_id == prospection.id)
+    ]
     if prospection.id is None:
-        return [obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and (obj.prospection is prospection or obj.prospection_id == prospection.id)]
+        return pending
     visits = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).order_by(ClientVisit.id.asc()).all()
-    visits.extend(obj for obj in session.new if isinstance(obj, ClientVisit) and not obj.is_duplicate and obj.prospection is prospection and obj not in visits)
+    visits.extend(obj for obj in pending if obj not in visits)
     return visits
 
 
@@ -119,31 +125,30 @@ def _prepare_prospection_mirror(session, prospection):
     ))
 
 
-def _replace_auto_mirror_with_explicit_visit(session, visit):
-    """Garder la visite saisie et éliminer tout autre miroir de la prospection."""
-    prospect = visit.prospection
-    if prospect is None or prospect.id is None:
-        return False
-    linked = ClientVisit.query.filter_by(
-        prospection_id=prospect.id,
-        is_duplicate=False,
-    ).order_by(ClientVisit.id.asc()).all()
-    linked.extend(
-        obj for obj in session.new
-        if isinstance(obj, ClientVisit)
-        and not obj.is_duplicate
-        and obj is not visit
-        and obj.prospection is prospect
-        and obj not in linked
-    )
-    removed = False
-    for existing in linked:
-        if existing is visit or existing in session.deleted:
-            continue
-        existing.prospection_id = None
-        session.delete(existing)
-        removed = True
-    return removed
+def _deduplicate_linked_visits(session, prospection):
+    """Garder une seule visite active liée à une prospection."""
+    if prospection.id is None:
+        linked = [
+            obj for obj in session.new
+            if isinstance(obj, ClientVisit)
+            and not obj.is_duplicate
+            and obj.prospection is prospection
+        ]
+    else:
+        linked = ClientVisit.query.filter_by(
+            prospection_id=prospection.id,
+            is_duplicate=False,
+        ).order_by(ClientVisit.id.asc()).all()
+        linked.extend(
+            obj for obj in session.new
+            if isinstance(obj, ClientVisit)
+            and not obj.is_duplicate
+            and obj.prospection is prospection
+            and obj not in linked
+        )
+    for duplicate in linked[1:]:
+        duplicate.prospection_id = None
+        session.delete(duplicate)
 
 
 @event.listens_for(Session, "before_flush")
@@ -158,16 +163,16 @@ def prepare_visit_synchronization(session, flush_context, instances):
         if prospect not in pending:
             pending.append(prospect)
     for visit in new_visits:
+        # Une visite explicitement liée à une prospection est déjà correcte.
+        # Surtout, ne pas lancer de requête ORM depuis before_flush: les requêtes
+        # déclenchent normalement un autoflush et peuvent ré-entrer dans le flush.
         if visit.prospection is not None or visit.prospection_id is not None:
-            if visit.prospection is not None:
-                _replace_auto_mirror_with_explicit_visit(session, visit)
             continue
         matched = next((prospect for prospect in pending if _same_visit_payload(visit, prospect, _find_client_for_visit(visit))), None)
         if matched is None:
             matched = _find_prospection_for_visit(visit)
         if matched is not None:
             visit.prospection = matched
-            _replace_auto_mirror_with_explicit_visit(session, visit)
             continue
         client = _find_client_for_visit(visit)
         if client is None:
@@ -191,7 +196,7 @@ def prepare_visit_synchronization(session, flush_context, instances):
 
 @event.listens_for(Session, "before_commit")
 def finalize_prospection_synchronization(session):
-    """Créer le miroir seulement au commit, après que les visites explicites ont été proposées."""
+    """Finaliser les liens Prospection/Client/ClientVisit juste avant commit."""
     if session.info.get("visit_sync_running"):
         return
     prospects = [obj for obj in session.new if isinstance(obj, Prospection)]
@@ -200,9 +205,9 @@ def finalize_prospection_synchronization(session):
         return
     session.info["visit_sync_running"] = True
     try:
-        # Une requête ici peut provoquer le flush des Prospections; c'est voulu:
-        # l'identifiant est nécessaire pour le lien ClientVisit.
         for prospect in prospects:
             _prepare_prospection_mirror(session, prospect)
+        for prospect in prospects:
+            _deduplicate_linked_visits(session, prospect)
     finally:
         session.info.pop("visit_sync_running", None)
