@@ -37,7 +37,7 @@ def _parse_non_negative_price(raw_value):
     if raw_value is None or str(raw_value).strip() == "":
         return None
     try:
-        value = float(str(raw_value).strip().replace(",", "."))
+        value = float(str(raw_value).strip().replace(" ", "").replace(",", "."))
     except (TypeError, ValueError):
         raise ValueError("Le prix doit être un nombre valide.")
     if value < 0:
@@ -56,24 +56,23 @@ def _handle_supplier_sales(slug, template_name):
     sale_model = supplier["sale_model"]
     division = supplier["division"]
 
-    # Un commercial ne doit jamais pouvoir consulter le catalogue d'une autre
-    # division, même si la route est techniquement accessible en lecture seule.
-    # Les administrateurs conservent l'accès transversal aux divisions.
     if not division_matches(current_user, division):
         abort(403)
 
     form = SupplierSalesForm()
     products = product_model.query.filter_by(is_active=True).order_by(product_model.name).all()
-    read_only = current_user.role != "admin"
+    # L'administrateur et le commercial peuvent saisir les ventes de leur
+    # division. Les modifications/suppressions restent réservées à l'admin.
+    read_only = current_user.role not in {"admin", "commercial"}
 
     if request.method == "POST":
         if read_only:
-            flash("Seul l'administrateur peut saisir des ventes.", "error")
+            flash("Ce compte n'est pas autorisé à saisir des ventes.", "error")
             return redirect(url_for(f"sales.{slug}"))
 
         if not form.validate_on_submit():
             flash("Merci de renseigner une date de saisie valide.", "error")
-            return redirect(url_for(f"sales.{slug}"))
+            return render_template(template_name, products=products, form=form, supplier=supplier, read_only=read_only, slug=slug)
 
         sale_date = form.sale_date.data
         nb_ventes = 0
@@ -112,7 +111,7 @@ def _handle_supplier_sales(slug, template_name):
         except Exception:
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement des ventes %s", supplier["label"])
-            flash("Erreur lors de l'enregistrement des ventes.", "error")
+            flash("Erreur lors de l'enregistrement des ventes. Aucune donnée partiellement enregistrée.", "error")
 
         return redirect(url_for(f"sales.{slug}"))
 
@@ -156,14 +155,10 @@ def sales_history(slug):
     product_model = supplier["product_model"]
 
     query = sale_model.query.join(product_model, sale_model.product_id == product_model.id)
-
-    # Liste des mois disponibles pour le filtre (calculée sur toutes les ventes de ce labo)
     all_dates = [row[0] for row in db.session.query(sale_model.date).all()]
     available_months = sorted({d.strftime("%Y-%m") for d in all_dates}, reverse=True)
 
     selected_month = request.args.get("month", "")
-
-    # Filtrage par mois fait en Python (portable SQLite/PostgreSQL).
     sales = query.order_by(sale_model.date.desc(), sale_model.id.desc()).all()
     if selected_month:
         sales = [s for s in sales if s.date.strftime("%Y-%m") == selected_month]
@@ -206,7 +201,6 @@ def edit_sale(slug, sale_id):
     supplier = _get_active_supplier_or_404(slug)
     sale_model = supplier["sale_model"]
     sale = sale_model.query.get_or_404(sale_id)
-
     form = SaleEditForm(obj=sale)
 
     if form.validate_on_submit():
@@ -233,7 +227,6 @@ def delete_sale(slug, sale_id):
     supplier = _get_active_supplier_or_404(slug)
     sale_model = supplier["sale_model"]
     sale = sale_model.query.get_or_404(sale_id)
-
     form = CSRFOnlyForm()
     if not form.validate_on_submit():
         flash("Requête invalide.", "error")
