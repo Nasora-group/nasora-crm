@@ -57,30 +57,17 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
-    """Return clients the current commercial is allowed to see.
-
-    Owned clients must remain visible even when they have no legacy
-    prospection. Unassigned clients are additionally exposed when they can
-    be matched to one of the commercial's legacy prospections. Clients owned
-    by another commercial are never included.
-    """
     owned_query = Client.query.filter(Client.owner_id == current_user.id)
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
-
-    # A commercial must always see the professionals explicitly attributed to it.
     if not active_prospections:
         return owned_query
-
-    candidates = Client.query.filter(
-        or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)
-    ).all()
+    candidates = Client.query.filter(or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)).all()
     visible_ids = {client.id for client in candidates if client.owner_id == current_user.id}
-
     for prospect in active_prospections:
         prospect_phone = _normalize_phone(prospect.telephone)
         prospect_name = _normalize_text(prospect.nom_client)
         for client in candidates:
-            if client.owner_id != current_user.id and client.owner_id is not None:
+            if client.owner_id not in (None, current_user.id):
                 continue
             if prospect_phone and len(prospect_phone) >= 6:
                 client_phone = _normalize_phone(client.phone)
@@ -89,14 +76,11 @@ def _commercial_client_query():
                     continue
             if prospect_name and _normalize_text(client.name) == prospect_name:
                 visible_ids.add(client.id)
-
     return Client.query.filter(Client.id.in_(visible_ids)) if visible_ids else owned_query
 
 
 def _commercial_can_access_client(client):
-    if current_user.role != "commercial":
-        return True
-    return client.owner_id in (None, current_user.id)
+    return current_user.role != "commercial" or client.owner_id in (None, current_user.id)
 
 
 def _find_duplicate_client(phone, name, structure, exclude_id=None):
@@ -111,22 +95,13 @@ def _find_duplicate_client(phone, name, structure, exclude_id=None):
         client_phone = _normalize_phone(client.phone)
         if normalized_phone and len(normalized_phone) >= 6 and client_phone and client_phone == normalized_phone:
             return client, "téléphone"
-        if normalized_name and normalized_structure:
-            if _normalize_text(client.name) == normalized_name and _normalize_text(client.structure) == normalized_structure:
-                return client, "nom + structure"
+        if normalized_name and normalized_structure and _normalize_text(client.name) == normalized_name and _normalize_text(client.structure) == normalized_structure:
+            return client, "nom + structure"
     return None, None
 
 
 def _exact_visit_exists(client_id, commercial_id, visit_date, products_presented, products_prescribed, report, exclude_id=None):
-    query = ClientVisit.query.filter_by(
-        client_id=client_id,
-        commercial_id=commercial_id,
-        date=visit_date,
-        products_presented=products_presented,
-        products_prescribed=products_prescribed,
-        report=report,
-        is_duplicate=False,
-    )
+    query = ClientVisit.query.filter_by(client_id=client_id, commercial_id=commercial_id, date=visit_date, products_presented=products_presented, products_prescribed=products_prescribed, report=report, is_duplicate=False)
     if exclude_id is not None:
         query = query.filter(ClientVisit.id != exclude_id)
     return query.first() is not None
@@ -143,6 +118,20 @@ def _refresh_client_visit_dates(client):
         client.next_visit = None
 
 
+def _client_form_context(client=None, include_commerciaux=True):
+    return dict(client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=(User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all() if include_commerciaux else []))
+
+
+def _parse_potential(raw_value):
+    try:
+        value = int(str(raw_value or "3").strip())
+    except (TypeError, ValueError):
+        raise ValueError("Le potentiel commercial doit être compris entre 1 et 5.")
+    if not 1 <= value <= 5:
+        raise ValueError("Le potentiel commercial doit être compris entre 1 et 5.")
+    return value
+
+
 @clients_bp.route("/admin/clients")
 @login_required
 @roles_required("admin", "commercial")
@@ -150,9 +139,7 @@ def list_clients():
     q = (request.args.get("q") or "").strip()
     structure = (request.args.get("structure") or "").strip()
     potential = (request.args.get("potential") or "").strip()
-    query = Client.query
-    if current_user.role == "commercial":
-        query = _commercial_client_query()
+    query = _commercial_client_query() if current_user.role == "commercial" else Client.query
     if q:
         term = f"%{q}%"
         query = query.filter(or_(Client.name.ilike(term), Client.establishment.ilike(term), Client.phone.ilike(term), Client.zone.ilike(term)))
@@ -168,7 +155,7 @@ def list_clients():
         else:
             potential = ""
     page = request.args.get("page", 1, type=int)
-    pagination = query.order_by(Client.name.asc()).paginate(page=page, per_page=25, error_out=False)
+    pagination = query.order_by(Client.name.asc()).paginate(page=max(1, page), per_page=25, error_out=False)
     total = query.with_entities(func.count(func.distinct(Client.id))).scalar() or 0
     structures = query.with_entities(func.count(func.distinct(Client.structure))).scalar() or 0
     high_potential = query.filter(Client.potential >= 4).with_entities(func.count(func.distinct(Client.id))).scalar() or 0
@@ -185,18 +172,25 @@ def new_client():
             structure = request.form.get("structure", "").strip()
             if not name or not structure:
                 flash("Le nom et la structure sont obligatoires.", "error")
-                return render_template("client_form.html", client=None, structure_choices=[s[0] for s in STRUCTURES], commerciaux=User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all())
+                return render_template("client_form.html", **_client_form_context(None))
+            potential = _parse_potential(request.form.get("potential", "3"))
             duplicate, match_type = _find_duplicate_client(request.form.get("phone", ""), name, structure)
             if duplicate:
                 flash(f"Un professionnel existe déjà avec ce {match_type}. Consultez sa fiche avant d'en créer une nouvelle.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=duplicate.id))
-            potential = max(1, min(5, int(request.form.get("potential", 3))))
             owner_id = current_user.id if current_user.role == "commercial" else (request.form.get("owner_id", type=int) or None)
             c = Client(name=name, specialty=request.form.get("specialty", "").strip() or None, structure=structure, establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id)
-            db.session.add(c); db.session.commit(); flash("Professionnel ajouté à la base CRM.", "success"); return redirect(url_for("clients.client_detail", client_id=c.id))
+            db.session.add(c)
+            db.session.commit()
+            flash("Professionnel ajouté à la base CRM.", "success")
+            return redirect(url_for("clients.client_detail", client_id=c.id))
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
         except Exception:
-            db.session.rollback(); flash("Impossible d'enregistrer le professionnel.", "error")
-    return render_template("client_form.html", client=None, structure_choices=[s[0] for s in STRUCTURES], commerciaux=User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all())
+            db.session.rollback()
+            flash("Impossible d'enregistrer le professionnel.", "error")
+    return render_template("client_form.html", **_client_form_context(None))
 
 
 @clients_bp.route("/admin/clients/<int:client_id>/modifier", methods=["GET", "POST"])
@@ -212,11 +206,12 @@ def edit_client(client_id):
             structure = request.form.get("structure", "").strip()
             if not name or not structure:
                 flash("Le nom et la structure sont obligatoires.", "error")
-                return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+                return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
+            potential = _parse_potential(request.form.get("potential", "3"))
             duplicate, match_type = _find_duplicate_client(request.form.get("phone", ""), name, structure, exclude_id=client.id)
             if duplicate:
                 flash(f"Modification bloquée : un autre professionnel existe déjà avec ce {match_type}.", "warning")
-                return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+                return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
             client.name = name
             client.specialty = request.form.get("specialty", "").strip() or None
             client.structure = structure
@@ -225,15 +220,18 @@ def edit_client(client_id):
             client.email = request.form.get("email", "").strip() or None
             client.zone = request.form.get("zone", "").strip() or None
             client.address = request.form.get("address", "").strip() or None
-            client.potential = max(1, min(5, int(request.form.get("potential", 3))))
+            client.potential = potential
             client.notes = request.form.get("notes", "").strip() or None
             db.session.commit()
             flash("Fiche professionnel mise à jour avec succès.", "success")
             return redirect(url_for("clients.client_detail", client_id=client.id))
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
         except Exception:
             db.session.rollback()
             flash("Impossible de mettre à jour le professionnel.", "error")
-    return render_template("client_form.html", client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=[])
+    return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
 
 
 @clients_bp.route("/admin/clients/<int:client_id>")
@@ -248,16 +246,13 @@ def client_detail(client_id):
     if current_user.role == "commercial":
         visits = visits.filter(ClientVisit.commercial_id == current_user.id)
     visits = visits.order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).all()
-
     display_last_visit = client.last_visit
     if legacy_history and (not display_last_visit or legacy_history[0].date > display_last_visit):
         display_last_visit = legacy_history[0].date
-
     display_next_visit = client.next_visit
     latest_crm_next = next((v.next_visit for v in visits if v.next_visit), None)
     if latest_crm_next and (not display_next_visit or latest_crm_next != display_next_visit):
         display_next_visit = latest_crm_next
-
     linked_prospection_ids = {v.prospection_id for v in visits if v.prospection_id is not None}
     unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
@@ -297,6 +292,9 @@ def new_visit(client_id):
             db.session.commit()
             flash("Visite enregistrée avec succès.", "success")
             return redirect(url_for("clients.client_detail", client_id=client.id))
+        except ValueError:
+            db.session.rollback()
+            flash("Date invalide. Utilisez un format de date valide.", "error")
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer la visite. Vérifiez les dates.", "error")
@@ -341,6 +339,9 @@ def edit_visit(client_id, visit_id):
             db.session.commit()
             flash("Visite mise à jour avec succès.", "success")
             return redirect(url_for("clients.client_detail", client_id=client.id))
+        except ValueError:
+            db.session.rollback()
+            flash("Date invalide. Utilisez un format de date valide.", "error")
         except Exception:
             db.session.rollback()
             flash("Impossible de mettre à jour la visite. Vérifiez les dates.", "error")
