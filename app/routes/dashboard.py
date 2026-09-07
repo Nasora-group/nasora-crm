@@ -142,6 +142,7 @@ def _sync_professional_from_prospection(prospection, establishment=None, existin
         visit.products_presented = pp
         visit.products_prescribed = pr
         visit.report = report
+    prospection.client_id = client.id
     client.last_visit = prospection.date
 
 
@@ -208,16 +209,14 @@ def index():
                 establishment=form.nom_structure.data.strip(),
             )
             db.session.add(prospection)
-            # On ne délègue plus la réussite de la saisie à un événement
-            # SQLAlchemy: la route crée explicitement le professionnel et sa
-            # visite dans la même transaction que la prospection.
+            # La route reste responsable de la transaction complète:
+            # Prospection -> Client -> ClientVisit.
             db.session.flush()
             _sync_professional_from_prospection(
                 prospection,
                 establishment=form.nom_structure.data,
             )
             db.session.flush()
-            # Une seule prospection = une seule visite active liée.
             linked_visits = ClientVisit.query.filter_by(
                 prospection_id=prospection.id,
                 is_duplicate=False,
