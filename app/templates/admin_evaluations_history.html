@@ -4,57 +4,57 @@
 <div class="eval-page">
     <section class="eval-hero">
         <div>
-            <span class="eval-kicker">Suivi individuel · Historique</span>
-            <h1>Évaluations — {{ commercial.username }}</h1>
-            <p>Division {{ commercial.project|upper }} · Zone {{ commercial.zone or 'N/A' }}</p>
+            <span class="eval-kicker">Suivi individuel · Évaluation</span>
+            <h1>Suivi de {{ commercial.username }}</h1>
+            <p>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }} · Retrouvez ici les résultats et les progrès mois après mois.</p>
         </div>
         <div class="eval-hero-actions">
-            <a href="{{ url_for('evaluations.list_commercials') }}" class="btn btn-outline">← Retour</a>
-            <a href="{{ url_for('evaluations.export_evaluations_excel', commercial_id=commercial.id) }}" class="btn btn-outline">📊 Excel</a>
-            <a href="{{ url_for('evaluations.export_evaluations_pdf', commercial_id=commercial.id) }}" class="btn btn-outline">📄 PDF</a>
+            <a href="{{ url_for('evaluations.list_commercials') }}" class="btn btn-outline">← Retour à l'équipe</a>
+            <a href="{{ url_for('evaluations.export_evaluations_excel', commercial_id=commercial.id) }}" class="btn btn-outline">📊 Exporter Excel</a>
+            <a href="{{ url_for('evaluations.export_evaluations_pdf', commercial_id=commercial.id) }}" class="btn btn-outline">📄 Exporter PDF</a>
         </div>
     </section>
 
     <form method="GET" class="filter-form eval-filter">
-        <div><label for="month">Mois analysé</label><select id="month" name="month" class="form-input">{% for m, label in mois_labels.items() %}<option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label for="month">Mois à consulter</label><select id="month" name="month" class="form-input">{% for m, label in mois_labels.items() %}<option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
         <div><label for="year">Année</label><input type="number" id="year" name="year" class="form-input eval-year" value="{{ current_year }}"></div>
-        <div><button type="submit" class="btn">Analyser</button></div>
+        <div><button type="submit" class="btn">Voir le suivi</button></div>
     </form>
 
     {% if current_evaluation %}
     <div class="eval-live-kpis">
         <div class="eval-live-card"><span>Score global</span><strong>{{ "%.1f"|format(current_evaluation.total_score) }}<em>/ {{ max_total }}</em></strong><small>{{ current_evaluation.niveau }}</small></div>
         <div class="eval-live-card"><span>Visites du mois</span><strong>{{ visits }}</strong><small>activité terrain</small></div>
-        <div class="eval-live-card"><span>Évolution</span><strong>{% if score_delta is not none %}{{ '+' if score_delta > 0 else '' }}{{ "%.1f"|format(score_delta) }}{% else %}—{% endif %}</strong><small>vs évaluation précédente</small></div>
-        <div class="eval-live-card"><span>Évalué par</span><strong class="eval-evaluator">{{ current_evaluation.evaluator.username if current_evaluation.evaluator else '—' }}</strong><small>{{ current_evaluation.updated_at.strftime('%d/%m/%Y') }}</small></div>
+        <div class="eval-live-card"><span>Progression</span><strong>{% if score_delta is not none %}{{ '+' if score_delta > 0 else '' }}{{ "%.1f"|format(score_delta) }}{% else %}—{% endif %}</strong><small>par rapport à l'évaluation précédente</small></div>
+        <div class="eval-live-card"><span>Dernière évaluation</span><strong class="eval-evaluator">{{ current_evaluation.evaluator.username if current_evaluation.evaluator else '—' }}</strong><small>{{ current_evaluation.updated_at.strftime('%d/%m/%Y') }}</small></div>
     </div>
     {% else %}
-    <div class="eval-empty eval-alert"><div class="eval-empty-icon">!</div><h2>Aucune évaluation enregistrée</h2><p>Pour {{ mois_labels[current_month] }} {{ current_year }}.</p></div>
+    <div class="eval-empty eval-alert"><div class="eval-empty-icon">!</div><h2>Pas encore d'évaluation</h2><p>Aucune évaluation n'est enregistrée pour {{ mois_labels[current_month] }} {{ current_year }}.</p></div>
     {% endif %}
 
     <section class="eval-panel">
         <div class="eval-panel-head">
-            <div><span>Analyse</span><h2>Évolution du score</h2><p>12 derniers mois · objectif de référence : 75/100.</p></div>
-            {% if current_evaluation %}<a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=current_year, month=current_month) }}" class="btn">Modifier l'évaluation</a>{% endif %}
+            <div><span>Progression</span><h2>Évolution du score</h2><p>Les 12 derniers mois · le repère « Bon » commence à 75/100.</p></div>
+            {% if current_evaluation %}<a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=current_year, month=current_month) }}" class="btn">Mettre à jour l'évaluation</a>{% endif %}
         </div>
         <div class="eval-chart-wrap"><canvas id="evaluationEvolutionChart"></canvas></div>
     </section>
 
     <section class="eval-panel">
-        <div class="eval-panel-head"><div><span>Repères</span><h2>Lecture de la performance</h2></div></div>
+        <div class="eval-panel-head"><div><span>Repères</span><h2>Comprendre le résultat</h2><p>Ces niveaux permettent de lire rapidement la situation et de définir les prochaines actions.</p></div></div>
         <div class="eval-level-grid">
             <div><span class="eval-level-dot level-low"></span><strong>Insuffisant</strong><small>&lt; 60/100</small></div>
             <div><span class="eval-level-dot level-mid"></span><strong>Moyen</strong><small>60 à 74,9/100</small></div>
             <div><span class="eval-level-dot level-good"></span><strong>Bon</strong><small>75 à 89,9/100</small></div>
             <div><span class="eval-level-dot level-best"></span><strong>Excellent</strong><small>90 à 100/100</small></div>
         </div>
-        {% if current_evaluation %}<p class="eval-management-note"><strong>Objectif de management :</strong> atteindre au minimum 75/100, puis viser 90/100 pour le niveau Excellent.</p>{% endif %}
+        {% if current_evaluation %}<p class="eval-management-note"><strong>Prochaine étape :</strong> consolider les points forts, travailler les axes d'amélioration et viser progressivement le niveau supérieur.</p>{% endif %}
     </section>
 
-    <section class="eval-section-head eval-history-head"><div><h2>Historique détaillé</h2><p>Retrouvez toutes les évaluations et leurs évolutions.</p></div></section>
+    <section class="eval-section-head eval-history-head"><div><h2>Historique des évaluations</h2><p>Un aperçu simple des résultats précédents pour suivre la progression dans le temps.</p></div></section>
     <div class="responsive-table eval-history-table">
     <table><thead><tr><th>Mois</th><th>Score</th><th>Niveau</th><th>Visites</th><th>Évalué par</th><th>Dernière modification</th><th>Action</th></tr></thead>
-    <tbody>{% for e in evaluations %}<tr><td><strong>{{ mois_labels[e.month] }}</strong> {{ e.year }}</td><td><strong>{{ "%.1f"|format(e.total_score) }}</strong> / 100</td><td><span class="eval-status {{ 'eval-status-good' if e.niveau in ['Bon', 'Excellent'] else 'eval-status-mid' }}">{{ e.niveau }}</span></td><td>{{ visits if e.year == current_year and e.month == current_month else '—' }}</td><td>{{ e.evaluator.username if e.evaluator else '—' }}</td><td>{{ e.updated_at.strftime('%d/%m/%Y') }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=e.year, month=e.month) }}" class="btn btn-outline">Modifier</a></td></tr>{% else %}<tr><td colspan="7" class="eval-table-empty">Aucune évaluation enregistrée pour le moment.</td></tr>{% endfor %}</tbody></table>
+    <tbody>{% for e in evaluations %}<tr><td><strong>{{ mois_labels[e.month] }}</strong> {{ e.year }}</td><td><strong>{{ "%.1f"|format(e.total_score) }}</strong> / 100</td><td><span class="eval-status {{ 'eval-status-good' if e.niveau in ['Bon', 'Excellent'] else 'eval-status-mid' }}">{{ e.niveau }}</span></td><td>{{ visits if e.year == current_year and e.month == current_month else '—' }}</td><td>{{ e.evaluator.username if e.evaluator else '—' }}</td><td>{{ e.updated_at.strftime('%d/%m/%Y') }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=commercial.id, year=e.year, month=e.month) }}" class="btn btn-outline">Modifier</a></td></tr>{% else %}<tr><td colspan="7" class="eval-table-empty">Aucune évaluation n'est encore enregistrée pour ce commercial.</td></tr>{% endfor %}</tbody></table>
     </div>
 </div>
 
