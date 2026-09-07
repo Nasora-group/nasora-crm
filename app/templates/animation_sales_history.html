@@ -15,16 +15,16 @@
     <article class="card" style="padding:20px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
         <div>
-          <h2 style="font-size:1.08rem;margin:0 0 5px;">{{ group.pharmacy_name }}</h2>
-          <div style="opacity:.7;">Animation du {{ group.animation_date.strftime('%d/%m/%Y') }}{% if group.animateur %} — {{ group.animateur.username }}{% endif %}</div>
+          <h2 style="font-size:1.08rem;margin:0 0 5px;">{{ group['pharmacy_name'] }}</h2>
+          <div style="opacity:.7;">Animation du {{ group['animation_date'].strftime('%d/%m/%Y') }}{% if group.get('animateur') %} — {{ group['animateur'].username }}{% endif %}</div>
         </div>
-        <strong>{{ group.total_quantity }} unité(s) vendue(s)</strong>
+        <strong>{{ group['total_quantity'] }} unité(s) vendue(s)</strong>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr><th style="text-align:left;padding:10px;">Produit</th><th style="text-align:right;padding:10px;">Quantité vendue</th></tr></thead>
           <tbody>
-          {% for sale in group.items %}
+          {% for sale in group['items'] %}
             <tr><td style="padding:10px;border-top:1px solid #eee;">{{ sale.product_name }}</td><td style="padding:10px;border-top:1px solid #eee;text-align:right;font-weight:600;">{{ sale.quantity }}</td></tr>
           {% endfor %}
           </tbody>
