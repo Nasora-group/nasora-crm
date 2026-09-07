@@ -1,30 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Historique ventes animations — NASORA CRM{% endblock %}
+{% block title %}Historique des ventes d’animations — NASORA CRM{% endblock %}
 {% block content %}
 <section class="crm-page" style="max-width:1200px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
     <div>
-      <h1 style="margin-bottom:6px;">Historique des ventes d’animations</h1>
+      <span class="planning-kicker">Suivi commercial · Animations</span>
+      <h1 style="margin:4px 0 6px;">Ventes d’animations</h1>
       {% if animateur %}
-        <p style="margin:0;opacity:.75;">Animateur(trice) : <strong>{{ animateur.username }}</strong></p>
+        <p style="margin:0;opacity:.75;">Suivi de <strong>{{ animateur.username }}</strong></p>
       {% else %}
-        <p style="margin:0;opacity:.75;">Ventes enregistrées lors des animations en pharmacie.</p>
+        <p style="margin:0;opacity:.75;">Retrouvez les ventes réalisées pendant les animations en pharmacie.</p>
       {% endif %}
     </div>
     {% if current_user.role == 'animateur' %}
-      <a class="btn btn-primary" href="{{ url_for('animation_sales.new_animation_sale') }}">+ Nouvelle animation</a>
+      <a class="btn btn-primary" href="{{ url_for('animation_sales.new_animation_sale') }}">＋ Saisir une vente</a>
     {% endif %}
   </div>
 
   <div class="card" style="padding:18px;margin-bottom:20px;">
     <form method="get" action="{{ url_for('animation_sales.my_history') }}" style="display:flex;align-items:end;gap:14px;flex-wrap:wrap;">
       <div>
-        <label for="month" style="display:block;font-weight:600;margin-bottom:6px;">Filtrer par mois</label>
+        <label for="month" style="display:block;font-weight:600;margin-bottom:6px;">Période</label>
         <input id="month" name="month" type="month" value="{{ selected_month }}" class="form-control">
       </div>
-      <button type="submit" class="btn btn-primary">Filtrer</button>
+      <button type="submit" class="btn btn-primary">Afficher</button>
       {% if selected_month %}
-        <a href="{{ url_for('animation_sales.my_history') }}" class="btn btn-secondary">Réinitialiser</a>
+        <a href="{{ url_for('animation_sales.my_history') }}" class="btn btn-secondary">Tout afficher</a>
       {% endif %}
     </form>
   </div>
@@ -32,11 +33,11 @@
   <div class="card" style="padding:22px;margin-bottom:20px;background:linear-gradient(135deg,#f4fff8,#ffffff);">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
       <div>
-        <div style="font-size:.9rem;opacity:.7;">TOTAL GÉNÉRAL{% if selected_month %} — {{ selected_month }}{% endif %}</div>
+        <div style="font-size:.9rem;opacity:.7;">TOTAL DES VENTES{% if selected_month %} — {{ selected_month }}{% endif %}</div>
         <div style="font-size:2rem;font-weight:800;margin-top:4px;">{{ '%.2f'|format(general_total|float) }} €</div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:.9rem;opacity:.7;">Quantité totale</div>
+        <div style="font-size:.9rem;opacity:.7;">Quantité vendue</div>
         <strong style="font-size:1.25rem;">{{ general_quantity }}</strong>
       </div>
     </div>
@@ -48,7 +49,7 @@
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr>
-              <th style="text-align:left;padding:14px;">Date de vente</th>
+              <th style="text-align:left;padding:14px;">Date</th>
               {% if is_admin %}<th style="text-align:left;padding:14px;">Animateur(trice)</th>{% endif %}
               <th style="text-align:right;padding:14px;">Montant total</th>
               <th style="text-align:right;padding:14px;">Quantité</th>
@@ -69,13 +70,13 @@
               <td style="padding:14px;border-top:1px solid #eee;text-align:right;font-weight:700;">{{ '%.2f'|format(day['total_amount']|float) }} €</td>
               <td style="padding:14px;border-top:1px solid #eee;text-align:right;">{{ day['total_quantity'] }}</td>
               <td style="padding:14px;border-top:1px solid #eee;text-align:center;">
-                <button type="button" class="btn btn-sm btn-primary" onclick="toggleAnimationDetail('detail-{{ loop.index }}', this)">Détail</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="toggleAnimationDetail('detail-{{ loop.index }}', this)">Voir le détail</button>
               </td>
             </tr>
             <tr id="detail-{{ loop.index }}" style="display:none;background:#fafafa;">
               <td colspan="{{ 5 if is_admin else 4 }}" style="padding:0 14px 16px 14px;">
                 <div style="padding:16px;border-left:4px solid #198754;">
-                  <div style="font-weight:700;margin-bottom:10px;">Détail des ventes du {{ day['animation_date'].strftime('%d/%m/%Y') }}</div>
+                  <div style="font-weight:700;margin-bottom:10px;">Ventes du {{ day['animation_date'].strftime('%d/%m/%Y') }}</div>
                   <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;">
                       <thead>
@@ -117,7 +118,7 @@
           </tbody>
           <tfoot>
             <tr>
-              <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">TOTAL GÉNÉRAL</td>
+              <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">TOTAL</td>
               {% if is_admin %}<td style="padding:14px;border-top:2px solid #ddd;"></td>{% endif %}
               <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ '%.2f'|format(general_total|float) }} €</td>
               <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ general_quantity }}</td>
@@ -128,7 +129,7 @@
       </div>
     </div>
   {% else %}
-    <div class="card" style="padding:35px;text-align:center;opacity:.8;">Aucune vente d’animation pour cette période.</div>
+    <div class="card" style="padding:35px;text-align:center;opacity:.8;">Aucune vente d’animation sur cette période.</div>
   {% endif %}
 </section>
 
@@ -137,7 +138,7 @@ function toggleAnimationDetail(id, button) {
   const row = document.getElementById(id);
   const visible = row.style.display !== 'none';
   row.style.display = visible ? 'none' : 'table-row';
-  button.textContent = visible ? 'Détail' : 'Masquer';
+  button.textContent = visible ? 'Voir le détail' : 'Masquer le détail';
 }
 </script>
 {% endblock %}
