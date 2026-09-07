@@ -120,7 +120,7 @@ def my_history():
             "animation_date": animation_date,
             "items": items,
             "animateurs": sorted({
-                sale.animateur.username if sale.animateur else "—"
+                sale.animateur.username if sale.animateur else "-"
                 for sale in items
             }),
             "total_quantity": sum(i.quantity for i in items),
@@ -174,11 +174,11 @@ def edit_animation_sale(sale_id):
         sale.unit_price = unit_price
         try:
             db.session.commit()
-            flash("Vente d’animation modifiée avec succès. Le montant total a été recalculé.", "success")
+            flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
             return redirect(url_for("animation_sales.my_history"))
         except Exception:
             db.session.rollback()
-            flash("Impossible de modifier la vente d’animation.", "error")
+            flash("Impossible de modifier la vente d'animation.", "error")
 
     return render_template("animation_sale_edit.html", sale=sale)
 
