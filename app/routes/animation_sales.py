@@ -107,7 +107,9 @@ def my_history():
 
     sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.id.desc()).all()
 
-    # One line per date. The detail button opens the complete sales breakdown for that date.
+    # Pour l'administrateur, chaque date regroupe toutes les ventes et affiche
+    # les animateurs concernés dans le détail. Pour les autres rôles, seules
+    # leurs ventes autorisées sont visibles.
     by_date = {}
     for sale in sales:
         by_date.setdefault(sale.animation_date, []).append(sale)
@@ -117,6 +119,10 @@ def my_history():
         days.append({
             "animation_date": animation_date,
             "items": items,
+            "animateurs": sorted({
+                sale.animateur.username if sale.animateur else "—"
+                for sale in items
+            }),
             "total_quantity": sum(i.quantity for i in items),
             "total_amount": sum((i.total_amount for i in items), Decimal("0.00")),
         })
@@ -195,6 +201,7 @@ def animateur_history(user_id):
         by_date.setdefault(sale.animation_date, []).append(sale)
     days = [
         {"animation_date": date, "items": items,
+         "animateurs": [animateur.username],
          "total_quantity": sum(i.quantity for i in items),
          "total_amount": sum((i.total_amount for i in items), Decimal("0.00"))}
         for date, items in by_date.items()
