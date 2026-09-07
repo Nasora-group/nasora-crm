@@ -152,6 +152,7 @@ def _sync_professional_from_existing_prospection(prospection, establishment=None
 def _delete_linked_records_for_prospection(prospection):
     visit = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first()
     if visit is not None:
+        visit.prospection_id = None
         db.session.delete(visit)
         return
     client = _find_client_for_prospection(prospection)
@@ -206,16 +207,31 @@ def index():
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
                 establishment=form.nom_structure.data.strip(),
             )
-            # La synchronisation Client + ClientVisit est centralisée dans visit_sync.py.
-            # Ne pas recréer une seconde visite ici : le before_flush s'en charge.
             db.session.add(prospection)
+            # On ne délègue plus la réussite de la saisie à un événement
+            # SQLAlchemy: la route crée explicitement le professionnel et sa
+            # visite dans la même transaction que la prospection.
+            db.session.flush()
+            _sync_professional_from_prospection(
+                prospection,
+                establishment=form.nom_structure.data,
+            )
+            db.session.flush()
+            # Une seule prospection = une seule visite active liée.
+            linked_visits = ClientVisit.query.filter_by(
+                prospection_id=prospection.id,
+                is_duplicate=False,
+            ).order_by(ClientVisit.id.asc()).all()
+            for duplicate_visit in linked_visits[1:]:
+                duplicate_visit.prospection_id = None
+                db.session.delete(duplicate_visit)
             db.session.commit()
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
-            flash("Impossible d'enregistrer la prospection. Vérifiez les données et réessayez.", "error")
+            flash("Impossible d'enregistrer la prospection. Aucun changement n'a été appliqué.", "error")
             return _render_dashboard(form)
     return _render_dashboard(form)
 
@@ -349,47 +365,9 @@ def direction():
     professionals = {professional_key(r) for r in rows if professional_key(r)}
     structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
     specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
-    zones_counter = Counter(((r.commercial.zone or "Non renseignée").strip() or "Non renseignée") for r in rows)
-    commercial_counter = Counter(r.commercial_id for r in rows)
-    evolution_counter = Counter(r.date.isoformat() for r in rows if r.date)
-
-    commercials = User.query.filter_by(role="commercial").order_by(User.username).all()
-    zones = [z for (z,) in User.query.filter(User.role == "commercial", User.zone.isnot(None)).with_entities(User.zone).distinct().order_by(User.zone).all()]
-    specialites = [s for (s,) in Prospection.query.with_entities(Prospection.specialite).distinct().order_by(Prospection.specialite).all() if s]
-
-    visit_targets = _visit_targets_for_commercials(commercials)
-    objectifs = []
-    for commercial in commercials:
-        if commercial_id and commercial.id != commercial_id:
-            continue
-        realise = commercial_counter.get(commercial.id, 0)
-        activity_target = visit_targets.get(commercial.id, 100)
-        taux = round(realise * 100 / activity_target, 1) if activity_target else 0
-        if taux >= 100:
-            statut, badge = "Objectif atteint", "bg-success"
-        elif taux >= 80:
-            statut, badge = "À surveiller", "bg-warning text-dark"
-        else:
-            statut, badge = "Insuffisant", "bg-danger"
-        objectifs.append({"name": commercial.username, "objectif": activity_target, "realise": realise, "taux": taux, "statut": statut, "badge": badge})
-
-    ordered_evolution = sorted(evolution_counter.items())
-    charts = {
-        "specialites": {"labels": list(specialites_counter.keys()), "values": list(specialites_counter.values())},
-        "zones": {"labels": list(zones_counter.keys()), "values": list(zones_counter.values())},
-        "commercials": {"labels": [next((c.username for c in commercials if c.id == cid), str(cid)) for cid, _ in commercial_counter.most_common()], "values": [count for _, count in commercial_counter.most_common()]},
-        "evolution": {"labels": [label for label, _ in ordered_evolution], "values": [count for _, count in ordered_evolution]},
-    }
-
-    return render_template(
-        "admin_dashboard_direction.html",
-        total_prospections=total_prospections,
-        total_professionals=len(professionals),
-        total_structures=len(structures),
-        objectifs=objectifs,
-        charts=charts,
-        commercials=commercials,
-        zones=zones,
-        specialites=specialites,
-        filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite},
-    )
+    zones_counter = Counter(((r.establishment or "Non renseignée").strip() or "Non renseignée") for r in rows)
+    commerciaux = User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username.asc()).all()
+    visit_targets = _visit_targets_for_commercials(commerciaux)
+    commercial_counts = Counter(r.commercial_id for r in rows)
+    commercial_rows = [{"commercial": c, "count": commercial_counts.get(c.id, 0), "target": visit_targets.get(c.id, 100)} for c in commerciaux]
+    return render_template("dashboard_direction.html", rows=rows, total_prospections=total_prospections, professionals=len(professionals), structures=len(structures), specialites_counter=specialites_counter, zones_counter=zones_counter, commerciaux=commerciaux, commercial_rows=commercial_rows, filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite})
