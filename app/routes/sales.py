@@ -1,9 +1,7 @@
 import logging
-from datetime import datetime
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
-from sqlalchemy import func
 
 from app.extensions import db
 from app.forms import SupplierSalesForm, SaleEditForm, CSRFOnlyForm
@@ -21,6 +19,30 @@ def _get_active_supplier_or_404(slug):
     if not supplier or supplier.get("archived"):
         abort(404)
     return supplier
+
+
+def _parse_non_negative_int(raw_value):
+    if raw_value is None or str(raw_value).strip() == "":
+        return None
+    try:
+        value = int(str(raw_value).strip())
+    except (TypeError, ValueError):
+        raise ValueError("La quantité doit être un nombre entier.")
+    if value < 0:
+        raise ValueError("La quantité ne peut pas être négative.")
+    return value
+
+
+def _parse_non_negative_price(raw_value):
+    if raw_value is None or str(raw_value).strip() == "":
+        return None
+    try:
+        value = float(str(raw_value).strip().replace(",", "."))
+    except (TypeError, ValueError):
+        raise ValueError("Le prix doit être un nombre valide.")
+    if value < 0:
+        raise ValueError("Le prix ne peut pas être négatif.")
+    return value
 
 
 def _handle_supplier_sales(slug, template_name):
@@ -58,10 +80,10 @@ def _handle_supplier_sales(slug, template_name):
 
         try:
             for product in products:
-                quantity = request.form.get(f"quantity_{product.id}", type=int)
-                price = request.form.get(f"price_{product.id}", type=float)
+                quantity = _parse_non_negative_int(request.form.get(f"quantity_{product.id}"))
+                price = _parse_non_negative_price(request.form.get(f"price_{product.id}"))
 
-                if quantity and quantity > 0:
+                if quantity is not None and quantity > 0:
                     sale = sale_model(
                         product_id=product.id,
                         quantity=quantity,
@@ -75,7 +97,7 @@ def _handle_supplier_sales(slug, template_name):
 
                 for wholesaler in ("duopharm", "ubipharm", "laborex", "sodipharm"):
                     field = f"stock_{wholesaler}_{product.id}"
-                    value = request.form.get(field, type=int)
+                    value = _parse_non_negative_int(request.form.get(field))
                     if value is not None:
                         setattr(product, f"stock_{wholesaler}", value)
 
@@ -84,6 +106,9 @@ def _handle_supplier_sales(slug, template_name):
                 flash(f"{nb_ventes} vente(s) {supplier['label']} enregistrée(s) avec succès.", "success")
             else:
                 flash("Stocks mis à jour (aucune quantité vendue saisie).", "info")
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
         except Exception:
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement des ventes %s", supplier["label"])
@@ -138,18 +163,22 @@ def sales_history(slug):
 
     selected_month = request.args.get("month", "")
 
-    # Filtrage par mois fait en Python (portable SQLite/PostgreSQL, voir le bug
-    # précédent avec les fonctions de date spécifiques à un moteur SQL).
+    # Filtrage par mois fait en Python (portable SQLite/PostgreSQL).
     sales = query.order_by(sale_model.date.desc(), sale_model.id.desc()).all()
     if selected_month:
         sales = [s for s in sales if s.date.strftime("%Y-%m") == selected_month]
 
     page = request.args.get("page", 1, type=int)
+    page = max(1, page)
     per_page = 25
     total = len(sales)
     start = (page - 1) * per_page
     page_items = sales[start:start + per_page]
     total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+        start = (page - 1) * per_page
+        page_items = sales[start:start + per_page]
 
     total_amount = sum((s.quantity or 0) * (s.price or 0) for s in sales)
     delete_form = CSRFOnlyForm()
@@ -213,7 +242,13 @@ def delete_sale(slug, sale_id):
     product_name = sale.product.name
     sale_date = sale.date.strftime("%d/%m/%Y")
     db.session.delete(sale)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Erreur lors de la suppression de la vente #%s", sale_id)
+        flash("Erreur lors de la suppression de la vente.", "error")
+        return redirect(url_for("sales.sales_history", slug=slug))
     flash(f"Vente « {product_name} » du {sale_date} supprimée.", "success")
     logger.info("Vente #%s (%s) supprimée par %s", sale_id, slug, current_user.username)
     return redirect(url_for("sales.sales_history", slug=slug))
