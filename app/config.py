@@ -18,7 +18,13 @@ class BaseConfig:
         os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'instance', 'plateforme_commerciale.db')}")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    # Render/PostgreSQL peut fermer une connexion restée inactive. Le contrôle
+    # avant utilisation évite de réutiliser une connexion morte et le recyclage
+    # limite la durée de vie des connexions persistantes.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     WTF_CSRF_ENABLED = True
