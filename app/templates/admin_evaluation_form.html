@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 
+{% block title %}Évaluer {{ commercial.username }} — NASORA CRM{% endblock %}
 {% block content %}
 <div class="eval-page">
     <section class="eval-hero eval-form-hero">
         <div>
             <span class="eval-kicker">Évaluation KPI · {{ mois_label }} {{ year }}</span>
-            <h1>{{ commercial.username }}</h1>
-            <p>Division {{ commercial.project|upper }} · Évaluez la performance et définissez le plan d'action.</p>
+            <h1>Évaluer {{ commercial.username }}</h1>
+            <p>Division {{ commercial.project|upper }} · Prenez quelques minutes pour faire le point sur les résultats et préparer la suite.</p>
         </div>
-        <a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline">← Historique</a>
+        <a href="{{ url_for('evaluations.commercial_history', commercial_id=commercial.id) }}" class="btn btn-outline">← Retour à l'historique</a>
     </section>
 
     <div class="eval-live-kpis">
         <div class="eval-live-card"><span>Visites effectuées</span><strong>{{ visits }}</strong><small>ce mois</small></div>
-        <div class="eval-live-card eval-live-score"><span>Score total</span><strong><span id="live-total">{{ "%.1f"|format(evaluation.total_score) if evaluation else "0.0" }}</span><em>/ {{ max_total }}</em></strong><small>calculé en direct</small></div>
+        <div class="eval-live-card eval-live-score"><span>Score total</span><strong><span id="live-total">{{ "%.1f"|format(evaluation.total_score) if evaluation else "0.0" }}</span><em>/ {{ max_total }}</em></strong><small>mis à jour automatiquement</small></div>
     </div>
 
     <form method="POST" class="eval-form">
@@ -22,7 +23,7 @@
         {% for section_title, section_max, items in sections %}
         <section class="eval-section-card">
             <div class="eval-section-title">
-                <div><span>Évaluation</span><h2>{{ section_title }}</h2></div>
+                <div><span>Critères</span><h2>{{ section_title }}</h2></div>
                 <strong>{{ section_max }} pts</strong>
             </div>
             <div class="eval-fields-grid">
@@ -30,7 +31,7 @@
                 <div class="eval-field-card">
                     <div class="eval-field-header">
                         <label class="form-label" for="{{ field_name }}">{{ label }}</label>
-                        <span>/ {{ max_pts }}</span>
+                        <span>sur {{ max_pts }} pts</span>
                     </div>
                     <div class="eval-levels">
                         {% for lvl in level_labels %}<span>{{ lvl }}</span>{% endfor %}
@@ -44,18 +45,18 @@
 
         <section class="eval-section-card">
             <div class="eval-section-title">
-                <div><span>Management</span><h2>Synthèse qualitative & plan d'action</h2></div>
+                <div><span>Échange & accompagnement</span><h2>Synthèse et plan d'action</h2></div>
             </div>
             <div class="eval-text-grid">
-                <div class="form-group"><label class="form-label" for="points_forts">Points forts</label>{{ form.points_forts(class="form-input", rows="4") }}</div>
-                <div class="form-group"><label class="form-label" for="axes_amelioration">Axes d'amélioration</label>{{ form.axes_amelioration(class="form-input", rows="4") }}</div>
-                <div class="form-group"><label class="form-label" for="objectifs_quantitatifs">Objectifs quantitatifs</label>{{ form.objectifs_quantitatifs(class="form-input", rows="3") }}</div>
-                <div class="form-group"><label class="form-label" for="objectifs_qualitatifs">Objectifs qualitatifs</label>{{ form.objectifs_qualitatifs(class="form-input", rows="3") }}</div>
+                <div class="form-group"><label class="form-label" for="points_forts">Points forts</label>{{ form.points_forts(class="form-input", rows="4", placeholder="Ce qui fonctionne bien sur le terrain…") }}</div>
+                <div class="form-group"><label class="form-label" for="axes_amelioration">Axes d'amélioration</label>{{ form.axes_amelioration(class="form-input", rows="4", placeholder="Les points à renforcer ou à accompagner…") }}</div>
+                <div class="form-group"><label class="form-label" for="objectifs_quantitatifs">Objectifs quantitatifs</label>{{ form.objectifs_quantitatifs(class="form-input", rows="3", placeholder="Résultats attendus, volumes, visites…") }}</div>
+                <div class="form-group"><label class="form-label" for="objectifs_qualitatifs">Objectifs qualitatifs</label>{{ form.objectifs_qualitatifs(class="form-input", rows="3", placeholder="Comportements, qualité de visite, priorités…") }}</div>
             </div>
         </section>
 
         {% if form.errors %}
-        <div class="flash flash-error eval-errors"><ul>{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>
+        <div class="flash flash-error eval-errors"><strong>Vérifiez les éléments suivants :</strong><ul>{% for field, errors in form.errors.items() %}{% for error in errors %}<li>{{ form[field].label.text }} : {{ error }}</li>{% endfor %}{% endfor %}</ul></div>
         {% endif %}
 
         <div class="eval-form-actions">
@@ -69,7 +70,8 @@
 function updateEvalTotal() {
     let total = 0;
     document.querySelectorAll('.eval-score-input').forEach(function(input) { total += parseFloat(input.value) || 0; });
-    document.getElementById('live-total').textContent = total.toFixed(1);
+    const totalElement = document.getElementById('live-total');
+    if (totalElement) totalElement.textContent = total.toFixed(1);
 }
 document.querySelectorAll('.eval-score-input').forEach(function(input) { input.addEventListener('input', updateEvalTotal); });
 updateEvalTotal();
