@@ -1,6 +1,7 @@
 import logging
+from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 
 from app.extensions import db
@@ -10,7 +11,6 @@ from app.permissions import division_matches
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
-
 sales_bp = Blueprint("sales", __name__)
 
 
@@ -37,8 +37,8 @@ def _parse_non_negative_price(raw_value):
     if raw_value is None or str(raw_value).strip() == "":
         return None
     try:
-        value = float(str(raw_value).strip().replace(" ", "").replace(",", "."))
-    except (TypeError, ValueError):
+        value = Decimal(str(raw_value).strip().replace(" ", "").replace(",", "."))
+    except (InvalidOperation, TypeError, ValueError):
         raise ValueError("Le prix doit être un nombre valide.")
     if value < 0:
         raise ValueError("Le prix ne peut pas être négatif.")
@@ -46,12 +46,7 @@ def _parse_non_negative_price(raw_value):
 
 
 def _handle_supplier_sales(slug, template_name):
-    supplier = SUPPLIERS[slug]
-
-    if supplier.get("archived"):
-        flash(f"{supplier['label']} ne fait plus partie du groupe NASORA.", "error")
-        return redirect(url_for("admin.dashboard") if current_user.role == "admin" else url_for("dashboard.index"))
-
+    supplier = _get_active_supplier_or_404(slug)
     product_model = supplier["product_model"]
     sale_model = supplier["sale_model"]
     division = supplier["division"]
@@ -61,50 +56,41 @@ def _handle_supplier_sales(slug, template_name):
 
     form = SupplierSalesForm()
     products = product_model.query.filter_by(is_active=True).order_by(product_model.name).all()
-    # L'administrateur et le commercial peuvent saisir les ventes de leur
-    # division. Les modifications/suppressions restent réservées à l'admin.
-    read_only = current_user.role not in {"admin", "commercial"}
+    read_only = False
 
     if request.method == "POST":
-        if read_only:
-            flash("Ce compte n'est pas autorisé à saisir des ventes.", "error")
-            return redirect(url_for(f"sales.{slug}"))
-
         if not form.validate_on_submit():
             flash("Merci de renseigner une date de saisie valide.", "error")
-            return render_template(template_name, products=products, form=form, supplier=supplier, read_only=read_only, slug=slug)
+            return render_template(template_name, products=products, form=form, supplier=supplier, read_only=False, slug=slug)
 
         sale_date = form.sale_date.data
         nb_ventes = 0
-
         try:
             for product in products:
                 quantity = _parse_non_negative_int(request.form.get(f"quantity_{product.id}"))
                 price = _parse_non_negative_price(request.form.get(f"price_{product.id}"))
-
                 if quantity is not None and quantity > 0:
-                    sale = sale_model(
+                    db.session.add(sale_model(
                         product_id=product.id,
                         quantity=quantity,
                         price=price if price is not None else product.default_price,
                         date=sale_date,
                         commercial_id=current_user.id,
                         project=division,
-                    )
-                    db.session.add(sale)
+                    ))
                     nb_ventes += 1
 
                 for wholesaler in ("duopharm", "ubipharm", "laborex", "sodipharm"):
-                    field = f"stock_{wholesaler}_{product.id}"
-                    value = _parse_non_negative_int(request.form.get(field))
+                    value = _parse_non_negative_int(request.form.get(f"stock_{wholesaler}_{product.id}"))
                     if value is not None:
                         setattr(product, f"stock_{wholesaler}", value)
 
             db.session.commit()
-            if nb_ventes:
-                flash(f"{nb_ventes} vente(s) {supplier['label']} enregistrée(s) avec succès.", "success")
-            else:
-                flash("Stocks mis à jour (aucune quantité vendue saisie).", "info")
+            flash(
+                f"{nb_ventes} vente(s) {supplier['label']} enregistrée(s) avec succès."
+                if nb_ventes else "Stocks mis à jour (aucune quantité vendue saisie).",
+                "success" if nb_ventes else "info",
+            )
         except ValueError as exc:
             db.session.rollback()
             flash(str(exc), "error")
@@ -112,7 +98,6 @@ def _handle_supplier_sales(slug, template_name):
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement des ventes %s", supplier["label"])
             flash("Erreur lors de l'enregistrement des ventes. Aucune donnée partiellement enregistrée.", "error")
-
         return redirect(url_for(f"sales.{slug}"))
 
     return render_template(template_name, products=products, form=form, supplier=supplier, read_only=read_only, slug=slug)
@@ -153,45 +138,21 @@ def sales_history(slug):
     supplier = _get_active_supplier_or_404(slug)
     sale_model = supplier["sale_model"]
     product_model = supplier["product_model"]
-
     query = sale_model.query.join(product_model, sale_model.product_id == product_model.id)
     all_dates = [row[0] for row in db.session.query(sale_model.date).all()]
-    available_months = sorted({d.strftime("%Y-%m") for d in all_dates}, reverse=True)
-
+    available_months = sorted({d.strftime("%Y-%m") for d in all_dates if d}, reverse=True)
     selected_month = request.args.get("month", "")
     sales = query.order_by(sale_model.date.desc(), sale_model.id.desc()).all()
     if selected_month:
-        sales = [s for s in sales if s.date.strftime("%Y-%m") == selected_month]
-
-    page = request.args.get("page", 1, type=int)
-    page = max(1, page)
+        sales = [s for s in sales if s.date and s.date.strftime("%Y-%m") == selected_month]
+    page = max(1, request.args.get("page", 1, type=int) or 1)
     per_page = 25
     total = len(sales)
-    start = (page - 1) * per_page
-    page_items = sales[start:start + per_page]
     total_pages = max(1, (total + per_page - 1) // per_page)
-    if page > total_pages:
-        page = total_pages
-        start = (page - 1) * per_page
-        page_items = sales[start:start + per_page]
-
-    total_amount = sum((s.quantity or 0) * (s.price or 0) for s in sales)
-    delete_form = CSRFOnlyForm()
-
-    return render_template(
-        "admin_sales_history.html",
-        supplier=supplier,
-        slug=slug,
-        sales=page_items,
-        available_months=available_months,
-        selected_month=selected_month,
-        page=page,
-        total_pages=total_pages,
-        total_amount=total_amount,
-        total_count=total,
-        delete_form=delete_form,
-        suppliers=SUPPLIERS,
-    )
+    page = min(page, total_pages)
+    page_items = sales[(page - 1) * per_page:page * per_page]
+    total_amount = sum((Decimal(str(s.quantity or 0)) * Decimal(str(s.price or 0)) for s in sales), Decimal("0.00"))
+    return render_template("admin_sales_history.html", supplier=supplier, slug=slug, sales=page_items, available_months=available_months, selected_month=selected_month, page=page, total_pages=total_pages, total_amount=total_amount, total_count=total, delete_form=CSRFOnlyForm(), suppliers=SUPPLIERS)
 
 
 @sales_bp.route("/admin/ventes/<slug>/<int:sale_id>/modifier", methods=["GET", "POST"])
@@ -199,10 +160,8 @@ def sales_history(slug):
 @roles_required("admin")
 def edit_sale(slug, sale_id):
     supplier = _get_active_supplier_or_404(slug)
-    sale_model = supplier["sale_model"]
-    sale = sale_model.query.get_or_404(sale_id)
+    sale = supplier["sale_model"].query.get_or_404(sale_id)
     form = SaleEditForm(obj=sale)
-
     if form.validate_on_submit():
         try:
             sale.date = form.date.data
@@ -210,13 +169,11 @@ def edit_sale(slug, sale_id):
             sale.price = form.price.data
             db.session.commit()
             flash(f"Vente « {sale.product.name} » du {sale.date.strftime('%d/%m/%Y')} mise à jour.", "success")
-            logger.info("Vente #%s (%s) modifiée par %s", sale_id, slug, current_user.username)
             return redirect(url_for("sales.sales_history", slug=slug))
         except Exception:
             db.session.rollback()
             logger.exception("Erreur lors de la modification de la vente #%s", sale_id)
             flash("Erreur lors de la mise à jour de la vente.", "error")
-
     return render_template("admin_sale_form.html", form=form, supplier=supplier, slug=slug, sale=sale)
 
 
@@ -225,13 +182,11 @@ def edit_sale(slug, sale_id):
 @roles_required("admin")
 def delete_sale(slug, sale_id):
     supplier = _get_active_supplier_or_404(slug)
-    sale_model = supplier["sale_model"]
-    sale = sale_model.query.get_or_404(sale_id)
+    sale = supplier["sale_model"].query.get_or_404(sale_id)
     form = CSRFOnlyForm()
     if not form.validate_on_submit():
         flash("Requête invalide.", "error")
         return redirect(url_for("sales.sales_history", slug=slug))
-
     product_name = sale.product.name
     sale_date = sale.date.strftime("%d/%m/%Y")
     db.session.delete(sale)
@@ -243,5 +198,4 @@ def delete_sale(slug, sale_id):
         flash("Erreur lors de la suppression de la vente.", "error")
         return redirect(url_for("sales.sales_history", slug=slug))
     flash(f"Vente « {product_name} » du {sale_date} supprimée.", "success")
-    logger.info("Vente #%s (%s) supprimée par %s", sale_id, slug, current_user.username)
     return redirect(url_for("sales.sales_history", slug=slug))
