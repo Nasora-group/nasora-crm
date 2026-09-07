@@ -6,11 +6,11 @@
   <section class="error-card" aria-labelledby="error-title">
     <div class="error-icon" aria-hidden="true">🔒</div>
     <div class="error-code">403</div>
-    <h1 id="error-title">Accès refusé</h1>
-    <p>Votre compte ne dispose pas des autorisations nécessaires pour accéder à cette ressource.</p>
+    <h1 id="error-title">Vous n’avez pas accès à cette page</h1>
+    <p>Votre profil ne permet pas d’ouvrir cette ressource. Si vous pensez que c’est une erreur, rapprochez-vous de votre administrateur.</p>
     <div class="error-actions">
-      <a href="{{ url_for('auth.home') }}" class="btn">⌂ Retour à l’accueil</a>
-      <a href="javascript:history.back()" class="btn btn-outline">← Page précédente</a>
+      <a href="{{ url_for('auth.home') }}" class="btn">⌂ Revenir à l’accueil</a>
+      <a href="javascript:history.back()" class="btn btn-outline">← Revenir à la page précédente</a>
     </div>
   </section>
 </div>
