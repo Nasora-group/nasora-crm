@@ -4,13 +4,13 @@
 {% block content %}
 <div class="error-page" role="main">
   <section class="error-card" aria-labelledby="error-title">
-    <div class="error-icon" aria-hidden="true">⌕</div>
+    <div class="error-icon" aria-hidden="true">🔎</div>
     <div class="error-code">404</div>
-    <h1 id="error-title">Page introuvable</h1>
-    <p>La page demandée n’existe pas ou n’est plus disponible. Vous pouvez revenir à l’accueil ou reprendre votre navigation.</p>
+    <h1 id="error-title">Oups, cette page est introuvable</h1>
+    <p>La page que vous cherchez n’existe pas ou a peut-être été déplacée. Pas d’inquiétude : vous pouvez reprendre votre navigation depuis l’accueil.</p>
     <div class="error-actions">
-      <a href="{{ url_for('auth.home') }}" class="btn">⌂ Retour à l’accueil</a>
-      <a href="javascript:history.back()" class="btn btn-outline">← Page précédente</a>
+      <a href="{{ url_for('auth.home') }}" class="btn">⌂ Revenir à l’accueil</a>
+      <a href="javascript:history.back()" class="btn btn-outline">← Revenir à la page précédente</a>
     </div>
   </section>
 </div>
