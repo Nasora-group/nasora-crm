@@ -23,12 +23,12 @@
 
     <div style="overflow-x:auto;">
       <div style="min-width:760px;display:grid;grid-template-columns:minmax(220px,1fr) 150px 150px 170px;gap:10px 18px;align-items:center;">
-        <strong>Produit</strong><strong>Prix par défaut (FCFA)</strong><strong>Prix de vente (FCFA)</strong><strong>Quantité</strong>
+        <strong>Produit</strong><strong>Prix HT par défaut (€)</strong><strong>Prix de vente (FCFA)</strong><strong>Quantité</strong>
         {% for product in products %}
         {% set default_price = prices.get(product, 0) %}
         <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
-        <span>{{ '%.0f'|format(default_price|float) }} FCFA</span>
-        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Prix de vente" aria-label="Prix de vente de {{ product }} en FCFA">
+        <span>{{ '%.2f'|format(default_price|float) }} €</span>
+        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Prix de vente en FCFA" aria-label="Prix de vente de {{ product }} en FCFA">
         <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
         {% else %}
         <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
@@ -41,7 +41,7 @@
         <div style="font-size:.82rem;opacity:.7;">Montant total de l'animation</div>
         <strong id="animation-total" style="font-size:1.7rem;color:#17643f;">0 FCFA</strong>
       </div>
-      <div style="font-size:.85rem;opacity:.7;">Total = quantité × prix de vente unitaire</div>
+      <div style="font-size:.85rem;opacity:.7;">Total = quantité × prix de vente unitaire (FCFA)</div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
