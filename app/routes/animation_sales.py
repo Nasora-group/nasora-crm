@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 
@@ -11,11 +11,15 @@ from app.utils import roles_required
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
 
 
+def _render_sale_form(products, prices, form_data):
+    return render_template("animation_sale_form.html", products=products, prices=prices, form_data=form_data)
+
+
 @animation_sales_bp.route("/nouvelle", methods=["GET", "POST"])
 @login_required
 @roles_required("admin", "commercial", "animateur")
 def new_animation_sale():
-    """Create an animation sale; animateurs can create their own sales."""
+    """Create an animation sale with quantity and sale unit price entered per product."""
     if current_user.role not in {"animateur", "admin"}:
         abort(403)
 
@@ -28,23 +32,42 @@ def new_animation_sale():
         raw_date = (request.form.get("animation_date") or "").strip()
         if not pharmacy or not raw_date:
             flash("Le nom de la pharmacie et la date d'animation sont obligatoires.", "error")
-            return render_template("animation_sale_form.html", products=products, prices=prices, form_data=request.form)
+            return _render_sale_form(products, prices, request.form)
 
         try:
             animation_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
             flash("La date d'animation est invalide.", "error")
-            return render_template("animation_sale_form.html", products=products, prices=prices, form_data=request.form)
+            return _render_sale_form(products, prices, request.form)
 
         items = []
+        invalid_product = None
         for product_name in products:
-            quantity = request.form.get(f"quantity__{product_name}", type=int)
-            if quantity and quantity > 0:
-                items.append((product_name, quantity, prices.get(product_name, 0)))
+            raw_quantity = (request.form.get(f"quantity__{product_name}") or "").strip()
+            raw_price = (request.form.get(f"unit_price__{product_name}") or "").strip().replace(",", ".")
+
+            if not raw_quantity and not raw_price:
+                continue
+
+            try:
+                quantity = int(raw_quantity)
+                unit_price = Decimal(raw_price)
+                if quantity <= 0 or unit_price < 0:
+                    raise ValueError
+                unit_price = unit_price.quantize(Decimal("0.01"))
+            except (ValueError, TypeError, InvalidOperation, ArithmeticError):
+                invalid_product = product_name
+                break
+
+            items.append((product_name, quantity, unit_price))
+
+        if invalid_product:
+            flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
+            return _render_sale_form(products, prices, request.form)
 
         if not items:
-            flash("Sélectionnez au moins un produit et renseignez une quantité vendue.", "error")
-            return render_template("animation_sale_form.html", products=products, prices=prices, form_data=request.form)
+            flash("Sélectionnez au moins un produit et renseignez sa quantité et son prix unitaire.", "error")
+            return _render_sale_form(products, prices, request.form)
 
         from app.models import AnimationSale
         try:
@@ -64,8 +87,9 @@ def new_animation_sale():
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer les ventes de l'animation.", "error")
+            return _render_sale_form(products, prices, request.form)
 
-    return render_template("animation_sale_form.html", products=products, prices=prices, form_data={})
+    return _render_sale_form(products, prices, {})
 
 
 def _animation_sales_query():
@@ -107,9 +131,6 @@ def my_history():
 
     sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.id.desc()).all()
 
-    # Pour l'administrateur, chaque date regroupe toutes les ventes et affiche
-    # les animateurs concernés dans le détail. Pour les autres rôles, seules
-    # leurs ventes autorisées sont visibles.
     by_date = {}
     for sale in sales:
         by_date.setdefault(sale.animation_date, []).append(sale)
@@ -163,10 +184,10 @@ def edit_animation_sale(sale_id):
             quantity = int(raw_quantity)
             if quantity <= 0:
                 raise ValueError
-            unit_price = Decimal(raw_price)
+            unit_price = Decimal(raw_price).quantize(Decimal("0.01"))
             if unit_price < 0:
                 raise ValueError
-        except (ValueError, TypeError, ArithmeticError):
+        except (ValueError, TypeError, InvalidOperation, ArithmeticError):
             flash("La quantité et le prix unitaire doivent être valides.", "error")
             return render_template("animation_sale_edit.html", sale=sale)
 
