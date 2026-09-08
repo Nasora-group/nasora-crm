@@ -8,6 +8,7 @@ from app.forms import LoginForm
 from app.models import User
 from app.audit_log import audit
 from app.login_security import is_blocked, record_failure, clear_failures, retry_after
+from app.extensions import csrf
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,14 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
+@csrf.exempt
 def logout():
+    """Log out the current user.
+
+    Logout is intentionally exempt from CSRF validation so a stale page/session
+    cannot prevent the user from ending their own session. Other state-changing
+    routes remain protected by the global CSRF middleware.
+    """
     audit("logout", target=current_user.username)
     logout_user()
     session.clear()
