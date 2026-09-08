@@ -19,7 +19,7 @@
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
-    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Le prix affiché en référence est le prix par défaut de la fiche produit. Vous pouvez le modifier pour appliquer le prix de vente réellement pratiqué pendant l'animation.</p>
+    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Les produits non vendus peuvent rester vides et ne bloquent pas l'enregistrement. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué.</p>
 
     <div style="overflow-x:auto;">
       <div style="min-width:760px;display:grid;grid-template-columns:minmax(220px,1fr) 150px 150px 170px;gap:10px 18px;align-items:center;">
@@ -28,7 +28,7 @@
         {% set default_price = prices.get(product, 0) %}
         <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
         <span>{{ '%.2f'|format(default_price|float) }} €</span>
-        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="0.01" inputmode="decimal" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, default_price) }}" placeholder="0.00" aria-label="Prix de vente de {{ product }}">
+        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="0.01" inputmode="decimal" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Prix de vente" aria-label="Prix de vente de {{ product }}">
         <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
         {% else %}
         <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
