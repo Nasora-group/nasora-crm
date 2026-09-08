@@ -1,34 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Saisir les ventes d’animation — NASORA CRM{% endblock %}
+{% block title %}Saisir les ventes d'animation - NASORA CRM{% endblock %}
 {% block content %}
 <section class="crm-page" style="max-width:1100px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
-      <h1 style="margin-bottom:6px;">Enregistrer les ventes de l’animation</h1>
-      <p style="margin:0;opacity:.75;">Indiquez la pharmacie, la date et les quantités vendues. Le montant de chaque ligne est calculé automatiquement.</p>
+      <h1 style="margin-bottom:6px;">Enregistrer les ventes de l'animation</h1>
+      <p style="margin:0;opacity:.75;">Pour chaque produit vendu, saisissez la quantité et le prix unitaire réellement pratiqué. Le total est calculé automatiquement.</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
 
-  <form method="post" class="card" style="padding:24px;">
+  <form method="post" class="card" style="padding:24px;" id="animation-sale-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:26px;">
       <label><strong>Pharmacie</strong><input required name="pharmacy_name" value="{{ form_data.get('pharmacy_name','') }}" placeholder="Ex. Pharmacie du Centre" style="width:100%;margin-top:8px;"></label>
-      <label><strong>Date de l’animation</strong><input required type="date" name="animation_date" value="{{ form_data.get('animation_date','') }}" style="width:100%;margin-top:8px;"></label>
+      <label><strong>Date de l'animation</strong><input required type="date" name="animation_date" value="{{ form_data.get('animation_date','') }}" style="width:100%;margin-top:8px;"></label>
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
-    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Saisissez uniquement les quantités réellement vendues. Une quantité à 0 ne crée pas de vente.</p>
-    <div style="display:grid;grid-template-columns:1fr 140px 180px;gap:10px 18px;align-items:center;">
-      <strong>Produit</strong><strong>Prix unitaire</strong><strong>Quantité vendue</strong>
-      {% for product in products %}
-      <label for="q-{{ loop.index }}">{{ product }}</label>
-      <span>{{ '%.2f'|format(prices.get(product, 0)|float) }} €</span>
-      <input id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2">
-      {% else %}
-      <p>Aucun produit actif n’est disponible pour votre division pour le moment.</p>
-      {% endfor %}
+    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Le prix affiché en référence est le prix par défaut de la fiche produit. Vous pouvez le modifier pour appliquer le prix de vente réellement pratiqué pendant l'animation.</p>
+
+    <div style="overflow-x:auto;">
+      <div style="min-width:760px;display:grid;grid-template-columns:minmax(220px,1fr) 150px 150px 170px;gap:10px 18px;align-items:center;">
+        <strong>Produit</strong><strong>Prix par défaut</strong><strong>Prix de vente</strong><strong>Quantité</strong>
+        {% for product in products %}
+        {% set default_price = prices.get(product, 0) %}
+        <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
+        <span>{{ '%.2f'|format(default_price|float) }} €</span>
+        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="0.01" inputmode="decimal" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, default_price) }}" placeholder="0.00" aria-label="Prix de vente de {{ product }}">
+        <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
+        {% else %}
+        <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding:18px;border-radius:12px;background:#f5faf7;border:1px solid #dcefe5;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.82rem;opacity:.7;">Montant total de l'animation</div>
+        <strong id="animation-total" style="font-size:1.7rem;color:#17643f;">0.00 €</strong>
+      </div>
+      <div style="font-size:.85rem;opacity:.7;">Total = quantité × prix de vente unitaire</div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
@@ -37,4 +50,34 @@
     </div>
   </form>
 </section>
+
+<script>
+(function () {
+  const form = document.getElementById('animation-sale-form');
+  const totalEl = document.getElementById('animation-total');
+  if (!form || !totalEl) return;
+
+  function numberValue(input) {
+    const value = Number.parseFloat((input.value || '').replace(',', '.'));
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  }
+
+  function updateTotal() {
+    let total = 0;
+    form.querySelectorAll('.sale-quantity').forEach(function (quantityInput) {
+      const priceInput = document.getElementById(quantityInput.dataset.priceInput);
+      if (!priceInput) return;
+      total += numberValue(quantityInput) * numberValue(priceInput);
+    });
+    totalEl.textContent = total.toFixed(2) + ' €';
+  }
+
+  form.querySelectorAll('.sale-quantity, .sale-unit-price').forEach(function (input) {
+    input.addEventListener('input', updateTotal);
+    input.addEventListener('change', updateTotal);
+  });
+
+  updateTotal();
+})();
+</script>
 {% endblock %}
