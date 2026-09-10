@@ -5,42 +5,16 @@
   <div class="card" style="padding:24px;">
     <h1 style="margin-bottom:6px;">Modifier la vente d’animation</h1>
     <p style="opacity:.75;margin-bottom:22px;">{{ sale.pharmacy_name }} — {{ sale.animation_date.strftime('%d/%m/%Y') }} — {{ sale.product_name }}</p>
-
     <form method="post">
-      <div style="margin-bottom:18px;">
-        <label for="quantity"><strong>Quantité vendue</strong></label>
-        <input id="quantity" name="quantity" type="number" min="1" step="1" required value="{{ sale.quantity }}" style="width:100%;padding:10px;margin-top:6px;">
-      </div>
-
-      <div style="margin-bottom:18px;">
-        <label for="unit_price"><strong>Prix unitaire (€)</strong></label>
-        <input id="unit_price" name="unit_price" type="number" min="0" step="0.01" required value="{{ '%.2f'|format(sale.unit_price|float) }}" style="width:100%;padding:10px;margin-top:6px;">
-      </div>
-
-      <div style="padding:14px;background:#f5f7f5;border-radius:8px;margin-bottom:22px;">
-        <div style="opacity:.7;font-size:.9rem;">Nouveau montant total</div>
-        <strong id="total-preview" style="font-size:1.4rem;">{{ '%.2f'|format(sale.total_amount|float) }} €</strong>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-primary" type="submit">Enregistrer la modification</button>
-        <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a>
-      </div>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="margin-bottom:18px;"><label for="quantity"><strong>Quantité vendue</strong></label><input id="quantity" name="quantity" type="number" min="1" step="1" required value="{{ sale.quantity }}" style="width:100%;padding:10px;margin-top:6px;"></div>
+      <div style="margin-bottom:18px;"><label for="unit_price"><strong>Prix unitaire (€)</strong></label><input id="unit_price" name="unit_price" type="number" min="0" step="0.01" required value="{{ '%.2f'|format(sale.unit_price|float) }}" style="width:100%;padding:10px;margin-top:6px;"></div>
+      <div style="padding:14px;background:#f5f7f5;border-radius:8px;margin-bottom:22px;"><div style="opacity:.7;font-size:.9rem;">Nouveau montant total</div><strong id="total-preview" style="font-size:1.4rem;">{{ '%.2f'|format(sale.total_amount|float) }} €</strong></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-primary" type="submit">Enregistrer la modification</button><a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a></div>
     </form>
   </div>
 </section>
 <script>
-(function () {
-  const quantity = document.getElementById('quantity');
-  const price = document.getElementById('unit_price');
-  const total = document.getElementById('total-preview');
-  function updateTotal() {
-    const q = Number(quantity.value) || 0;
-    const p = Number(price.value) || 0;
-    total.textContent = (q * p).toFixed(2) + ' €';
-  }
-  quantity.addEventListener('input', updateTotal);
-  price.addEventListener('input', updateTotal);
-})();
+(function () { const quantity=document.getElementById('quantity'); const price=document.getElementById('unit_price'); const total=document.getElementById('total-preview'); function updateTotal(){const q=Number(quantity.value)||0;const p=Number(price.value)||0;total.textContent=(q*p).toFixed(2)+' €';} quantity.addEventListener('input',updateTotal); price.addEventListener('input',updateTotal); })();
 </script>
 {% endblock %}
