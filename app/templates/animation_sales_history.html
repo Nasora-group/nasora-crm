@@ -3,142 +3,56 @@
 {% block content %}
 <section class="crm-page" style="max-width:1200px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
-    <div>
-      <span class="planning-kicker">Suivi commercial · Animations</span>
-      <h1 style="margin:4px 0 6px;">Ventes d’animations</h1>
-      {% if animateur %}
-        <p style="margin:0;opacity:.75;">Suivi de <strong>{{ animateur.username }}</strong></p>
-      {% else %}
-        <p style="margin:0;opacity:.75;">Retrouvez les ventes réalisées pendant les animations en pharmacie.</p>
-      {% endif %}
-    </div>
-    {% if current_user.role == 'animateur' %}
-      <a class="btn btn-primary" href="{{ url_for('animation_sales.new_animation_sale') }}">＋ Saisir une vente</a>
-    {% endif %}
+    <div><span class="planning-kicker">Suivi commercial · Animations</span><h1 style="margin:4px 0 6px;">Ventes d’animations</h1>{% if animateur %}<p style="margin:0;opacity:.75;">Suivi de <strong>{{ animateur.username }}</strong></p>{% else %}<p style="margin:0;opacity:.75;">Retrouvez les ventes réalisées pendant les animations en pharmacie.</p>{% endif %}</div>
+    {% if current_user.role == 'animateur' %}<a class="btn btn-primary" href="{{ url_for('animation_sales.new_animation_sale') }}">＋ Saisir une vente</a>{% endif %}
   </div>
 
   <div class="card" style="padding:18px;margin-bottom:20px;">
     <form method="get" action="{{ url_for('animation_sales.my_history') }}" style="display:flex;align-items:end;gap:14px;flex-wrap:wrap;">
-      <div>
-        <label for="month" style="display:block;font-weight:600;margin-bottom:6px;">Période</label>
-        <input id="month" name="month" type="month" value="{{ selected_month }}" class="form-control">
-      </div>
-      <button type="submit" class="btn btn-primary">Afficher</button>
-      {% if selected_month %}
-        <a href="{{ url_for('animation_sales.my_history') }}" class="btn btn-secondary">Tout afficher</a>
-      {% endif %}
+      <div><label for="month" style="display:block;font-weight:600;margin-bottom:6px;">Période</label><input id="month" name="month" type="month" value="{{ selected_month }}" class="form-control"></div>
+      <button type="submit" class="btn btn-primary">Afficher</button>{% if selected_month %}<a href="{{ url_for('animation_sales.my_history') }}" class="btn btn-secondary">Tout afficher</a>{% endif %}
     </form>
   </div>
 
   <div class="card" style="padding:22px;margin-bottom:20px;background:linear-gradient(135deg,#f4fff8,#ffffff);">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:.9rem;opacity:.7;">TOTAL DES VENTES{% if selected_month %} - {{ selected_month }}{% endif %}</div>
-        <div style="font-size:2rem;font-weight:800;margin-top:4px;">{{ '%.2f'|format(general_total|float) }} €</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:.9rem;opacity:.7;">Quantité vendue</div>
-        <strong style="font-size:1.25rem;">{{ general_quantity }}</strong>
-      </div>
-    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;"><div><div style="font-size:.9rem;opacity:.7;">TOTAL DES VENTES{% if selected_month %} - {{ selected_month }}{% endif %}</div><div style="font-size:2rem;font-weight:800;margin-top:4px;">{{ '%.2f'|format(general_total|float) }} €</div></div><div style="text-align:right;"><div style="font-size:.9rem;opacity:.7;">Quantité vendue</div><strong style="font-size:1.25rem;">{{ general_quantity }}</strong></div></div>
   </div>
 
   {% if days %}
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:14px;">Date</th>
-              {% if is_admin %}<th style="text-align:left;padding:14px;">Animateur(trice)</th>{% endif %}
-              <th style="text-align:right;padding:14px;">Montant total</th>
-              <th style="text-align:right;padding:14px;">Quantité</th>
-              <th style="text-align:center;padding:14px;">Détail</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for day in days %}
-            <tr>
-              <td style="padding:14px;border-top:1px solid #eee;font-weight:600;">{{ day['animation_date'].strftime('%d/%m/%Y') }}</td>
-              {% if is_admin %}
-                <td style="padding:14px;border-top:1px solid #eee;font-weight:600;">
-                  {% for name in day['animateurs'] %}
-                    <span style="display:inline-block;margin-right:6px;">{{ name }}</span>{% if not loop.last %}, {% endif %}
-                  {% endfor %}
-                </td>
-              {% endif %}
-              <td style="padding:14px;border-top:1px solid #eee;text-align:right;font-weight:700;">{{ '%.2f'|format(day['total_amount']|float) }} €</td>
-              <td style="padding:14px;border-top:1px solid #eee;text-align:right;">{{ day['total_quantity'] }}</td>
-              <td style="padding:14px;border-top:1px solid #eee;text-align:center;">
-                <button type="button" class="btn btn-sm btn-primary" onclick="toggleAnimationDetail('detail-{{ loop.index }}', this)">Voir le détail</button>
-              </td>
-            </tr>
-            <tr id="detail-{{ loop.index }}" style="display:none;background:#fafafa;">
-              <td colspan="{{ 5 if is_admin else 4 }}" style="padding:0 14px 16px 14px;">
-                <div style="padding:16px;border-left:4px solid #198754;">
-                  <div style="font-weight:700;margin-bottom:10px;">Ventes du {{ day['animation_date'].strftime('%d/%m/%Y') }}</div>
-                  <div style="overflow-x:auto;">
-                    <table style="width:100%;border-collapse:collapse;">
-                      <thead>
-                        <tr>
-                          {% if is_admin %}<th style="text-align:left;padding:8px;">Animateur(trice)</th>{% endif %}
-                          <th style="text-align:left;padding:8px;">Pharmacie</th>
-                          <th style="text-align:left;padding:8px;">Produit</th>
-                          <th style="text-align:right;padding:8px;">Prix unitaire</th>
-                          <th style="text-align:right;padding:8px;">Quantité</th>
-                          <th style="text-align:right;padding:8px;">Montant</th>
-                          <th style="text-align:center;padding:8px;">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for sale in day['items'] %}
-                          <tr>
-                            {% if is_admin %}<td style="padding:8px;border-top:1px solid #eee;">{{ sale.animateur.username if sale.animateur else '-' }}</td>{% endif %}
-                            <td style="padding:8px;border-top:1px solid #eee;">{{ sale.pharmacy_name }}</td>
-                            <td style="padding:8px;border-top:1px solid #eee;">{{ sale.product_name }}</td>
-                            <td style="padding:8px;border-top:1px solid #eee;text-align:right;">{{ '%.2f'|format(sale.unit_price|float) }} €</td>
-                            <td style="padding:8px;border-top:1px solid #eee;text-align:right;font-weight:600;">{{ sale.quantity }}</td>
-                            <td style="padding:8px;border-top:1px solid #eee;text-align:right;font-weight:600;">{{ '%.2f'|format(sale.total_amount|float) }} €</td>
-                            <td style="padding:8px;border-top:1px solid #eee;text-align:center;">
-                              {% if current_user.role == 'admin' or (current_user.role == 'animateur' and sale.animateur_id == current_user_id) %}
-                                <a class="btn btn-sm btn-primary" href="{{ url_for('animation_sales.edit_animation_sale', sale_id=sale.id) }}">Modifier</a>
-                              {% else %}
-                                <span style="opacity:.55;">-</span>
-                              {% endif %}
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">TOTAL</td>
-              {% if is_admin %}<td style="padding:14px;border-top:2px solid #ddd;"></td>{% endif %}
-              <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ '%.2f'|format(general_total|float) }} €</td>
-              <td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ general_quantity }}</td>
-              <td style="border-top:2px solid #ddd;"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  {% else %}
-    <div class="card" style="padding:35px;text-align:center;opacity:.8;">Aucune vente d’animation sur cette période.</div>
-  {% endif %}
+    <div class="card" style="padding:0;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+      <thead><tr><th style="text-align:left;padding:14px;">Date</th>{% if is_admin %}<th style="text-align:left;padding:14px;">Animateur(trice)</th>{% endif %}<th style="text-align:right;padding:14px;">Montant total</th><th style="text-align:right;padding:14px;">Quantité</th><th style="text-align:center;padding:14px;">Détail</th></tr></thead>
+      <tbody>
+      {% for day in days %}
+        <tr>
+          <td style="padding:14px;border-top:1px solid #eee;font-weight:700;"><button type="button" class="date-detail-btn" onclick="toggleAnimationDetail('detail-{{ loop.index }}', this)">{{ day['animation_date'].strftime('%d/%m/%Y') }}</button></td>
+          {% if is_admin %}<td style="padding:14px;border-top:1px solid #eee;font-weight:600;">{% for name in day['animateurs'] %}{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>{% endif %}
+          <td style="padding:14px;border-top:1px solid #eee;text-align:right;font-weight:700;">{{ '%.2f'|format(day['total_amount']|float) }} €</td><td style="padding:14px;border-top:1px solid #eee;text-align:right;">{{ day['total_quantity'] }}</td>
+          <td style="padding:14px;border-top:1px solid #eee;text-align:center;"><button type="button" class="btn btn-sm btn-primary" onclick="toggleAnimationDetail('detail-{{ loop.index }}', this)">Voir le détail</button></td>
+        </tr>
+        <tr id="detail-{{ loop.index }}" style="display:none;background:#fafafa;"><td colspan="{{ 5 if is_admin else 4 }}" style="padding:0 14px 16px;">
+          <div style="padding:16px;border-left:4px solid #198754;"><div style="font-weight:700;font-size:1rem;margin-bottom:14px;">Ventes du {{ day['animation_date'].strftime('%d/%m/%Y') }} par pharmacie</div>
+            {% for pharmacy in day['pharmacies'] %}
+              <div class="pharmacy-group">
+                <div class="pharmacy-group-head"><div><strong>🏥 {{ pharmacy['pharmacy_name'] }}</strong>{% if is_admin %}<div class="pharmacy-meta">{% for name in pharmacy['animateurs'] %}{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}</div><div class="pharmacy-totals"><span>{{ pharmacy['total_quantity'] }} unité(s)</span><strong>{{ '%.2f'|format(pharmacy['total_amount']|float) }} €</strong></div></div>
+                <div style="overflow-x:auto;"><table class="pharmacy-sales-table" style="width:100%;border-collapse:collapse;"><thead><tr><th style="text-align:left;padding:8px;">Produit</th><th style="text-align:right;padding:8px;">Prix unitaire</th><th style="text-align:right;padding:8px;">Quantité</th><th style="text-align:right;padding:8px;">Montant</th><th style="text-align:center;padding:8px;">Actions</th></tr></thead><tbody>
+                  {% for sale in pharmacy['items'] %}<tr><td style="padding:8px;border-top:1px solid #eee;">{{ sale.product_name }}</td><td style="padding:8px;border-top:1px solid #eee;text-align:right;">{{ '%.2f'|format(sale.unit_price|float) }} €</td><td style="padding:8px;border-top:1px solid #eee;text-align:right;font-weight:600;">{{ sale.quantity }}</td><td style="padding:8px;border-top:1px solid #eee;text-align:right;font-weight:600;">{{ '%.2f'|format(sale.total_amount|float) }} €</td><td style="padding:8px;border-top:1px solid #eee;text-align:center;">
+                    {% if current_user.role == 'admin' or (current_user.role == 'animateur' and sale.animateur_id == current_user_id) %}<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><a class="btn btn-sm btn-primary" href="{{ url_for('animation_sales.edit_animation_sale', sale_id=sale.id) }}">Modifier</a><form method="post" action="{{ url_for('animation_sales.delete_animation_sale', sale_id=sale.id) }}" onsubmit="return confirm('Supprimer définitivement cette vente ?');" style="display:inline;"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div>{% else %}<span style="opacity:.55;">-</span>{% endif %}
+                  </td></tr>{% endfor %}
+                </tbody></table></div>
+              </div>
+            {% endfor %}
+          </div>
+        </td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">TOTAL</td>{% if is_admin %}<td style="padding:14px;border-top:2px solid #ddd;"></td>{% endif %}<td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ '%.2f'|format(general_total|float) }} €</td><td style="padding:14px;text-align:right;font-weight:800;border-top:2px solid #ddd;">{{ general_quantity }}</td><td style="border-top:2px solid #ddd;"></td></tr></tfoot>
+    </table></div></div>
+  {% else %}<div class="card" style="padding:35px;text-align:center;opacity:.8;">Aucune vente d’animation sur cette période.</div>{% endif %}
 </section>
-
+<style>
+.date-detail-btn{border:0;background:transparent;padding:0;font:inherit;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:3px}.pharmacy-group{background:#fff;border:1px solid #e4e8e5;border-radius:12px;margin-bottom:12px;overflow:hidden}.pharmacy-group-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;background:#f4fff8;border-bottom:1px solid #e4e8e5}.pharmacy-meta{font-size:.72rem;opacity:.65;margin-top:3px}.pharmacy-totals{display:flex;align-items:center;gap:16px;font-size:.78rem}.pharmacy-totals strong{font-size:.95rem}.btn-danger{background:#c0392b;color:#fff;border-color:#c0392b}.btn-danger:hover{opacity:.9}@media(max-width:650px){.pharmacy-group-head{align-items:flex-start;flex-direction:column}.pharmacy-totals{width:100%;justify-content:space-between}}
+</style>
 <script>
-function toggleAnimationDetail(id, button) {
-  const row = document.getElementById(id);
-  const visible = row.style.display !== 'none';
-  row.style.display = visible ? 'none' : 'table-row';
-  button.textContent = visible ? 'Voir le détail' : 'Masquer le détail';
-}
+function toggleAnimationDetail(id, button){const row=document.getElementById(id);const visible=row.style.display!=='none';row.style.display=visible?'none':'table-row';if(!button.classList.contains('date-detail-btn'))button.textContent=visible?'Voir le détail':'Masquer le détail';}
 </script>
 {% endblock %}
