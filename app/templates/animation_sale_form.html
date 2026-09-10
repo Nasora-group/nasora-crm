@@ -6,7 +6,7 @@
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
       <h1 style="margin-bottom:6px;">Enregistrer les ventes de l'animation</h1>
-      <p style="margin:0;opacity:.75;">Pour chaque produit vendu, saisissez la quantité et le prix unitaire réellement pratiqué. Le total est calculé automatiquement.</p>
+      <p style="margin:0;opacity:.75;">Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
@@ -19,16 +19,14 @@
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
-    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Les produits non vendus peuvent rester vides et ne bloquent pas l'enregistrement. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué.</p>
+    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué en FCFA.</p>
 
     <div style="overflow-x:auto;">
-      <div style="min-width:760px;display:grid;grid-template-columns:minmax(220px,1fr) 150px 150px 170px;gap:10px 18px;align-items:center;">
-        <strong>Produit</strong><strong>Prix HT par défaut (€)</strong><strong>Prix de vente (FCFA)</strong><strong>Quantité</strong>
+      <div style="min-width:560px;display:grid;grid-template-columns:minmax(260px,1fr) 190px 170px;gap:10px 18px;align-items:center;">
+        <strong>Produit</strong><strong>Prix de vente unitaire (FCFA)</strong><strong>Quantité</strong>
         {% for product in products %}
-        {% set default_price = prices.get(product, 0) %}
         <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
-        <span>{{ '%.2f'|format(default_price|float) }} €</span>
-        <input class="sale-unit-price" data-default-price="{{ default_price }}" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Prix de vente en FCFA" aria-label="Prix de vente de {{ product }} en FCFA">
+        <input class="sale-unit-price" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Ex. 5000" aria-label="Prix de vente de {{ product }} en FCFA">
         <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
         {% else %}
         <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
