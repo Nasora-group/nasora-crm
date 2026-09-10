@@ -2,7 +2,6 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
-from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
@@ -48,16 +47,6 @@ def _cycle_dates(start_date):
     if not _valid_week_start(start_date):
         raise ValueError("La date de début doit être un lundi")
     return [start_date + timedelta(days=7 * index) for index in range(4)]
-
-
-def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
-    query = Planning.query.filter(
-        Planning.commercial_id == commercial_id,
-        Planning.date.in_(cycle_dates),
-    )
-    if lock:
-        query = query.with_for_update()
-    return query.first() is not None
 
 
 def _planning_candidates(commercial_id):
@@ -128,8 +117,6 @@ def saisie():
         ).first()
 
         try:
-            # Upsert: les anciennes contraintes d'unicité ne doivent plus
-            # empêcher une nouvelle saisie pour une semaine déjà existante.
             if existing is None:
                 existing = Planning(
                     commercial_id=current_user.id,
@@ -144,10 +131,7 @@ def saisie():
             flash("Impossible d'enregistrer le planning pour le moment. Votre saisie n'a pas été enregistrée.", "error")
             return _render_saisie(formulaire, "create")
 
-        flash(
-            "Planning enregistré avec succès." if existing is None else "Planning enregistré avec succès.",
-            "success",
-        )
+        flash("Planning enregistré avec succès.", "success")
         return redirect(url_for("planning.visualiser"))
     return _render_saisie(formulaire, "create")
 
@@ -167,8 +151,6 @@ def edit_planning(planning_id):
             flash("La date de début doit être un lundi.", "error")
             return _render_saisie(formulaire, "edit", planning)
 
-        # Si une ancienne contrainte unique existe encore, déplacer la saisie
-        # vers la ligne existante au lieu de produire une erreur SQL.
         target = Planning.query.filter(
             Planning.commercial_id == current_user.id,
             Planning.date == formulaire.date.data,
@@ -294,10 +276,6 @@ def admin_planning_generate(commercial_id):
             for champ, valeur in fields.items():
                 setattr(planning, champ, valeur)
         db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-        flash("Le planning n'a pas pu être généré. Aucune modification partielle n'a été conservée.", "error")
-        return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
     except Exception:
         db.session.rollback()
         flash("Impossible de générer le planning pour le moment. Aucune modification partielle n'a été conservée.", "error")
