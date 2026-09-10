@@ -8,7 +8,7 @@ from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
 from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS
 from app.services.planning_ai import PlanningCandidate, generate_two_weeks, planning_entries_for_week
-from app.permissions import owns_record
+from app.permissions import owns_record, is_commercial
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
 
 planning_bp = Blueprint("planning", __name__)
@@ -55,19 +55,6 @@ def _cycle_already_exists(commercial_id, cycle_dates, lock=False):
         Planning.commercial_id == commercial_id,
         Planning.date.in_(cycle_dates),
     )
-    if lock:
-        query = query.with_for_update()
-    return query.first() is not None
-
-
-def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, lock=False, query=None):
-    query = query or Planning.query
-    query = query.filter(
-        Planning.commercial_id == commercial_id,
-        Planning.date == planning_date,
-    )
-    if exclude_id is not None:
-        query = query.filter(Planning.id != exclude_id)
     if lock:
         query = query.with_for_update()
     return query.first() is not None
@@ -134,43 +121,33 @@ def saisie():
             flash("La date de début doit être un lundi.", "error")
             return _render_saisie(formulaire, "create")
 
-        nouveau_planning = Planning(
+        creneaux = _build_creneaux_from_form()
+        existing = Planning.query.filter_by(
             commercial_id=current_user.id,
             date=formulaire.date.data,
-            **_build_creneaux_from_form(),
-        )
-        db.session.add(nouveau_planning)
+        ).first()
+
         try:
-            db.session.commit()
-        except IntegrityError:
-            # Certaines bases historiques possèdent encore une contrainte
-            # unique (commercial, date). Dans ce cas, on transforme l'ancien
-            # blocage en mise à jour du planning existant : aucune saisie valide
-            # ne reste bloquée à cause de l'ancien schéma.
-            db.session.rollback()
-            existing = Planning.query.filter_by(
-                commercial_id=current_user.id,
-                date=formulaire.date.data,
-            ).first()
+            # Upsert: les anciennes contraintes d'unicité ne doivent plus
+            # empêcher une nouvelle saisie pour une semaine déjà existante.
             if existing is None:
-                flash("Impossible d'enregistrer le planning pour le moment. Réessayez sans perdre votre saisie.", "error")
-                return _render_saisie(formulaire, "create")
-            existing.date = formulaire.date.data
-            for champ, valeur in _build_creneaux_from_form().items():
+                existing = Planning(
+                    commercial_id=current_user.id,
+                    date=formulaire.date.data,
+                )
+                db.session.add(existing)
+            for champ, valeur in creneaux.items():
                 setattr(existing, champ, valeur)
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                flash("Impossible d'enregistrer le planning pour le moment.", "error")
-                return _render_saisie(formulaire, "create")
-            flash("Le planning existant a été mis à jour avec votre nouvelle saisie.", "success")
-            return redirect(url_for("planning.visualiser"))
+            db.session.commit()
         except Exception:
             db.session.rollback()
-            flash("Impossible d'enregistrer le planning pour le moment.", "error")
+            flash("Impossible d'enregistrer le planning pour le moment. Votre saisie n'a pas été enregistrée.", "error")
             return _render_saisie(formulaire, "create")
-        flash("Planning enregistré avec succès.", "success")
+
+        flash(
+            "Planning enregistré avec succès." if existing is None else "Planning enregistré avec succès.",
+            "success",
+        )
         return redirect(url_for("planning.visualiser"))
     return _render_saisie(formulaire, "create")
 
@@ -190,33 +167,23 @@ def edit_planning(planning_id):
             flash("La date de début doit être un lundi.", "error")
             return _render_saisie(formulaire, "edit", planning)
 
-        planning.date = formulaire.date.data
-        for champ, valeur in _build_creneaux_from_form().items():
-            setattr(planning, champ, valeur)
+        # Si une ancienne contrainte unique existe encore, déplacer la saisie
+        # vers la ligne existante au lieu de produire une erreur SQL.
+        target = Planning.query.filter(
+            Planning.commercial_id == current_user.id,
+            Planning.date == formulaire.date.data,
+            Planning.id != planning.id,
+        ).first()
+        if target is not None:
+            for champ, valeur in _build_creneaux_from_form().items():
+                setattr(target, champ, valeur)
+            db.session.delete(planning)
+        else:
+            planning.date = formulaire.date.data
+            for champ, valeur in _build_creneaux_from_form().items():
+                setattr(planning, champ, valeur)
         try:
             db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            existing = Planning.query.filter(
-                Planning.commercial_id == current_user.id,
-                Planning.date == formulaire.date.data,
-                Planning.id != planning.id,
-            ).first()
-            if existing is None:
-                flash("Impossible de mettre à jour le planning pour le moment.", "error")
-                return _render_saisie(formulaire, "edit", planning)
-            # Même logique de compatibilité avec une ancienne contrainte unique.
-            for champ, valeur in _build_creneaux_from_form().items():
-                setattr(existing, champ, valeur)
-            db.session.delete(planning)
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                flash("Impossible de mettre à jour le planning pour le moment.", "error")
-                return _render_saisie(formulaire, "edit", planning)
-            flash("Le planning a été mis à jour avec succès.", "success")
-            return redirect(url_for("planning.visualiser"))
         except Exception:
             db.session.rollback()
             flash("Impossible de mettre à jour le planning pour le moment.", "error")
@@ -251,7 +218,7 @@ def delete_planning(planning_id):
 @login_required
 @roles_required("admin")
 def admin_plannings():
-    commerciaux = User.query.filter_by(role="commercial").order_by(User.username).all()
+    commerciaux = User.query.filter(User.role.in_(("commercial", "animateur"))).order_by(User.username).all()
     return render_template("admin_plannings.html", commerciaux=commerciaux)
 
 
@@ -260,7 +227,7 @@ def admin_plannings():
 @roles_required("admin")
 def admin_planning_detail(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
-    if commercial.role != "commercial":
+    if not is_commercial(commercial):
         abort(404)
     plannings = _monday_plannings(
         Planning.query.filter_by(commercial_id=commercial_id).order_by(Planning.date.desc())
@@ -273,7 +240,7 @@ def admin_planning_detail(commercial_id):
 @roles_required("admin")
 def admin_planning_generate(commercial_id):
     commercial = User.query.get_or_404(commercial_id)
-    if commercial.role != "commercial":
+    if not is_commercial(commercial):
         abort(404)
     try:
         visits_per_day = int(request.form.get("visits_per_day", "5"))
@@ -301,32 +268,39 @@ def admin_planning_generate(commercial_id):
         return redirect(url_for("planning.admin_plannings"))
 
     cycle_dates = _cycle_dates(start_date)
-    if _cycle_already_exists(commercial.id, cycle_dates):
-        flash("Un planning existe déjà sur l'une des quatre semaines. Utilisez la saisie/modification pour l'ajuster.", "error")
-        return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
-
     generated_entries = [planning_entries_for_week(week) for week in weeks]
     complete_cycle = generated_entries + [generated_entries[0], generated_entries[1]]
     empty_slot = encode_planning_slot([])
 
     try:
+        # Verrouille le visiteur médical pour éviter deux générations
+        # concurrentes. Les lignes existantes sont mises à jour, les absentes
+        # sont créées. Il n'y a plus de blocage « planning déjà existant ».
         User.query.filter_by(id=commercial.id).with_for_update().first()
-        if _cycle_already_exists(commercial.id, cycle_dates, lock=True):
-            db.session.rollback()
-            flash("Un planning existe déjà sur l'une des quatre semaines.", "error")
-            return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+        existing_by_date = {
+            row.date: row
+            for row in Planning.query.filter(
+                Planning.commercial_id == commercial.id,
+                Planning.date.in_(cycle_dates),
+            ).with_for_update().all()
+        }
         for cycle_index, cycle_date in enumerate(cycle_dates):
+            planning = existing_by_date.get(cycle_date)
+            if planning is None:
+                planning = Planning(commercial_id=commercial.id, date=cycle_date)
+                db.session.add(planning)
             fields = {jour: encode_planning_slot(complete_cycle[cycle_index][jour]) for jour in WORKING_DAYS}
             fields.update({jour: empty_slot for jour in NON_WORKING_DAYS})
-            db.session.add(Planning(commercial_id=commercial.id, date=cycle_date, **fields))
+            for champ, valeur in fields.items():
+                setattr(planning, champ, valeur)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        flash("Le planning n'a pas pu être généré car il existe déjà. Aucun enregistrement partiel n'a été conservé.", "error")
+        flash("Le planning n'a pas pu être généré. Aucune modification partielle n'a été conservée.", "error")
         return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
     except Exception:
         db.session.rollback()
-        flash("Impossible de générer le planning pour le moment. Aucun enregistrement partiel n'a été conservé.", "error")
+        flash("Impossible de générer le planning pour le moment. Aucune modification partielle n'a été conservée.", "error")
         return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
 
     flash(f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.", "success")
