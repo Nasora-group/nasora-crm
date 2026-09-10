@@ -52,7 +52,11 @@ button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .data-table-wrapper,
 .responsive-table-wrapper,
 .crm-table-card,
-.responsive-table{
+.responsive-table,
+.panel:has(table),
+.crm-surface:has(table),
+.card:has(table),
+.dashboard-card:has(table){
   width:100%;
   max-width:100%;
   overflow-x:auto;
@@ -68,7 +72,11 @@ button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .data-table-wrapper::-webkit-scrollbar,
 .responsive-table-wrapper::-webkit-scrollbar,
 .crm-table-card::-webkit-scrollbar,
-.responsive-table::-webkit-scrollbar{height:8px;}
+.responsive-table::-webkit-scrollbar,
+.panel:has(table)::-webkit-scrollbar,
+.crm-surface:has(table)::-webkit-scrollbar,
+.card:has(table)::-webkit-scrollbar,
+.dashboard-card:has(table)::-webkit-scrollbar{height:8px;}
 
 .table-responsive::-webkit-scrollbar-thumb,
 .table-wrapper::-webkit-scrollbar-thumb,
@@ -76,12 +84,16 @@ button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .data-table-wrapper::-webkit-scrollbar-thumb,
 .responsive-table-wrapper::-webkit-scrollbar-thumb,
 .crm-table-card::-webkit-scrollbar-thumb,
-.responsive-table::-webkit-scrollbar-thumb{
+.responsive-table::-webkit-scrollbar-thumb,
+.panel:has(table)::-webkit-scrollbar-thumb,
+.crm-surface:has(table)::-webkit-scrollbar-thumb,
+.card:has(table)::-webkit-scrollbar-thumb,
+.dashboard-card:has(table)::-webkit-scrollbar-thumb{
   background:#b7c7bd;
   border-radius:999px;
 }
 
-/* Table directe ou table placée dans un wrapper responsive. */
+/* Table directe ou table placée dans un conteneur : largeur réelle conservée. */
 table.responsive-table,
 table.data-table,
 .responsive-table > table,
@@ -89,7 +101,11 @@ table.data-table,
 .table-responsive table,
 .table-wrapper table,
 .table-container table,
-.crm-table-card table{
+.crm-table-card table,
+.panel:has(table) > table,
+.crm-surface:has(table) > table,
+.card:has(table) > table,
+.dashboard-card:has(table) > table{
   width:max-content;
   min-width:100%;
   max-width:none;
@@ -103,7 +119,7 @@ table.data-table,
   overflow:visible;
 }
 
-/* Toutes les cellules des tableaux de données : retour à la ligne plutôt que contenu coupé. */
+/* Cellules : le contenu revient à la ligne au lieu de sortir de l'écran. */
 .responsive-table th,
 .responsive-table td,
 .data-table th,
@@ -117,7 +133,15 @@ table.data-table,
 .table-container table th,
 .table-container table td,
 .crm-table-card table th,
-.crm-table-card table td{
+.crm-table-card table td,
+.panel:has(table) table th,
+.panel:has(table) table td,
+.crm-surface:has(table) table th,
+.crm-surface:has(table) table td,
+.card:has(table) table th,
+.card:has(table) table td,
+.dashboard-card:has(table) table th,
+.dashboard-card:has(table) table td{
   padding:13px 15px;
   border-bottom:1px solid var(--ns-human-border);
   vertical-align:middle;
@@ -134,7 +158,11 @@ table.data-table,
 .table-responsive table thead th,
 .table-wrapper table thead th,
 .table-container table thead th,
-.crm-table-card table thead th{
+.crm-table-card table thead th,
+.panel:has(table) table thead th,
+.crm-surface:has(table) table thead th,
+.card:has(table) table thead th,
+.dashboard-card:has(table) table thead th{
   position:sticky;
   top:0;
   z-index:3;
@@ -154,7 +182,11 @@ table.data-table,
 .table-responsive table tbody tr:last-child td,
 .table-wrapper table tbody tr:last-child td,
 .table-container table tbody tr:last-child td,
-.crm-table-card table tbody tr:last-child td{border-bottom:0;}
+.crm-table-card table tbody tr:last-child td,
+.panel:has(table) table tbody tr:last-child td,
+.crm-surface:has(table) table tbody tr:last-child td,
+.card:has(table) table tbody tr:last-child td,
+.dashboard-card:has(table) table tbody tr:last-child td{border-bottom:0;}
 
 .responsive-table tbody tr:hover td,
 .data-table tbody tr:hover td,
@@ -162,16 +194,23 @@ table.data-table,
 .table-responsive table tbody tr:hover td,
 .table-wrapper table tbody tr:hover td,
 .table-container table tbody tr:hover td,
-.crm-table-card table tbody tr:hover td{background:#f5faf7!important;}
+.crm-table-card table tbody tr:hover td,
+.panel:has(table) table tbody tr:hover td,
+.crm-surface:has(table) table tbody tr:hover td,
+.card:has(table) table tbody tr:hover td,
+.dashboard-card:has(table) table tbody tr:hover td{background:#f5faf7!important;}
 
-/* Colonnes longues : largeur raisonnable + texte intégral sur plusieurs lignes. */
 .responsive-table td,
 .data-table td,
 .responsive-table table td,
 .table-responsive table td,
 .table-wrapper table td,
 .table-container table td,
-.crm-table-card table td{max-width:360px;}
+.crm-table-card table td,
+.panel:has(table) table td,
+.crm-surface:has(table) table td,
+.card:has(table) table td,
+.dashboard-card:has(table) table td{max-width:360px;}
 
 .responsive-table td:first-child,
 .data-table td:first-child,
@@ -179,9 +218,12 @@ table.data-table,
 .table-responsive table td:first-child,
 .table-wrapper table td:first-child,
 .table-container table td:first-child,
-.crm-table-card table td:first-child{white-space:nowrap;}
+.crm-table-card table td:first-child,
+.panel:has(table) table td:first-child,
+.crm-surface:has(table) table td:first-child,
+.card:has(table) table td:first-child,
+.dashboard-card:has(table) table td:first-child{white-space:nowrap;}
 
-/* Les actions restent toujours regroupées et accessibles. */
 .table-actions{
   display:flex;
   flex-wrap:wrap;
@@ -192,10 +234,12 @@ table.data-table,
 .table-actions form{margin:0;}
 .table-actions .btn{white-space:nowrap;}
 
-/* Repère discret lorsque toutes les colonnes ne tiennent pas sur l'écran. */
+/* Indication discrète quand un tableau dépasse la largeur disponible. */
 .crm-table-card:has(table)::after,
 .table-responsive:has(table)::after,
-.responsive-table:has(table)::after{
+.responsive-table:has(table)::after,
+.panel:has(table)::after,
+.crm-surface:has(table)::after{
   content:'Faites défiler horizontalement pour voir toutes les colonnes';
   display:block;
   width:max-content;
@@ -207,34 +251,30 @@ table.data-table,
   pointer-events:none;
 }
 
-/* Première colonne fixe sur desktop pour conserver le repère lors du défilement. */
+/* Première colonne fixe sur desktop pour garder le contexte pendant le défilement. */
 @media(min-width:901px){
-  .responsive-table th:first-child,
-  .responsive-table td:first-child,
-  .data-table th:first-child,
-  .data-table td:first-child,
-  .responsive-table table th:first-child,
-  .responsive-table table td:first-child,
-  .table-responsive table th:first-child,
-  .table-responsive table td:first-child,
-  .table-wrapper table th:first-child,
-  .table-wrapper table td:first-child,
-  .table-container table th:first-child,
-  .table-container table td:first-child,
-  .crm-table-card table th:first-child,
-  .crm-table-card table td:first-child{
+  .responsive-table th:first-child,.responsive-table td:first-child,
+  .data-table th:first-child,.data-table td:first-child,
+  .responsive-table table th:first-child,.responsive-table table td:first-child,
+  .table-responsive table th:first-child,.table-responsive table td:first-child,
+  .table-wrapper table th:first-child,.table-wrapper table td:first-child,
+  .table-container table th:first-child,.table-container table td:first-child,
+  .crm-table-card table th:first-child,.crm-table-card table td:first-child,
+  .panel:has(table) table th:first-child,.panel:has(table) table td:first-child,
+  .crm-surface:has(table) table th:first-child,.crm-surface:has(table) table td:first-child,
+  .card:has(table) table th:first-child,.card:has(table) table td:first-child,
+  .dashboard-card:has(table) table th:first-child,.dashboard-card:has(table) table td:first-child{
     position:sticky;
     left:0;
     z-index:2;
     background:var(--ns-human-surface);
   }
-  .responsive-table thead th:first-child,
-  .data-table thead th:first-child,
-  .responsive-table table thead th:first-child,
-  .table-responsive table thead th:first-child,
-  .table-wrapper table thead th:first-child,
-  .table-container table thead th:first-child,
-  .crm-table-card table thead th:first-child{
+  .responsive-table thead th:first-child,.data-table thead th:first-child,
+  .responsive-table table thead th:first-child,.table-responsive table thead th:first-child,
+  .table-wrapper table thead th:first-child,.table-container table thead th:first-child,
+  .crm-table-card table thead th:first-child,
+  .panel:has(table) table thead th:first-child,.crm-surface:has(table) table thead th:first-child,
+  .card:has(table) table thead th:first-child,.dashboard-card:has(table) table thead th:first-child{
     z-index:5;
     background:#f0f6f2!important;
   }
@@ -251,22 +291,21 @@ table.data-table,
   text-align:left;
 }
 
-/* Sur petits écrans : aucune donnée supprimée, le tableau devient défilable. */
 @media(max-width:820px){
-  .table-responsive,
-  .table-wrapper,
-  .table-container,
-  .data-table-wrapper,
-  .responsive-table-wrapper,
-  .crm-table-card,
-  .responsive-table{margin-left:0;margin-right:0;}
+  .table-responsive,.table-wrapper,.table-container,.data-table-wrapper,
+  .responsive-table-wrapper,.crm-table-card,.responsive-table,
+  .panel:has(table),.crm-surface:has(table),.card:has(table),.dashboard-card:has(table){margin-left:0;margin-right:0;}
   .responsive-table th,.responsive-table td,
   .data-table th,.data-table td,
   .responsive-table table th,.responsive-table table td,
   .table-responsive table th,.table-responsive table td,
   .table-wrapper table th,.table-wrapper table td,
   .table-container table th,.table-container table td,
-  .crm-table-card table th,.crm-table-card table td{
+  .crm-table-card table th,.crm-table-card table td,
+  .panel:has(table) table th,.panel:has(table) table td,
+  .crm-surface:has(table) table th,.crm-surface:has(table) table td,
+  .card:has(table) table th,.card:has(table) table td,
+  .dashboard-card:has(table) table th,.dashboard-card:has(table) table td{
     padding:11px 12px;
     font-size:.82rem;
   }
@@ -274,9 +313,8 @@ table.data-table,
   .responsive-table table thead th,.table-responsive table thead th{font-size:.68rem!important;}
   .table-actions{flex-direction:column;align-items:stretch;}
   .table-actions .btn{width:100%;text-align:center;}
-  .crm-table-card:has(table)::after,
-  .table-responsive:has(table)::after,
-  .responsive-table:has(table)::after{font-size:.64rem;}
+  .crm-table-card:has(table)::after,.table-responsive:has(table)::after,
+  .responsive-table:has(table)::after,.panel:has(table)::after,.crm-surface:has(table)::after{font-size:.64rem;}
   main.container{padding-left:12px!important;padding-right:12px!important;}
   .card,.panel,.dashboard-card,.kpi-card,.chart-card,.summary-card,.crm-surface,.data-card{border-radius:12px!important;}
   .kpi-card{padding:14px!important;}
@@ -284,14 +322,12 @@ table.data-table,
   button,.btn,.btn-submit{min-height:42px;}
 }
 
-/* Focus clavier clairement visible sans modifier le fonctionnement. */
 :where(a,button,input,select,textarea):focus-visible{
   outline:3px solid rgba(23,100,63,.22)!important;
   outline-offset:2px!important;
   border-color:var(--ns-human-green)!important;
 }
 
-/* Messages : parler à la personne plutôt qu'au système. */
 .flash{border-radius:12px!important;padding:12px 15px!important;font-weight:600;}
 .flash-success{background:#edf8f1!important;color:#145c38!important;border-color:#cce8d6!important;}
 .flash-info{background:#eef6fb!important;color:#24536d!important;border-color:#cfe2ef!important;}
