@@ -43,7 +43,7 @@ def _specialites_stats(query):
 
 
 def _prospection_payload(query):
-    rows = query.order_by(Prospection.date.desc(), Prospection.id.desc()).all()
+    rows = query.order_by(Prospection.date.desc()).all()
     return [{
         "id": p.id,
         "date": p.date.isoformat() if p.date else "",
