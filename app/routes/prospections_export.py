@@ -2,7 +2,7 @@ from datetime import date
 from io import BytesIO
 
 import pandas as pd
-from flask import Blueprint, render_template, request, send_file
+from flask import Blueprint, jsonify, render_template, request, send_file
 from flask_login import login_required
 from sqlalchemy import func
 
@@ -40,6 +40,34 @@ def _specialites_stats(query):
             .group_by(Prospection.specialite)
             .order_by(func.count(Prospection.id).desc(), Prospection.specialite.asc()).all())
     return [{"label": (specialite or "Non renseignée"), "count": int(count or 0)} for specialite, count in rows]
+
+
+def _prospection_payload(query):
+    rows = query.order_by(Prospection.date.desc(), Prospection.id.desc()).all()
+    return [{
+        "id": p.id,
+        "date": p.date.isoformat() if p.date else "",
+        "commercial": p.commercial.username if p.commercial else "",
+        "division": (p.commercial.project or "").upper() if p.commercial else "",
+        "zone": p.commercial.zone or "" if p.commercial else "",
+        "nom_client": p.nom_client or "",
+        "specialite": p.specialite or "",
+        "structure": p.structure or "",
+        "establishment": p.establishment or "",
+        "telephone": p.telephone or "",
+        "profils_prospect": p.profils_prospect or "",
+        "produits_presentes": p.produits_presentes or "",
+        "produits_prescrits": p.produits_prescrits or "",
+    } for p in rows]
+
+
+@prospections_export_bp.route("/admin/prospections/data", methods=["GET"])
+@login_required
+@roles_required("admin")
+def prospections_data():
+    """Retourne les prospections filtrées avec l'intégralité des champs saisis."""
+    query, *_ = _query_from_filters()
+    return jsonify({"items": _prospection_payload(query)})
 
 
 @prospections_export_bp.route("/admin/prospections/export", methods=["GET"])
