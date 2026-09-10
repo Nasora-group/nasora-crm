@@ -2,33 +2,21 @@ from collections import Counter
 from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request
-from flask_login import current_user, login_required
+from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import (
-    AnimationSale,
-    Client,
-    ClientVisit,
-    Prospection,
-    SalesObjective,
-    SUPPLIERS,
-    DIVISION_SUPPLIERS,
-    User,
-)
+from app.models import AnimationSale, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User
+from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.visit_objectives_readonly import read_visit_targets
-
 
 manager_cockpit_bp = Blueprint("manager_cockpit", __name__)
 
 
 def _month_bounds(day):
     start = day.replace(day=1)
-    if day.month == 12:
-        end = day.replace(year=day.year + 1, month=1, day=1)
-    else:
-        end = day.replace(month=day.month + 1, day=1)
+    end = day.replace(year=day.year + 1, month=1, day=1) if day.month == 12 else day.replace(month=day.month + 1, day=1)
     return start, end
 
 
@@ -41,19 +29,7 @@ def _revenue_for_range(division, start, end, commercial_id=None):
         sale_model = supplier["sale_model"]
         product_model = supplier["product_model"]
         amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-        query = (
-            db.session.query(
-                product_model.name,
-                func.coalesce(func.sum(sale_model.quantity), 0),
-                func.coalesce(func.sum(amount_expr), 0),
-            )
-            .join(sale_model, sale_model.product_id == product_model.id)
-            .filter(
-                sale_model.project == division,
-                sale_model.date >= start,
-                sale_model.date < end,
-            )
-        )
+        query = db.session.query(product_model.name, func.coalesce(func.sum(sale_model.quantity), 0), func.coalesce(func.sum(amount_expr), 0)).join(sale_model, sale_model.product_id == product_model.id).filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end)
         if commercial_id is not None:
             query = query.filter(sale_model.commercial_id == commercial_id)
         rows = query.group_by(product_model.id, product_model.name).all()
@@ -94,10 +70,9 @@ def _unique_visits(commercial_id=None, start=None, end=None):
     unique = []
     for row in rows:
         key = (row.commercial_id, row.client_id, row.date)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(row)
+        if key not in seen:
+            seen.add(key)
+            unique.append(row)
     return unique
 
 
@@ -108,14 +83,7 @@ def _ranking(commercials, division, start, end, visit_targets):
         visits = len(_unique_visits(commercial.id, start, end))
         target = int(visit_targets.get(commercial.id, 0) or 0)
         visit_pct = round(visits * 100 / target, 1) if target else 0.0
-        ranking.append({
-            "id": commercial.id,
-            "name": commercial.username,
-            "revenue": revenue,
-            "visits": visits,
-            "target": target,
-            "visit_pct": visit_pct,
-        })
+        ranking.append({"id": commercial.id, "name": commercial.username, "revenue": revenue, "visits": visits, "target": target, "visit_pct": visit_pct})
     ranking.sort(key=lambda row: (row["revenue"], row["visits"]), reverse=True)
     for index, row in enumerate(ranking, 1):
         row["rank"] = index
@@ -129,18 +97,15 @@ def index():
     today = date.today()
     start, end = _month_bounds(today)
     previous_start = (start - timedelta(days=1)).replace(day=1)
-
     division = (request.args.get("division") or "").strip().lower()
     if division not in DIVISION_SUPPLIERS:
         division = "all"
-
     divisions = list(DIVISION_SUPPLIERS.keys())
     division_filter = None if division == "all" else division
     commercials = User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all()
     animateurs = User.query.filter_by(role="animateur", is_active_account=True).order_by(User.username).all()
-
-    selected_commercial_raw = (request.args.get("commercial_id") or "").strip()
-    selected_commercial_id = int(selected_commercial_raw) if selected_commercial_raw.isdigit() else None
+    selected_raw = (request.args.get("commercial_id") or "").strip()
+    selected_commercial_id = int(selected_raw) if selected_raw.isdigit() else None
     if selected_commercial_id and not any(c.id == selected_commercial_id for c in commercials):
         selected_commercial_id = None
 
@@ -163,13 +128,9 @@ def index():
         monthly_objective = None
 
     visits = _unique_visits(selected_commercial_id, start, end)
-    visit_count = len(visits)
-    clients_query = Client.query
-    if selected_commercial_id:
-        clients_query = clients_query.filter(Client.owner_id == selected_commercial_id)
+    clients_query = Client.query.filter(Client.owner_id == selected_commercial_id) if selected_commercial_id else Client.query
     clients_count = clients_query.count()
     high_potential = clients_query.filter(Client.potential >= 4).count()
-
     animation_total, animation_lines, animation_products, animation_pharmacies = _animation_revenue(start, end)
     animation_animateurs = []
     for animateur in animateurs:
@@ -178,18 +139,18 @@ def index():
     animation_animateurs.sort(key=lambda row: row["amount"], reverse=True)
 
     visit_targets = read_visit_targets(commercials)
-    ranking = _ranking(commercials, division_filter or (divisions[0] if divisions else ""), start, end, visit_targets) if division_filter else []
+    ranking = _ranking(commercials, division_filter, start, end, visit_targets) if division_filter else []
     if selected_commercial_id:
         ranking = [row for row in ranking if row["id"] == selected_commercial_id]
-
     objective_amount = float(monthly_objective.target_amount) if monthly_objective and monthly_objective.target_amount is not None else None
     revenue_pct = round(revenue * 100 / objective_amount, 1) if objective_amount else None
     previous_pct = round((revenue - previous_revenue) * 100 / previous_revenue, 1) if previous_revenue else None
 
     alerts = []
-    overdue_count = Client.query.filter(Client.next_visit.isnot(None), Client.next_visit < today).count()
+    overdue_query = Client.query.filter(Client.next_visit.isnot(None), Client.next_visit < today)
     if selected_commercial_id:
-        overdue_count = Client.query.filter(Client.owner_id == selected_commercial_id, Client.next_visit.isnot(None), Client.next_visit < today).count()
+        overdue_query = overdue_query.filter(Client.owner_id == selected_commercial_id)
+    overdue_count = overdue_query.count()
     if overdue_count:
         alerts.append({"level": "danger", "title": "Relances en retard", "text": f"{overdue_count} professionnel(s) ont une prochaine visite dépassée."})
     for row in ranking:
@@ -200,34 +161,14 @@ def index():
     if animation_total:
         alerts.append({"level": "success", "title": "Animations actives", "text": f"{animation_total:,.0f} FCFA générés par les animations ce mois."})
 
-    top_products = product_counter.most_common(8)
-    top_animation_products = animation_products.most_common(6)
-    top_animation_pharmacies = sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6]
-
     return render_template(
-        "manager_cockpit.html",
-        today=today,
-        start=start,
-        end=end,
-        divisions=divisions,
-        division=division,
-        commercials=commercials,
-        selected_commercial_id=selected_commercial_id,
-        revenue=revenue,
-        previous_revenue=previous_revenue,
-        previous_pct=previous_pct,
-        objective_amount=objective_amount,
-        revenue_pct=revenue_pct,
-        visit_count=visit_count,
-        clients_count=clients_count,
-        high_potential=high_potential,
-        animation_total=animation_total,
-        animation_lines=animation_lines,
-        supplier_totals=supplier_totals,
-        ranking=ranking,
-        alerts=alerts,
-        top_products=top_products,
-        top_animation_products=top_animation_products,
-        top_animation_pharmacies=top_animation_pharmacies,
+        "manager_cockpit.html", today=today, start=start, end=end, divisions=divisions, division=division,
+        commercials=commercials, selected_commercial_id=selected_commercial_id, revenue=revenue,
+        previous_revenue=previous_revenue, previous_pct=previous_pct, objective_amount=objective_amount,
+        revenue_pct=revenue_pct, visit_count=len(visits), clients_count=clients_count, high_potential=high_potential,
+        animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
+        ranking=ranking, alerts=alerts, top_products=product_counter.most_common(8),
+        top_animation_products=animation_products.most_common(6),
+        top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
     )
