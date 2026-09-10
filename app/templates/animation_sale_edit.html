@@ -1,20 +1,77 @@
 {% extends "base.html" %}
 {% block title %}Modifier une vente d’animation — NASORA CRM{% endblock %}
 {% block content %}
-<section class="crm-page" style="max-width:700px;margin:30px auto;">
+<section class="crm-page" style="max-width:760px;margin:30px auto;">
   <div class="card" style="padding:24px;">
     <h1 style="margin-bottom:6px;">Modifier la vente d’animation</h1>
-    <p style="opacity:.75;margin-bottom:22px;">{{ sale.pharmacy_name }} — {{ sale.animation_date.strftime('%d/%m/%Y') }} — {{ sale.product_name }}</p>
-    <form method="post">
+    <p style="opacity:.75;margin-bottom:22px;">Modifiez la pharmacie, la date, le produit, la quantité ou le prix unitaire.</p>
+
+    <form method="post" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div style="margin-bottom:18px;"><label for="quantity"><strong>Quantité vendue</strong></label><input id="quantity" name="quantity" type="number" min="1" step="1" required value="{{ sale.quantity }}" style="width:100%;padding:10px;margin-top:6px;"></div>
-      <div style="margin-bottom:18px;"><label for="unit_price"><strong>Prix unitaire (FCFA)</strong></label><input id="unit_price" name="unit_price" type="number" min="0" step="1" inputmode="numeric" required value="{{ '%.0f'|format(sale.unit_price|float) }}" style="width:100%;padding:10px;margin-top:6px;"></div>
-      <div style="padding:14px;background:#f5f7f5;border-radius:8px;margin-bottom:22px;"><div style="opacity:.7;font-size:.9rem;">Nouveau montant total</div><strong id="total-preview" style="font-size:1.4rem;">{{ '%.0f'|format(sale.total_amount|float) }} FCFA</strong></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-primary" type="submit">Enregistrer la modification</button><a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a></div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
+        <div style="margin-bottom:4px;">
+          <label for="pharmacy_name"><strong>Pharmacie animée</strong></label>
+          <input id="pharmacy_name" name="pharmacy_name" type="text" maxlength="200" required value="{{ request.form.get('pharmacy_name', sale.pharmacy_name) }}" style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:4px;">
+          <label for="animation_date"><strong>Date d’animation</strong></label>
+          <input id="animation_date" name="animation_date" type="date" required value="{{ request.form.get('animation_date', sale.animation_date.strftime('%Y-%m-%d')) }}" style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div style="margin-top:18px;margin-bottom:18px;">
+        <label for="product_name"><strong>Produit</strong></label>
+        <select id="product_name" name="product_name" required style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;">
+          {% set selected_product = request.form.get('product_name', sale.product_name) %}
+          {% for product in products %}
+            <option value="{{ product }}" {% if product == selected_product %}selected{% endif %}>{{ product }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
+        <div style="margin-bottom:18px;">
+          <label for="quantity"><strong>Quantité vendue</strong></label>
+          <input id="quantity" name="quantity" type="number" min="1" step="1" required value="{{ request.form.get('quantity', sale.quantity) }}" style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:18px;">
+          <label for="unit_price"><strong>Prix unitaire (FCFA)</strong></label>
+          <input id="unit_price" name="unit_price" type="number" min="0" step="1" inputmode="numeric" required value="{{ request.form.get('unit_price', '%.0f'|format(sale.unit_price|float)) }}" style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div style="padding:14px;background:#f5f7f5;border-radius:8px;margin-bottom:22px;">
+        <div style="opacity:.7;font-size:.9rem;">Nouveau montant total</div>
+        <strong id="total-preview" style="font-size:1.4rem;">{{ '%.0f'|format(sale.total_amount|float) }} FCFA</strong>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" type="submit">Enregistrer la modification</button>
+        <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a>
+      </div>
     </form>
   </div>
 </section>
+
+<style>
+@media (max-width:650px){
+  .crm-page .card > form > div[style*="grid-template-columns"]{grid-template-columns:1fr !important;}
+}
+</style>
 <script>
-(function () { const quantity=document.getElementById('quantity'); const price=document.getElementById('unit_price'); const total=document.getElementById('total-preview'); function updateTotal(){const q=Number(quantity.value)||0;const p=Number(price.value)||0;total.textContent=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(q*p)+' FCFA';} quantity.addEventListener('input',updateTotal); price.addEventListener('input',updateTotal); })();
+(function () {
+  const quantity = document.getElementById('quantity');
+  const price = document.getElementById('unit_price');
+  const total = document.getElementById('total-preview');
+  function updateTotal() {
+    const q = Number(quantity.value) || 0;
+    const p = Number(price.value) || 0;
+    total.textContent = new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 0}).format(q * p) + ' FCFA';
+  }
+  quantity.addEventListener('input', updateTotal);
+  price.addEventListener('input', updateTotal);
+  updateTotal();
+})();
 </script>
 {% endblock %}
