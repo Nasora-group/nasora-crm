@@ -38,6 +38,23 @@ def _valid_week_start(value):
     return value is not None and value.weekday() == 0
 
 
+def _planning_date_already_exists(commercial_id, planning_date, exclude_id=None, query=None):
+    """Compatibilite avec les tests et anciens appelants.
+
+    Cette fonction ne bloque plus la saisie elle-meme. Elle fournit uniquement
+    un garde de lecture pour les endroits qui ont encore besoin de savoir si
+    une ligne existe deja pour un visiteur medical et une date donnes.
+    """
+    planning_query = query if query is not None else Planning.query
+    planning_query = planning_query.filter(
+        Planning.commercial_id == commercial_id,
+        Planning.date == planning_date,
+    )
+    if exclude_id is not None:
+        planning_query = planning_query.filter(Planning.id != exclude_id)
+    return planning_query.first() is not None
+
+
 def _next_monday(reference=None):
     reference = reference or date.today()
     return reference + timedelta(days=(7 - reference.weekday()) % 7)
@@ -255,9 +272,6 @@ def admin_planning_generate(commercial_id):
     empty_slot = encode_planning_slot([])
 
     try:
-        # Verrouille le visiteur médical pour éviter deux générations
-        # concurrentes. Les lignes existantes sont mises à jour, les absentes
-        # sont créées. Il n'y a plus de blocage « planning déjà existant ».
         User.query.filter_by(id=commercial.id).with_for_update().first()
         existing_by_date = {
             row.date: row
