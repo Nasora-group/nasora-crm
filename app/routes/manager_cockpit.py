@@ -78,6 +78,8 @@ def _unique_visits(commercial_id=None, start=None, end=None):
 
 def _ranking(commercials, division, start, end, visit_targets):
     ranking = []
+    if not division:
+        return ranking
     for commercial in commercials:
         revenue, _, _ = _revenue_for_range(division, start, end, commercial.id)
         visits = len(_unique_visits(commercial.id, start, end))
@@ -88,6 +90,28 @@ def _ranking(commercials, division, start, end, visit_targets):
     for index, row in enumerate(ranking, 1):
         row["rank"] = index
     return ranking
+
+
+def _stock_alerts(division=None, limit=12):
+    """Retourne les références actives en rupture ou stock très faible."""
+    slugs = DIVISION_SUPPLIERS.keys() if not division else (division,)
+    alerts = []
+    stock_fields = ("stock_duopharm", "stock_ubipharm", "stock_laborex", "stock_sodipharm")
+    labels = {"stock_duopharm": "Duopharm", "stock_ubipharm": "Ubipharm", "stock_laborex": "Laborex", "stock_sodipharm": "Sodipharm"}
+    for item_division in slugs:
+        for slug in DIVISION_SUPPLIERS.get(item_division, []):
+            supplier = SUPPLIERS[slug]
+            model = supplier["product_model"]
+            products = model.query.filter_by(is_active=True).order_by(model.name).all()
+            for product in products:
+                for field in stock_fields:
+                    quantity = int(getattr(product, field, 0) or 0)
+                    if quantity <= 0:
+                        alerts.append({"level": "danger", "product": product.name, "supplier": supplier["label"], "wholesaler": labels[field], "quantity": quantity, "text": "Rupture"})
+                    elif quantity <= 5:
+                        alerts.append({"level": "warning", "product": product.name, "supplier": supplier["label"], "wholesaler": labels[field], "quantity": quantity, "text": "Stock faible"})
+    alerts.sort(key=lambda row: (row["quantity"] > 0, row["quantity"], row["product"]))
+    return alerts[:limit]
 
 
 @manager_cockpit_bp.route("/admin/cockpit-manager")
@@ -102,11 +126,11 @@ def index():
         division = "all"
     divisions = list(DIVISION_SUPPLIERS.keys())
     division_filter = None if division == "all" else division
-    commercials = User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all()
-    animateurs = User.query.filter_by(role="animateur", is_active_account=True).order_by(User.username).all()
+    field_users = User.query.filter(User.role.in_(("commercial", "animateur")), User.is_active_account.is_(True)).order_by(User.username).all()
+    animateurs = [user for user in field_users if user.role == "animateur"]
     selected_raw = (request.args.get("commercial_id") or "").strip()
     selected_commercial_id = int(selected_raw) if selected_raw.isdigit() else None
-    if selected_commercial_id and not any(c.id == selected_commercial_id for c in commercials):
+    if selected_commercial_id and not any(c.id == selected_commercial_id for c in field_users):
         selected_commercial_id = None
 
     if division_filter:
@@ -138,8 +162,8 @@ def index():
         animation_animateurs.append({"name": animateur.username, "amount": amount, "lines": lines})
     animation_animateurs.sort(key=lambda row: row["amount"], reverse=True)
 
-    visit_targets = read_visit_targets(commercials)
-    ranking = _ranking(commercials, division_filter, start, end, visit_targets) if division_filter else []
+    visit_targets = read_visit_targets(field_users)
+    ranking = _ranking(field_users, division_filter, start, end, visit_targets)
     if selected_commercial_id:
         ranking = [row for row in ranking if row["id"] == selected_commercial_id]
     objective_amount = float(monthly_objective.target_amount) if monthly_objective and monthly_objective.target_amount is not None else None
@@ -160,14 +184,17 @@ def index():
         alerts.append({"level": "warning", "title": "CA sous l'objectif", "text": f"Le CA est à {revenue_pct} % de l'objectif mensuel."})
     if animation_total:
         alerts.append({"level": "success", "title": "Animations actives", "text": f"{animation_total:,.0f} FCFA générés par les animations ce mois."})
+    stock_alerts = _stock_alerts(division_filter)
+    for stock in stock_alerts[:5]:
+        alerts.append({"level": stock["level"], "title": f"{stock['text']} stock", "text": f"{stock['product']} - {stock['supplier']} / {stock['wholesaler']} : {stock['quantity']} unité(s)."})
 
     return render_template(
         "manager_cockpit.html", today=today, start=start, end=end, divisions=divisions, division=division,
-        commercials=commercials, selected_commercial_id=selected_commercial_id, revenue=revenue,
+        commercials=field_users, selected_commercial_id=selected_commercial_id, revenue=revenue,
         previous_revenue=previous_revenue, previous_pct=previous_pct, objective_amount=objective_amount,
         revenue_pct=revenue_pct, visit_count=len(visits), clients_count=clients_count, high_potential=high_potential,
         animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
-        ranking=ranking, alerts=alerts, top_products=product_counter.most_common(8),
+        ranking=ranking, alerts=alerts, stock_alerts=stock_alerts, top_products=product_counter.most_common(8),
         top_animation_products=animation_products.most_common(6),
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
