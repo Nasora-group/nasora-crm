@@ -16,14 +16,14 @@
 </div>
 
 {% if prospections %}
-<div class="crm-surface" style="margin-bottom:16px;">
-  <div style="display:grid;grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) auto;gap:12px;align-items:end;">
-    <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
-      Rechercher
+<div class="crm-surface prospection-filters">
+  <div class="prospection-filter-grid">
+    <label>
+      <span>Rechercher</span>
       <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, commentaire, produit…" autocomplete="off" aria-label="Rechercher une prospection">
     </label>
-    <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
-      Date
+    <label>
+      <span>Date</span>
       <input id="prospection-date" type="date" class="form-control" aria-label="Filtrer les prospections par date">
     </label>
     <button id="prospection-reset" type="button" class="btn btn-outline" aria-label="Réinitialiser les filtres de prospection">Réinitialiser</button>
@@ -32,24 +32,47 @@
 </div>
 {% endif %}
 
-<div class="crm-table-card">
+<div class="crm-table-card prospection-table-card">
 {% if prospections %}
-  <div class="table-responsive">
-    <table class="data-table responsive-table" id="prospection-table" aria-label="Liste des prospections">
-      <thead><tr><th>Date</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Commentaires / compte-rendu</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead>
+  <div class="prospection-table-intro">
+    <div>
+      <strong>Détail des prospections</strong>
+      <span>Toutes les informations sont affichées. Les textes longs se lisent directement dans leur cellule.</span>
+    </div>
+    <span class="prospection-scroll-hint">↔ Faites défiler horizontalement si nécessaire</span>
+  </div>
+  <div class="table-responsive prospection-table-wrap">
+    <table class="data-table responsive-table prospection-table" id="prospection-table" aria-label="Liste détaillée des prospections">
+      <colgroup>
+        <col class="col-date"><col class="col-professionnel"><col class="col-specialite"><col class="col-structure"><col class="col-etablissement"><col class="col-telephone"><col class="col-commentaires"><col class="col-produits"><col class="col-prescrits"><col class="col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Professionnel</th>
+          <th>Spécialité</th>
+          <th>Structure</th>
+          <th>Nom de la structure</th>
+          <th>Téléphone</th>
+          <th>Commentaires / compte-rendu</th>
+          <th>Produits présentés</th>
+          <th>Produits prescrits</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
       {% for p in prospections %}
         <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.profils_prospect, p.produits_presentes, p.produits_prescrits]|join(' ')|lower }}">
-          <td><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
-          <td>{{ p.nom_client }}</td>
+          <td class="date-cell"><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
+          <td class="primary-cell">{{ p.nom_client or '—' }}</td>
           <td>{{ p.specialite or '—' }}</td>
           <td>{{ p.structure or '—' }}</td>
           <td>{{ establishments_by_prospection.get(p.id) or '—' }}</td>
-          <td>{{ p.telephone or '—' }}</td>
-          <td class="prospection-comment-cell"><div class="prospection-comment">{{ p.profils_prospect or '—' }}</div></td>
-          <td>{{ p.produits_presentes or '—' }}</td>
-          <td>{{ p.produits_prescrits or '—' }}</td>
-          <td><div class="table-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td>
+          <td class="nowrap">{{ p.telephone or '—' }}</td>
+          <td><div class="prospection-text">{{ p.profils_prospect or '—' }}</div></td>
+          <td><div class="prospection-text">{{ p.produits_presentes or '—' }}</div></td>
+          <td><div class="prospection-text">{{ p.produits_prescrits or '—' }}</div></td>
+          <td><div class="table-actions prospection-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td>
         </tr>
       {% endfor %}
       </tbody>
@@ -61,9 +84,35 @@
 </div>
 
 <style>
-.prospection-comment-cell{min-width:280px;max-width:420px;vertical-align:top}
-.prospection-comment{white-space:pre-wrap;line-height:1.45;max-height:120px;overflow-y:auto;word-break:break-word;text-align:left}
-@media (max-width:900px){.prospection-comment-cell{min-width:240px}.prospection-comment{max-height:none}}
+.prospection-filters{margin-bottom:16px}
+.prospection-filter-grid{display:grid;grid-template-columns:minmax(300px,2fr) minmax(180px,1fr) auto;gap:12px;align-items:end}
+.prospection-filter-grid label{display:flex;flex-direction:column;gap:6px;font-weight:600}
+.prospection-table-card{overflow:hidden}
+.prospection-table-intro{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(15,23,42,.08);background:rgba(22,163,74,.035)}
+.prospection-table-intro div{display:flex;flex-direction:column;gap:3px}
+.prospection-table-intro span{font-size:12px;color:#64748b}
+.prospection-scroll-hint{white-space:nowrap;font-weight:600}
+.prospection-table-wrap{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
+.prospection-table{width:100%;min-width:1180px;table-layout:fixed}
+.prospection-table th,.prospection-table td{padding:12px 10px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.prospection-table th{font-size:11px;line-height:1.25;white-space:normal}
+.prospection-table td{font-size:12px;line-height:1.4}
+.prospection-table tbody tr:hover{background:rgba(22,163,74,.025)}
+.prospection-table .col-date{width:90px}.prospection-table .col-professionnel{width:115px}.prospection-table .col-specialite{width:105px}.prospection-table .col-structure{width:95px}.prospection-table .col-etablissement{width:125px}.prospection-table .col-telephone{width:105px}.prospection-table .col-commentaires{width:210px}.prospection-table .col-produits{width:170px}.prospection-table .col-prescrits{width:150px}.prospection-table .col-actions{width:145px}
+.prospection-table .primary-cell{font-weight:600}
+.prospection-table .date-cell{white-space:nowrap}
+.prospection-table .nowrap{white-space:nowrap}
+.prospection-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-align:left}
+.prospection-actions{display:flex;flex-direction:column;align-items:stretch;gap:7px}
+.prospection-actions .btn{width:100%;justify-content:center}
+@media (max-width:900px){
+  .prospection-filter-grid{grid-template-columns:1fr}
+  .prospection-table-intro{align-items:flex-start;flex-direction:column;gap:8px}
+  .prospection-scroll-hint{white-space:normal}
+}
+@media (max-width:600px){
+  .prospection-table{min-width:1080px}
+}
 </style>
 
 {% if prospections %}
