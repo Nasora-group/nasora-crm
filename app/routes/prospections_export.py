@@ -43,7 +43,7 @@ def _specialites_stats(query):
 
 
 def _prospection_payload(query):
-    rows = query.order_by(Prospection.date.desc()).all()
+    rows = query.order_by(Prospection.date.desc(), Prospection.id.desc()).all()
     return [{
         "id": p.id,
         "date": p.date.isoformat() if p.date else "",
@@ -84,19 +84,24 @@ def export_prospections():
     if request.args.get("download") == "1":
         prospections = query.order_by(Prospection.date.desc(), User.username.asc(), Prospection.id.desc()).all()
         rows = [{
-            "Commercial": p.commercial.username,
-            "Division": (p.commercial.project or "").upper(),
-            "Zone": p.commercial.zone or "",
-            "Date": p.date.strftime("%Y-%m-%d"),
-            "Nom Client": p.nom_client,
-            "Spécialité": p.specialite,
-            "Structure": p.structure,
-            "Téléphone": p.telephone,
-            "Profils Prospect": p.profils_prospect or "",
-            "Produits Présentés": p.produits_presentes or "",
-            "Produits Prescrits": p.produits_prescrits or "",
+            "Date": p.date.strftime("%Y-%m-%d") if p.date else "",
+            "Visiteur médical": p.commercial.username if p.commercial else "",
+            "Division": (p.commercial.project or "").upper() if p.commercial else "",
+            "Zone": p.commercial.zone or "" if p.commercial else "",
+            "Nom du professionnel": p.nom_client or "",
+            "Spécialité": p.specialite or "",
+            "Structure": p.structure or "",
+            "Nom de l'établissement": p.establishment or "",
+            "Téléphone": p.telephone or "",
+            "Profil / compte-rendu": p.profils_prospect or "",
+            "Produits présentés": p.produits_presentes or "",
+            "Produits prescrits": p.produits_prescrits or "",
         } for p in prospections]
-        columns = ["Commercial", "Division", "Zone", "Date", "Nom Client", "Spécialité", "Structure", "Téléphone", "Profils Prospect", "Produits Présentés", "Produits Prescrits"]
+        columns = [
+            "Date", "Visiteur médical", "Division", "Nom du professionnel", "Spécialité",
+            "Structure", "Nom de l'établissement", "Zone", "Téléphone",
+            "Profil / compte-rendu", "Produits présentés", "Produits prescrits",
+        ]
         df = pd.DataFrame(rows, columns=columns)
         output = BytesIO()
         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -114,7 +119,7 @@ def export_prospections():
     results_count = query.count()
     return render_template(
         "prospections_export.html",
-        prospections=query.order_by(Prospection.date.desc()).limit(100).all(),
+        prospections=query.order_by(Prospection.date.desc(), Prospection.id.desc()).limit(100).all(),
         results_count=results_count,
         commerciaux=commerciaux,
         zones=zones,
