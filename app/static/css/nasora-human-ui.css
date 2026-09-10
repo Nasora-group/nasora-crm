@@ -51,7 +51,8 @@ button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .table-container,
 .data-table-wrapper,
 .responsive-table-wrapper,
-.crm-table-card{
+.crm-table-card,
+.responsive-table{
   width:100%;
   max-width:100%;
   overflow-x:auto;
@@ -66,21 +67,29 @@ button,.btn,.btn-submit{font-weight:650!important;min-height:40px;}
 .table-container::-webkit-scrollbar,
 .data-table-wrapper::-webkit-scrollbar,
 .responsive-table-wrapper::-webkit-scrollbar,
-.crm-table-card::-webkit-scrollbar{height:8px;}
+.crm-table-card::-webkit-scrollbar,
+.responsive-table::-webkit-scrollbar{height:8px;}
 
 .table-responsive::-webkit-scrollbar-thumb,
 .table-wrapper::-webkit-scrollbar-thumb,
 .table-container::-webkit-scrollbar-thumb,
 .data-table-wrapper::-webkit-scrollbar-thumb,
 .responsive-table-wrapper::-webkit-scrollbar-thumb,
-.crm-table-card::-webkit-scrollbar-thumb{
+.crm-table-card::-webkit-scrollbar-thumb,
+.responsive-table::-webkit-scrollbar-thumb{
   background:#b7c7bd;
   border-radius:999px;
 }
 
-/* On garde une largeur réelle pour les tableaux riches : aucune colonne ne disparaît. */
+/* Table directe ou table placée dans un wrapper responsive. */
 table.responsive-table,
-table.data-table{
+table.data-table,
+.responsive-table > table,
+.responsive-table table,
+.table-responsive table,
+.table-wrapper table,
+.table-container table,
+.crm-table-card table{
   width:max-content;
   min-width:100%;
   max-width:none;
@@ -94,29 +103,21 @@ table.data-table{
   overflow:visible;
 }
 
-/* Tables sans classe dédiée : même règle de lisibilité sans toucher aux petits tableaux de mise en page. */
-.crm-table-card table,
-.table-responsive table,
-.table-wrapper table,
-.table-container table{
-  width:max-content;
-  min-width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-}
-
+/* Toutes les cellules des tableaux de données : retour à la ligne plutôt que contenu coupé. */
 .responsive-table th,
 .responsive-table td,
 .data-table th,
 .data-table td,
-.crm-table-card table th,
-.crm-table-card table td,
+.responsive-table table th,
+.responsive-table table td,
 .table-responsive table th,
 .table-responsive table td,
 .table-wrapper table th,
 .table-wrapper table td,
 .table-container table th,
-.table-container table td{
+.table-container table td,
+.crm-table-card table th,
+.crm-table-card table td{
   padding:13px 15px;
   border-bottom:1px solid var(--ns-human-border);
   vertical-align:middle;
@@ -129,10 +130,11 @@ table.data-table{
 
 .responsive-table thead th,
 .data-table thead th,
-.crm-table-card table thead th,
+.responsive-table table thead th,
 .table-responsive table thead th,
 .table-wrapper table thead th,
-.table-container table thead th{
+.table-container table thead th,
+.crm-table-card table thead th{
   position:sticky;
   top:0;
   z-index:3;
@@ -148,30 +150,38 @@ table.data-table{
 
 .responsive-table tbody tr:last-child td,
 .data-table tbody tr:last-child td,
-.crm-table-card table tbody tr:last-child td,
+.responsive-table table tbody tr:last-child td,
 .table-responsive table tbody tr:last-child td,
 .table-wrapper table tbody tr:last-child td,
-.table-container table tbody tr:last-child td{border-bottom:0;}
+.table-container table tbody tr:last-child td,
+.crm-table-card table tbody tr:last-child td{border-bottom:0;}
 
 .responsive-table tbody tr:hover td,
 .data-table tbody tr:hover td,
-.crm-table-card table tbody tr:hover td,
+.responsive-table table tbody tr:hover td,
 .table-responsive table tbody tr:hover td,
 .table-wrapper table tbody tr:hover td,
-.table-container table tbody tr:hover td{background:#f5faf7!important;}
+.table-container table tbody tr:hover td,
+.crm-table-card table tbody tr:hover td{background:#f5faf7!important;}
 
-/* Colonnes de texte longues : elles restent lisibles sans élargir indéfiniment le tableau. */
+/* Colonnes longues : largeur raisonnable + texte intégral sur plusieurs lignes. */
 .responsive-table td,
-.data-table td{
-  max-width:360px;
-}
+.data-table td,
+.responsive-table table td,
+.table-responsive table td,
+.table-wrapper table td,
+.table-container table td,
+.crm-table-card table td{max-width:360px;}
 
 .responsive-table td:first-child,
-.data-table td:first-child{
-  white-space:nowrap;
-}
+.data-table td:first-child,
+.responsive-table table td:first-child,
+.table-responsive table td:first-child,
+.table-wrapper table td:first-child,
+.table-container table td:first-child,
+.crm-table-card table td:first-child{white-space:nowrap;}
 
-/* Les actions restent visibles et ne se mélangent jamais au contenu. */
+/* Les actions restent toujours regroupées et accessibles. */
 .table-actions{
   display:flex;
   flex-wrap:wrap;
@@ -182,9 +192,10 @@ table.data-table{
 .table-actions form{margin:0;}
 .table-actions .btn{white-space:nowrap;}
 
-/* Repère visuel discret pour les tableaux qui dépassent l'écran. */
-.crm-table-card::after,
-.table-responsive::after{
+/* Repère discret lorsque toutes les colonnes ne tiennent pas sur l'écran. */
+.crm-table-card:has(table)::after,
+.table-responsive:has(table)::after,
+.responsive-table:has(table)::after{
   content:'Faites défiler horizontalement pour voir toutes les colonnes';
   display:block;
   width:max-content;
@@ -196,27 +207,39 @@ table.data-table{
   pointer-events:none;
 }
 
-/* Tables de données avec beaucoup de colonnes : les deux premières restent repérables. */
+/* Première colonne fixe sur desktop pour conserver le repère lors du défilement. */
 @media(min-width:901px){
   .responsive-table th:first-child,
   .responsive-table td:first-child,
   .data-table th:first-child,
-  .data-table td:first-child{
+  .data-table td:first-child,
+  .responsive-table table th:first-child,
+  .responsive-table table td:first-child,
+  .table-responsive table th:first-child,
+  .table-responsive table td:first-child,
+  .table-wrapper table th:first-child,
+  .table-wrapper table td:first-child,
+  .table-container table th:first-child,
+  .table-container table td:first-child,
+  .crm-table-card table th:first-child,
+  .crm-table-card table td:first-child{
     position:sticky;
     left:0;
     z-index:2;
     background:var(--ns-human-surface);
   }
   .responsive-table thead th:first-child,
-  .data-table thead th:first-child{
+  .data-table thead th:first-child,
+  .responsive-table table thead th:first-child,
+  .table-responsive table thead th:first-child,
+  .table-wrapper table thead th:first-child,
+  .table-container table thead th:first-child,
+  .crm-table-card table thead th:first-child{
     z-index:5;
     background:#f0f6f2!important;
   }
-  .responsive-table tbody tr:hover td:first-child,
-  .data-table tbody tr:hover td:first-child{background:#f5faf7!important;}
 }
 
-/* Les cellules à contenu long peuvent s'étendre verticalement au lieu d'être coupées. */
 .prospection-comment,
 .prospection-comment-cell,
 .long-text,
@@ -228,27 +251,32 @@ table.data-table{
   text-align:left;
 }
 
-/* Sur petits écrans : on conserve toutes les données et on évite le texte minuscule. */
+/* Sur petits écrans : aucune donnée supprimée, le tableau devient défilable. */
 @media(max-width:820px){
   .table-responsive,
   .table-wrapper,
   .table-container,
   .data-table-wrapper,
   .responsive-table-wrapper,
-  .crm-table-card{margin-left:0;margin-right:0;}
+  .crm-table-card,
+  .responsive-table{margin-left:0;margin-right:0;}
   .responsive-table th,.responsive-table td,
   .data-table th,.data-table td,
-  .crm-table-card table th,.crm-table-card table td,
+  .responsive-table table th,.responsive-table table td,
   .table-responsive table th,.table-responsive table td,
   .table-wrapper table th,.table-wrapper table td,
-  .table-container table th,.table-container table td{
+  .table-container table th,.table-container table td,
+  .crm-table-card table th,.crm-table-card table td{
     padding:11px 12px;
     font-size:.82rem;
   }
-  .responsive-table thead th,.data-table thead th{font-size:.68rem!important;}
+  .responsive-table thead th,.data-table thead th,
+  .responsive-table table thead th,.table-responsive table thead th{font-size:.68rem!important;}
   .table-actions{flex-direction:column;align-items:stretch;}
   .table-actions .btn{width:100%;text-align:center;}
-  .crm-table-card::after,.table-responsive::after{font-size:.64rem;}
+  .crm-table-card:has(table)::after,
+  .table-responsive:has(table)::after,
+  .responsive-table:has(table)::after{font-size:.64rem;}
   main.container{padding-left:12px!important;padding-right:12px!important;}
   .card,.panel,.dashboard-card,.kpi-card,.chart-card,.summary-card,.crm-surface,.data-card{border-radius:12px!important;}
   .kpi-card{padding:14px!important;}
