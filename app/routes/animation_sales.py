@@ -45,10 +45,8 @@ def new_animation_sale():
         for product_name in products:
             raw_quantity = (request.form.get(f"quantity__{product_name}") or "").strip()
             raw_price = (request.form.get(f"unit_price__{product_name}") or "").strip().replace(",", ".")
-
             if not raw_quantity and not raw_price:
                 continue
-
             try:
                 quantity = int(raw_quantity)
                 unit_price = Decimal(raw_price)
@@ -58,13 +56,11 @@ def new_animation_sale():
             except (ValueError, TypeError, InvalidOperation, ArithmeticError):
                 invalid_product = product_name
                 break
-
             items.append((product_name, quantity, unit_price))
 
         if invalid_product:
             flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
             return _render_sale_form(products, prices, request.form)
-
         if not items:
             flash("Sélectionnez au moins un produit et renseignez sa quantité et son prix unitaire.", "error")
             return _render_sale_form(products, prices, request.form)
@@ -95,7 +91,6 @@ def new_animation_sale():
 def _animation_sales_query():
     """Return the animation sales query restricted to the current user's scope."""
     from app.models import AnimationSale
-
     query = AnimationSale.query
     if current_user.role == "animateur":
         query = query.filter_by(animateur_id=current_user.id)
@@ -124,12 +119,9 @@ def my_history():
             next_month = month_date.replace(year=month_date.year + 1, month=1, day=1)
         else:
             next_month = month_date.replace(month=month_date.month + 1, day=1)
-        query = query.filter(
-            AnimationSale.animation_date >= month_date,
-            AnimationSale.animation_date < next_month,
-        )
+        query = query.filter(AnimationSale.animation_date >= month_date, AnimationSale.animation_date < next_month)
 
-    sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.id.desc()).all()
+    sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.pharmacy_name.asc(), AnimationSale.id.desc()).all()
 
     by_date = {}
     for sale in sales:
@@ -137,13 +129,24 @@ def my_history():
 
     days = []
     for animation_date, items in by_date.items():
+        by_pharmacy = {}
+        for sale in items:
+            by_pharmacy.setdefault(sale.pharmacy_name, []).append(sale)
+
+        pharmacies = []
+        for pharmacy_name, pharmacy_items in sorted(by_pharmacy.items(), key=lambda pair: pair[0].lower()):
+            pharmacies.append({
+                "pharmacy_name": pharmacy_name,
+                "items": pharmacy_items,
+                "total_quantity": sum(i.quantity for i in pharmacy_items),
+                "total_amount": sum((i.total_amount for i in pharmacy_items), Decimal("0.00")),
+                "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in pharmacy_items}),
+            })
+
         days.append({
             "animation_date": animation_date,
-            "items": items,
-            "animateurs": sorted({
-                sale.animateur.username if sale.animateur else "-"
-                for sale in items
-            }),
+            "pharmacies": pharmacies,
+            "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in items}),
             "total_quantity": sum(i.quantity for i in items),
             "total_amount": sum((i.total_amount for i in items), Decimal("0.00")),
         })
@@ -168,9 +171,7 @@ def my_history():
 def edit_animation_sale(sale_id):
     """Edit an animation sale: animateur only own sale; admin any sale."""
     from app.models import AnimationSale
-
     sale = AnimationSale.query.get_or_404(sale_id)
-
     if current_user.role == "animateur" and sale.animateur_id != current_user.id:
         abort(403)
     if current_user.role not in {"animateur", "admin"}:
@@ -179,7 +180,6 @@ def edit_animation_sale(sale_id):
     if request.method == "POST":
         raw_quantity = (request.form.get("quantity") or "").strip()
         raw_price = (request.form.get("unit_price") or "").strip().replace(",", ".")
-
         try:
             quantity = int(raw_quantity)
             if quantity <= 0:
@@ -204,29 +204,70 @@ def edit_animation_sale(sale_id):
     return render_template("animation_sale_edit.html", sale=sale)
 
 
+@animation_sales_bp.route("/<int:sale_id>/supprimer", methods=["POST"])
+@login_required
+@roles_required("admin", "animateur")
+def delete_animation_sale(sale_id):
+    """Delete an animation sale: animateur only own sale; admin any sale."""
+    from app.models import AnimationSale
+    sale = AnimationSale.query.get_or_404(sale_id)
+
+    if current_user.role == "animateur" and sale.animateur_id != current_user.id:
+        abort(403)
+    if current_user.role not in {"animateur", "admin"}:
+        abort(403)
+
+    try:
+        sale_date = sale.animation_date
+        pharmacy = sale.pharmacy_name
+        product = sale.product_name
+        db.session.delete(sale)
+        db.session.commit()
+        flash(f"Vente supprimée : {product} - {pharmacy} ({sale_date.strftime('%d/%m/%Y')}).", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Impossible de supprimer la vente d'animation.", "error")
+
+    return redirect(url_for("animation_sales.my_history"))
+
+
 @animation_sales_bp.route("/animateur/<int:user_id>")
 @login_required
 @roles_required("admin")
 def animateur_history(user_id):
     from app.models import AnimationSale
-
     animateur = User.query.get_or_404(user_id)
     if animateur.role != "animateur":
         abort(404)
-    sales = AnimationSale.query.filter_by(animateur_id=animateur.id).order_by(
-        AnimationSale.animation_date.desc(), AnimationSale.id.desc()
-    ).all()
+    sales = AnimationSale.query.filter_by(animateur_id=animateur.id).order_by(AnimationSale.animation_date.desc(), AnimationSale.pharmacy_name.asc(), AnimationSale.id.desc()).all()
 
     by_date = {}
     for sale in sales:
         by_date.setdefault(sale.animation_date, []).append(sale)
-    days = [
-        {"animation_date": date, "items": items,
-         "animateurs": [animateur.username],
-         "total_quantity": sum(i.quantity for i in items),
-         "total_amount": sum((i.total_amount for i in items), Decimal("0.00"))}
-        for date, items in by_date.items()
-    ]
+
+    days = []
+    for animation_date, items in by_date.items():
+        by_pharmacy = {}
+        for sale in items:
+            by_pharmacy.setdefault(sale.pharmacy_name, []).append(sale)
+        pharmacies = [
+            {
+                "pharmacy_name": pharmacy_name,
+                "items": pharmacy_items,
+                "total_quantity": sum(i.quantity for i in pharmacy_items),
+                "total_amount": sum((i.total_amount for i in pharmacy_items), Decimal("0.00")),
+                "animateurs": [animateur.username],
+            }
+            for pharmacy_name, pharmacy_items in sorted(by_pharmacy.items(), key=lambda pair: pair[0].lower())
+        ]
+        days.append({
+            "animation_date": animation_date,
+            "pharmacies": pharmacies,
+            "animateurs": [animateur.username],
+            "total_quantity": sum(i.quantity for i in items),
+            "total_amount": sum((i.total_amount for i in items), Decimal("0.00")),
+        })
+
     general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
     general_quantity = sum(day["total_quantity"] for day in days)
     return render_template(
