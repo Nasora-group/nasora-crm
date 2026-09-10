@@ -61,6 +61,7 @@ def _register_blueprints(app):
     from app.routes.auth import auth_bp
     from app.routes.dashboard_direction_safe import terrain_bp
     from app.routes.dashboard import dashboard_bp
+    from app.routes.manager_cockpit import manager_cockpit_bp
     from app.routes.planning import planning_bp
     from app.routes.sales import sales_bp
     from app.routes.animation_sales import animation_sales_bp
@@ -77,7 +78,7 @@ def _register_blueprints(app):
     from app.routes.vm_cockpit import vm_cockpit_bp
     from app.routes.stock import stock_bp
     from app.routes.visit_targets import visit_targets_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp)
+    app.register_blueprint(auth_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
