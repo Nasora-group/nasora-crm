@@ -20,7 +20,7 @@
   <div style="display:grid;grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) auto;gap:12px;align-items:end;">
     <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
       Rechercher
-      <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, produit…" autocomplete="off" aria-label="Rechercher une prospection">
+      <input id="prospection-search" type="search" class="form-control" placeholder="Nom, structure, téléphone, spécialité, commentaire, produit…" autocomplete="off" aria-label="Rechercher une prospection">
     </label>
     <label style="display:flex;flex-direction:column;gap:6px;font-weight:600;">
       Date
@@ -36,16 +36,17 @@
 {% if prospections %}
   <div class="table-responsive">
     <table class="data-table responsive-table" id="prospection-table" aria-label="Liste des prospections">
-      <thead><tr><th>Date</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Date</th><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Nom de la structure</th><th>Téléphone</th><th>Commentaires / compte-rendu</th><th>Produits présentés</th><th>Produits prescrits</th><th>Actions</th></tr></thead>
       <tbody>
       {% for p in prospections %}
-        <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.produits_presentes, p.produits_prescrits]|join(' ')|lower }}">
+        <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.profils_prospect, p.produits_presentes, p.produits_prescrits]|join(' ')|lower }}">
           <td><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
           <td>{{ p.nom_client }}</td>
           <td>{{ p.specialite or '—' }}</td>
           <td>{{ p.structure or '—' }}</td>
           <td>{{ establishments_by_prospection.get(p.id) or '—' }}</td>
           <td>{{ p.telephone or '—' }}</td>
+          <td class="prospection-comment-cell"><div class="prospection-comment">{{ p.profils_prospect or '—' }}</div></td>
           <td>{{ p.produits_presentes or '—' }}</td>
           <td>{{ p.produits_prescrits or '—' }}</td>
           <td><div class="table-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td>
@@ -58,6 +59,12 @@
   <div class="empty-state"><div class="empty-state-icon">📋</div><h2>Aucune prospection</h2><p>Vos prochaines prospections apparaîtront ici.</p><a href="{{ url_for('dashboard.index') }}#nouvelle-prospection" class="btn">＋ Saisir une prospection</a></div>
 {% endif %}
 </div>
+
+<style>
+.prospection-comment-cell{min-width:280px;max-width:420px;vertical-align:top}
+.prospection-comment{white-space:pre-wrap;line-height:1.45;max-height:120px;overflow-y:auto;word-break:break-word;text-align:left}
+@media (max-width:900px){.prospection-comment-cell{min-width:240px}.prospection-comment{max-height:none}}
+</style>
 
 {% if prospections %}
 <script>
