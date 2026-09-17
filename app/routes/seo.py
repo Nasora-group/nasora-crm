@@ -22,6 +22,7 @@ def robots():
             "Disallow: /evaluations",
             "Disallow: /prospections",
             "Disallow: /sales",
+            "Disallow: /login",
             f"Sitemap: {sitemap}",
             "",
         ]
@@ -32,7 +33,7 @@ def robots():
 @seo_bp.get("/sitemap.xml")
 def sitemap():
     """XML sitemap containing public, crawlable pages only."""
-    public_endpoints = ["auth.home", "auth.login", "legal.rgpd", "legal.cgu"]
+    public_endpoints = ["auth.home", "legal.rgpd", "legal.cgu"]
     urls = []
     for endpoint in public_endpoints:
         try:
@@ -47,3 +48,9 @@ def sitemap():
         f"{items}</urlset>"
     )
     return Response(xml, mimetype="application/xml")
+
+
+@seo_bp.get("/healthz")
+def healthz():
+    """Lightweight process health endpoint; intentionally does not touch the database."""
+    return Response("ok\n", mimetype="text/plain")
