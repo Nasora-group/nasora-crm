@@ -3,9 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}NASORA HEALTH &amp; SKINCARE — CRM{% endblock %}</title>
-<link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
+{% set page_title = self.title()|striptags|trim %}
+<title>{{ page_title }}</title>
+<meta name="description" content="NASORA CRM : plateforme professionnelle de gestion commerciale, prospections, planning, performances, stocks et activité terrain.">
+<meta name="robots" content="{% if request.path.startswith('/api/') or current_user.is_authenticated %}noindex, nofollow, noarchive{% else %}index, follow, max-image-preview:large{% endif %}">
+<link rel="canonical" href="{{ request.url.split('?')[0] }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NASORA Health &amp; Skincare">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:description" content="NASORA CRM : plateforme professionnelle de gestion commerciale et de pilotage terrain.">
+<meta property="og:url" content="{{ request.url.split('?')[0] }}">
+<meta property="og:image" content="{{ url_for('static', filename='images/logo.jpg', _external=True) }}">
+<meta property="og:image:alt" content="Logo NASORA Health &amp; Skincare">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ page_title }}">
+<meta name="twitter:description" content="NASORA CRM : plateforme professionnelle de gestion commerciale et de pilotage terrain.">
+<meta name="twitter:image" content="{{ url_for('static', filename='images/logo.jpg', _external=True) }}">
+<meta name="twitter:image:alt" content="Logo NASORA Health &amp; Skincare">
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+<link rel="alternate icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
+<link rel="preload" as="image" href="{{ url_for('static', filename='images/logo.jpg') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -31,16 +50,22 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/activity-terrain-saas.css', v='20260904-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-human-ui.css', v='20260910-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-phone-responsive.css', v='20260910-3') }}">
+<style>
+.cookie-banner{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:9999;display:none;max-width:900px;margin:auto;padding:1rem 1.15rem;border:1px solid #d9e5df;border-radius:14px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);color:#17352a}.cookie-banner.is-visible{display:block}.cookie-banner p{margin:0 0 .75rem;line-height:1.5}.cookie-actions{display:flex;gap:.6rem;flex-wrap:wrap}.cookie-actions button{border:0;border-radius:8px;padding:.65rem 1rem;font-weight:700;cursor:pointer}.cookie-accept{background:#0b7a4b;color:#fff}.cookie-reject{background:#eef3f0;color:#17352a}.cookie-link{color:#0b7a4b;font-weight:700}
+</style>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+{% if ga_measurement_id %}
+<script>window.NASORA_GA_ID={{ ga_measurement_id|tojson }};</script>
+{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20260901-1') }}"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="{{ url_for('static', filename='js/nasora-phone-responsive.js', v='20260910-3') }}"></script>
+<script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20260901-1') }}" defer></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/nasora-phone-responsive.js', v='20260910-3') }}" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
-<header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health &amp; Skincare" class="brand-logo"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</span><span class="header-user-name">{{ current_user.username }}</span></div><button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
+<header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health &amp; Skincare" class="brand-logo" width="160" height="60" fetchpriority="high" decoding="async"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</span><span class="header-user-name">{{ current_user.username }}</span></div><button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
 <nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
 <a class="nav-home" href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span><span>Accueil</span></a>
 {% if current_user.is_authenticated %}
@@ -64,6 +89,17 @@
 {% if messages %}<div class="flash-messages" role="status" aria-live="polite">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
 {% block content %}{% endblock %}
 </main>
-<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
-<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');if(!nav)return;const currentPath=window.location.pathname;const links=nav.querySelectorAll('a[href]');links.forEach(function(link){try{const linkPath=new URL(link.href,window.location.origin).pathname;if(linkPath===currentPath&&link.classList.contains('nav-home'))link.setAttribute('aria-current','page');else if(linkPath!==window.location.pathname||link.classList.contains('nav-home'))link.removeAttribute('aria-current')}catch(e){}});const dropdowns=nav.querySelectorAll('.nav-dropdown');dropdowns.forEach(function(dropdown){const trigger=dropdown.querySelector('.nav-dropdown-trigger');const children=dropdown.querySelectorAll('.nav-dropdown-menu a[href]');let active=false;children.forEach(function(link){try{const linkPath=new URL(link.href,window.location.origin).pathname;if(linkPath===currentPath){link.setAttribute('aria-current','page');active=true}}catch(e){}});if(active)trigger.setAttribute('data-active','true');trigger.addEventListener('click',function(){const open=dropdown.classList.toggle('is-open');dropdowns.forEach(function(other){if(other!==dropdown){other.classList.remove('is-open');const otherTrigger=other.querySelector('.nav-dropdown-trigger');if(otherTrigger)otherTrigger.setAttribute('aria-expanded','false')}});trigger.setAttribute('aria-expanded',open?'true':'false')})});document.addEventListener('click',function(event){if(!nav.contains(event.target))dropdowns.forEach(function(dropdown){dropdown.classList.remove('is-open');const trigger=dropdown.querySelector('.nav-dropdown-trigger');if(trigger)trigger.setAttribute('aria-expanded','false')})});if(toggle){toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');toggle.textContent=open?'✕':'☰'})}});</script>
+<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p><a href="{{ url_for('legal.rgpd') }}">Politique de confidentialité</a> · <a href="{{ url_for('legal.cgu') }}">CGU</a></p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
+<div id="cookie-banner" class="cookie-banner" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-text">
+<strong id="cookie-title">Respect de votre vie privée</strong>
+<p id="cookie-text">NASORA utilise uniquement les cookies nécessaires au fonctionnement du CRM. Si la mesure d'audience est activée, elle ne sera chargée qu'après votre accord. <a class="cookie-link" href="{{ url_for('legal.rgpd') }}">En savoir plus</a>.</p>
+<div class="cookie-actions"><button type="button" class="cookie-accept" id="cookie-accept">Accepter la mesure d'audience</button><button type="button" class="cookie-reject" id="cookie-reject">Refuser</button></div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+const nav=document.getElementById('main-navigation'),toggle=document.querySelector('.mobile-nav-toggle');
+if(nav){const currentPath=window.location.pathname;const links=nav.querySelectorAll('a[href]');links.forEach(function(link){try{const p=new URL(link.href,window.location.origin).pathname;if(p===currentPath)link.setAttribute('aria-current','page');}catch(e){}});const dropdowns=nav.querySelectorAll('.nav-dropdown');dropdowns.forEach(function(dropdown){const trigger=dropdown.querySelector('.nav-dropdown-trigger');const children=dropdown.querySelectorAll('.nav-dropdown-menu a[href]');let active=false;children.forEach(function(link){try{if(new URL(link.href,window.location.origin).pathname===currentPath){link.setAttribute('aria-current','page');active=true}}catch(e){}});if(active)trigger.setAttribute('data-active','true');trigger.addEventListener('click',function(){const open=dropdown.classList.toggle('is-open');dropdowns.forEach(function(other){if(other!==dropdown){other.classList.remove('is-open');const t=other.querySelector('.nav-dropdown-trigger');if(t)t.setAttribute('aria-expanded','false')}});trigger.setAttribute('aria-expanded',open?'true':'false')})});document.addEventListener('click',function(event){if(!nav.contains(event.target))dropdowns.forEach(function(dropdown){dropdown.classList.remove('is-open');const t=dropdown.querySelector('.nav-dropdown-trigger');if(t)t.setAttribute('aria-expanded','false')})});if(toggle)toggle.addEventListener('click',function(){const open=nav.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');toggle.textContent=open?'✕':'☰'})}
+const banner=document.getElementById('cookie-banner');const key='nasora_cookie_consent';const saved=localStorage.getItem(key);function loadAnalytics(){if(!window.NASORA_GA_ID||document.getElementById('nasora-ga-script'))return;const s=document.createElement('script');s.id='nasora-ga-script';s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(window.NASORA_GA_ID);document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config',window.NASORA_GA_ID,{anonymize_ip:true});}function hide(){if(banner)banner.classList.remove('is-visible')}if(!saved&&banner)banner.classList.add('is-visible');if(saved==='accepted')loadAnalytics();const accept=document.getElementById('cookie-accept'),reject=document.getElementById('cookie-reject');if(accept)accept.addEventListener('click',function(){localStorage.setItem(key,'accepted');loadAnalytics();hide()});if(reject)reject.addEventListener('click',function(){localStorage.setItem(key,'rejected');hide()});
+});
+</script>
 </body></html>
