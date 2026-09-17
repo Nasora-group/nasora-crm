@@ -136,11 +136,32 @@
   }
 
   function boot() {
+    var lineCanvas = document.getElementById('globalSalesChart');
+    var divisionCanvas = document.getElementById('divisionChart');
+    if (!lineCanvas && !divisionCanvas) return;
+
     var start = window.requestIdleCallback || function (callback) { window.setTimeout(callback, 0); };
-    start(function () {
-      applyNasoraChartTheme();
-      initAdminDashboardCharts();
-    }, { timeout: 1200 });
+    var schedule = function () {
+      start(function () {
+        applyNasoraChartTheme();
+        initAdminDashboardCharts();
+      }, { timeout: 1200 });
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      schedule();
+      return;
+    }
+
+    var observed = lineCanvas || divisionCanvas;
+    var observer = new IntersectionObserver(function (entries) {
+      if (entries.some(function (entry) { return entry.isIntersecting; })) {
+        observer.disconnect();
+        schedule();
+      }
+    }, { rootMargin: '240px' });
+
+    observer.observe(observed);
   }
 
   if (document.readyState === 'loading') {
