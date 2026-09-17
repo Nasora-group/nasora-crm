@@ -18,7 +18,7 @@ def create_app(config_object=None):
     _configure_logging(app)
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
     from app.models import User
-    from app.models_stock import StockEntry  # noqa: F401
+    from app.models_stock import StockEntry
     @login_manager.user_loader
     def load_user(user_id):
         user = db.session.get(User, int(user_id))
@@ -26,7 +26,7 @@ def create_app(config_object=None):
     _register_blueprints(app)
     from app.visit_objectives_readonly import install_readonly_objective_reader
     install_readonly_objective_reader()
-    from app import visit_sync  # noqa: F401
+    from app import visit_sync
     _register_error_handlers(app)
     @app.after_request
     def apply_security_headers(response):
@@ -78,7 +78,8 @@ def _register_blueprints(app):
     from app.routes.vm_cockpit import vm_cockpit_bp
     from app.routes.stock import stock_bp
     from app.routes.visit_targets import visit_targets_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp)
+    from app.routes.legal import legal_bp
+    app.register_blueprint(auth_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
