@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-{% block title %}NASORA CRM{% endblock %}
+<title>{% block title %}NASORA CRM{% endblock %}</title>
 <meta name="description" content="NASORA CRM : plateforme professionnelle de gestion commerciale, prospections, planning, performances, stocks et activité terrain.">
 <meta name="robots" content="{% if request.path.startswith('/api/') or current_user.is_authenticated %}noindex, nofollow, noarchive{% else %}index, follow, max-image-preview:large{% endif %}">
 <link rel="canonical" href="{{ request.url.split('?')[0] }}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NASORA Health &amp; Skincare">
-<meta property="og:title" content="{% block og_title %}NASORA CRM{% endblock %}">
+<meta property="og:title" content="NASORA CRM">
 <meta property="og:description" content="NASORA CRM : plateforme professionnelle de gestion commerciale et de pilotage terrain.">
 <meta property="og:url" content="{{ request.url.split('?')[0] }}">
 <meta property="og:image" content="{{ url_for('static', filename='images/logo.jpg', _external=True) }}">
 <meta property="og:image:alt" content="Logo NASORA Health &amp; Skincare">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{% block twitter_title %}NASORA CRM{% endblock %}">
+<meta name="twitter:title" content="NASORA CRM">
 <meta name="twitter:description" content="NASORA CRM : plateforme professionnelle de gestion commerciale et de pilotage terrain.">
 <meta name="twitter:image" content="{{ url_for('static', filename='images/logo.jpg', _external=True) }}">
 <meta name="twitter:image:alt" content="Logo NASORA Health &amp; Skincare">
