@@ -11,6 +11,7 @@ def create_app(config_object=None):
     app = Flask(__name__, instance_relative_config=True)
     config_object = config_object or get_config()
     app.config.from_object(config_object)
+    app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 86400)
     os.makedirs(app.instance_path, exist_ok=True)
     if app.config.get("ENV") == "production" or os.environ.get("FLASK_ENV") == "production":
         if not os.environ.get("SECRET_KEY"):
