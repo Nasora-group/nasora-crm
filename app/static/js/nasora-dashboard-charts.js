@@ -136,8 +136,11 @@
   }
 
   function boot() {
-    applyNasoraChartTheme();
-    initAdminDashboardCharts();
+    var start = window.requestIdleCallback || function (callback) { window.setTimeout(callback, 0); };
+    start(function () {
+      applyNasoraChartTheme();
+      initAdminDashboardCharts();
+    }, { timeout: 1200 });
   }
 
   if (document.readyState === 'loading') {
