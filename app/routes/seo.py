@@ -1,3 +1,5 @@
+from html import escape
+
 from flask import Blueprint, Response, current_app, url_for
 
 seo_bp = Blueprint("seo", __name__)
@@ -27,7 +29,9 @@ def robots():
             "",
         ]
     )
-    return Response(body, mimetype="text/plain")
+    response = Response(body, mimetype="text/plain")
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 @seo_bp.get("/sitemap.xml")
@@ -41,13 +45,15 @@ def sitemap():
         except Exception:
             current_app.logger.warning("Endpoint sitemap indisponible: %s", endpoint)
 
-    items = "".join(f"<url><loc>{url}</loc></url>" for url in urls)
+    items = "".join(f"<url><loc>{escape(url)}</loc></url>" for url in urls)
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
         f"{items}</urlset>"
     )
-    return Response(xml, mimetype="application/xml")
+    response = Response(xml, mimetype="application/xml")
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 @seo_bp.get("/healthz")
