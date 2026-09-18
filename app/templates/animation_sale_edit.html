@@ -6,7 +6,7 @@
     <h1 style="margin-bottom:6px;">Modifier la vente d’animation</h1>
     <p style="opacity:.75;margin-bottom:22px;">Modifiez la pharmacie, la date, le produit, la quantité ou le prix unitaire.</p>
 
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
@@ -28,6 +28,13 @@
             <option value="{{ product }}" {% if product == selected_product %}selected{% endif %}>{{ product }}</option>
           {% endfor %}
         </select>
+      </div>
+
+      <div style="margin:0 0 18px;padding:14px 16px;border:1px solid #dcefe5;border-radius:10px;background:#f7fcf9;">
+        <label for="animation_evidence"><strong>Justificatif photo</strong></label>
+        <p style="margin:5px 0 9px;opacity:.7;font-size:.85rem;">{% if sale.evidence %}Un justificatif est déjà associé. Vous pouvez le remplacer.{% else %}Ajoutez le justificatif de cette animation.{% endif %} JPG, PNG ou WEBP, 5 Mo maximum.</p>
+        <input id="animation_evidence" name="animation_evidence" type="file" accept="image/jpeg,image/png,image/webp" style="width:100%;">
+        {% if sale.evidence %}<div style="margin-top:8px;font-size:.82rem;"><a href="{{ url_for('animation_sales.animation_evidence', evidence_id=sale.evidence.id) }}" target="_blank" rel="noopener">Voir le justificatif actuel</a></div>{% endif %}
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">

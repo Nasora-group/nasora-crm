@@ -1,10 +1,12 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
+from io import BytesIO
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file
+from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import User, get_active_products_for_division, get_active_product_prices_for_division
+from app.models import User, AnimationEvidence, get_active_products_for_division, get_active_product_prices_for_division
 from app.utils import roles_required
 
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
@@ -35,6 +37,46 @@ def _parse_non_negative_price(raw):
         return value if value >= 0 else None
     except (InvalidOperation, TypeError, ValueError, ArithmeticError):
         return None
+
+
+MAX_EVIDENCE_SIZE = 5 * 1024 * 1024
+ALLOWED_EVIDENCE_TYPES = {
+    "image/jpeg": (".jpg", ".jpeg"),
+    "image/png": (".png",),
+    "image/webp": (".webp",),
+}
+
+
+def _read_animation_evidence(file_storage):
+    """Validate and read one pharmacy animation proof image into memory."""
+    if not file_storage or not file_storage.filename:
+        raise ValueError("Le justificatif photo de l'animation est obligatoire.")
+
+    filename = secure_filename(file_storage.filename)
+    extension = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    mime_type = (file_storage.mimetype or "").lower().strip()
+    allowed_extensions = ALLOWED_EVIDENCE_TYPES.get(mime_type)
+    if not allowed_extensions or extension not in allowed_extensions:
+        raise ValueError("Le justificatif doit être une image JPG, PNG ou WEBP.")
+
+    data = file_storage.read(MAX_EVIDENCE_SIZE + 1)
+    if len(data) > MAX_EVIDENCE_SIZE:
+        raise ValueError("Le justificatif ne doit pas dépasser 5 Mo.")
+
+    valid_signature = (
+        (mime_type == "image/jpeg" and data.startswith(b"\xff\xd8\xff"))
+        or (mime_type == "image/png" and data.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (mime_type == "image/webp" and len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP")
+    )
+    if not valid_signature:
+        raise ValueError("Le fichier envoyé ne correspond pas à une image JPG, PNG ou WEBP valide.")
+
+    return {
+        "filename": filename[:255] or "justificatif-animation",
+        "mime_type": mime_type,
+        "file_data": data,
+        "file_size": len(data),
+    }
 
 
 @animation_sales_bp.route("/nouvelle", methods=["GET", "POST"])
@@ -82,8 +124,19 @@ def new_animation_sale():
             flash("Un produit sélectionné n'est pas disponible dans cette division.", "error")
             return _render_sale_form(products, prices, request.form)
 
-        from app.models import AnimationSale
         try:
+            evidence_data = _read_animation_evidence(request.files.get("animation_evidence"))
+            evidence = AnimationEvidence(
+                animateur_id=current_user.id,
+                pharmacy_name=pharmacy,
+                animation_date=animation_date,
+                project=division,
+                **evidence_data,
+            )
+            db.session.add(evidence)
+            db.session.flush()
+
+            from app.models import AnimationSale
             for product_name, quantity, unit_price in items:
                 db.session.add(AnimationSale(
                     animateur_id=current_user.id,
@@ -93,6 +146,7 @@ def new_animation_sale():
                     quantity=quantity,
                     unit_price=unit_price,
                     project=division,
+                    evidence_id=evidence.id,
                 ))
             db.session.commit()
             flash(f"Animation enregistrée : {len(items)} produit(s) vendu(s).", "success")
@@ -134,6 +188,7 @@ def _group_sales(sales):
                 "total_quantity": sum(i.quantity for i in pharmacy_items),
                 "total_amount": sum((i.total_amount for i in pharmacy_items), Decimal("0.00")),
                 "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in pharmacy_items}),
+                "evidence": next((sale.evidence for sale in pharmacy_items if sale.evidence), None),
             })
         days.append({
             "animation_date": animation_date,
@@ -203,13 +258,35 @@ def edit_animation_sale(sale_id):
         elif quantity is None or unit_price is None:
             flash("La quantité et le prix unitaire doivent être valides.", "error")
         else:
-            sale.pharmacy_name = pharmacy
-            sale.animation_date = animation_date
-            sale.product_name = product_name
-            sale.quantity = quantity
-            sale.unit_price = unit_price
-            sale.project = division
             try:
+                uploaded_evidence = request.files.get("animation_evidence")
+                if uploaded_evidence and uploaded_evidence.filename:
+                    evidence_data = _read_animation_evidence(uploaded_evidence)
+                    if sale.evidence is None:
+                        sale.evidence = AnimationEvidence(
+                            animateur_id=sale.animateur_id,
+                            pharmacy_name=pharmacy,
+                            animation_date=animation_date,
+                            project=division,
+                            **evidence_data,
+                        )
+                    else:
+                        sale.evidence.pharmacy_name = pharmacy
+                        sale.evidence.animation_date = animation_date
+                        sale.evidence.project = division
+                        for key, value in evidence_data.items():
+                            setattr(sale.evidence, key, value)
+                elif sale.evidence is not None:
+                    sale.evidence.pharmacy_name = pharmacy
+                    sale.evidence.animation_date = animation_date
+                    sale.evidence.project = division
+
+                sale.pharmacy_name = pharmacy
+                sale.animation_date = animation_date
+                sale.product_name = product_name
+                sale.quantity = quantity
+                sale.unit_price = unit_price
+                sale.project = division
                 db.session.commit()
                 flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
                 return redirect(url_for("animation_sales.my_history"))
@@ -233,13 +310,40 @@ def delete_animation_sale(sale_id):
         abort(403)
     try:
         sale_date, pharmacy, product = sale.animation_date, sale.pharmacy_name, sale.product_name
+        evidence = sale.evidence
         db.session.delete(sale)
+        db.session.flush()
+        if evidence is not None:
+            from app.models import AnimationSale
+            remaining_sale = AnimationSale.query.filter(
+                AnimationSale.evidence_id == evidence.id,
+                AnimationSale.id != sale.id,
+            ).first()
+            if remaining_sale is None:
+                db.session.delete(evidence)
         db.session.commit()
         flash(f"Vente supprimée : {product} - {pharmacy} ({sale_date.strftime('%d/%m/%Y')}).", "success")
     except Exception:
         db.session.rollback()
         flash("Impossible de supprimer la vente d'animation. Aucun changement n'a été appliqué.", "error")
     return redirect(url_for("animation_sales.my_history"))
+
+
+@animation_sales_bp.route("/justificatif/<int:evidence_id>")
+@login_required
+@roles_required("admin", "animateur")
+def animation_evidence(evidence_id):
+    evidence = AnimationEvidence.query.get_or_404(evidence_id)
+    if current_user.role == "animateur" and evidence.animateur_id != current_user.id:
+        abort(403)
+    download = request.args.get("download") == "1"
+    return send_file(
+        BytesIO(evidence.file_data),
+        mimetype=evidence.mime_type,
+        as_attachment=download,
+        download_name=evidence.filename,
+        max_age=0,
+    )
 
 
 @animation_sales_bp.route("/animateur/<int:user_id>")
