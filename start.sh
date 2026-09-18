@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Script de démarrage utilisé par Render (Start Command = "bash start.sh").
-# set -e : si une étape échoue, on arrête tout de suite plutôt que de démarrer
-# le serveur avec une base de données pas à jour.
-set -e
+# Render Start Command: bash start.sh
+# Les migrations et le seed sont exécutés avant Gunicorn, une seule fois.
+set -euo pipefail
+
+echo "[start.sh] Vérification de la configuration..."
+if [[ "${FLASK_ENV:-}" == "production" && -z "${DATABASE_URL:-}" ]]; then
+  echo "[start.sh] ERREUR: DATABASE_URL est obligatoire en production."
+  exit 1
+fi
+if [[ "${FLASK_ENV:-}" == "production" && -z "${SECRET_KEY:-}" ]]; then
+  echo "[start.sh] ERREUR: SECRET_KEY est obligatoire en production."
+  exit 1
+fi
 
 echo "[start.sh] Application des migrations..."
 flask db upgrade
