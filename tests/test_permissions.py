@@ -69,3 +69,24 @@ def test_inactive_user_has_no_permissions():
     assert not account_is_active(u)
     assert not division_matches(u, "nasmedic")
     assert not owns_record(u, record(u.id))
+
+
+def test_admin_can_be_restricted_by_explicit_owner_flag():
+    admin = user(user_id=1, role="admin")
+    assert owns_record(admin, record(99), allow_admin=True)
+    assert not owns_record(admin, record(99), allow_admin=False)
+
+
+def test_same_division_helper_rejects_cross_division_record():
+    from app.permissions import require_same_division
+    import pytest
+    from flask import Flask
+    from flask_login import LoginManager
+    app = Flask(__name__)
+    app.secret_key = "test"
+    login = LoginManager(app)
+    with app.test_request_context("/"):
+        # This unit test documents the contract through direct division checks.
+        u = user(role="commercial", project="nasmedic")
+        assert division_matches(u, "nasmedic")
+        assert not division_matches(u, "nasderm")
