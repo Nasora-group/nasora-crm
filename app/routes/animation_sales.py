@@ -233,7 +233,7 @@ def my_history():
     general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
     general_quantity = sum(day["total_quantity"] for day in days)
     animators = User.query.filter_by(role="animateur").order_by(User.username.asc()).all() if current_user.role == "admin" else []
-    pharmacies = sorted({sale.pharmacy_name for sale in AnimationSale.query.with_entities(AnimationSale.pharmacy_name).all() if sale.pharmacy_name})
+    pharmacies = sorted({row[0] for row in AnimationSale.query.with_entities(AnimationSale.pharmacy_name).distinct().all() if row[0]})
     return render_template("animation_sales_history.html", days=days, general_total=general_total, general_quantity=general_quantity, selected_month=selected_month, pharmacy_filter=pharmacy_filter, selected_animator=selected_animator, animators=animators, pharmacies=pharmacies, is_admin=current_user.role == "admin", current_user_id=current_user.id)
 
 
