@@ -18,6 +18,7 @@ class BaseConfig:
         os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'instance', 'plateforme_commerciale.db')}")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SEND_FILE_MAX_AGE_DEFAULT = 86400
     # Render/PostgreSQL peut fermer une connexion restée inactive. Le contrôle
     # avant utilisation évite de réutiliser une connexion morte et le recyclage
     # limite la durée de vie des connexions persistantes.
