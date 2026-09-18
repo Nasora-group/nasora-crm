@@ -313,8 +313,14 @@ def delete_animation_sale(sale_id):
         evidence = sale.evidence
         db.session.delete(sale)
         db.session.flush()
-        if evidence is not None and not evidence.sales:
-            db.session.delete(evidence)
+        if evidence is not None:
+            from app.models import AnimationSale
+            remaining_sale = AnimationSale.query.filter(
+                AnimationSale.evidence_id == evidence.id,
+                AnimationSale.id != sale.id,
+            ).first()
+            if remaining_sale is None:
+                db.session.delete(evidence)
         db.session.commit()
         flash(f"Vente supprimée : {product} - {pharmacy} ({sale_date.strftime('%d/%m/%Y')}).", "success")
     except Exception:
