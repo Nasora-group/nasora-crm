@@ -1,22 +1,13 @@
 """
-Script de seed : crée les comptes utilisateurs et le catalogue produit initial.
+Seed idempotent des comptes utilisateurs et du catalogue produit initial.
 
-Ce script est SANS DANGER à relancer plusieurs fois (idempotent) : il ne
-recrée jamais un compte ou un produit qui existe déjà. C'est pourquoi il est
-appelé automatiquement à chaque déploiement (voir Procfile, phase "release").
+En production, les mots de passe doivent être fournis explicitement par
+variables d'environnement. Le script ne génère plus de mots de passe
+aléatoires et ne les écrit/affiche jamais dans les logs Render.
 
-Les mots de passe des commerciaux ne sont pas codés en dur : ils sont soit
-lus depuis les variables d'environnement, soit générés aléatoirement puis :
-  1) écrits dans instance/seed_credentials.txt (accessible via le Shell Render)
-  2) ET affichés directement dans les LOGS de déploiement (onglet "Logs" sur
-     Render), pour rester accessibles même sans les Shell.
-
-IMPORTANT : ces identifiants ne sont affichés/écrits qu'UNE SEULE FOIS, lors
-de la création des comptes. Les déploiements suivants ne les réafficheront
-pas (les comptes existent déjà). Copie-les dès la première fois.
+Les comptes et produits existants ne sont jamais remplacés.
 """
 import os
-import secrets
 
 from werkzeug.security import generate_password_hash
 
@@ -31,21 +22,31 @@ app = create_app()
 CREDENTIALS_FILE = os.path.join(app.instance_path, "seed_credentials.txt")
 
 
-def _generate_password():
-    return secrets.token_urlsafe(9)
+def _is_production():
+    return os.environ.get("FLASK_ENV", "").strip().lower() == "production"
+
+
+def _password_for_user(username, default_password):
+    """Return an explicit seed password, or None when creation is disabled."""
+    if username == "Anna Diallo":
+        return os.environ.get("SEED_ADMIN_PASSWORD") or default_password
+    return os.environ.get("SEED_DEFAULT_COMMERCIAL_PASSWORD") or default_password
 
 
 def create_initial_users(credentials_log):
-    admin_password = os.environ.get("SEED_ADMIN_PASSWORD") or _generate_password()
-    if not User.query.filter_by(username="Anna Diallo").first():
+    default_password = None
+    if not _is_production():
+        # Development/test convenience only. Never generate credentials in prod.
+        default_password = "ChangeMe-Local-Only"
+
+    admin_password = _password_for_user("Anna Diallo", default_password)
+    if not User.query.filter_by(username="Anna Diallo").first() and admin_password:
         db.session.add(User(
             username="Anna Diallo",
             password=generate_password_hash(admin_password, method="pbkdf2:sha256"),
             role="admin", zone=None, project="nasmedic",
         ))
         credentials_log.append(("Anna Diallo (admin)", admin_password))
-
-    default_password = os.environ.get("SEED_DEFAULT_COMMERCIAL_PASSWORD")
 
     commerciaux_nasmedic = [
         ("KHALIFA DIOP", "CENTRE VILLE", "nasmedic"),
@@ -72,13 +73,18 @@ def create_initial_users(credentials_log):
     for username, zone, project in commerciaux_nasmedic + commerciaux_nasderm:
         if User.query.filter_by(username=username).first():
             continue
-        password = default_password or _generate_password()
+        password = _password_for_user(username, default_password)
+        if not password:
+            # En production, ne jamais créer un compte avec un mot de passe
+            # généré ou exposé dans les logs. Le compte pourra être créé après
+            # configuration explicite de SEED_DEFAULT_COMMERCIAL_PASSWORD.
+            credentials_log.append((username, "SKIPPED: password env missing"))
+            continue
         db.session.add(User(
             username=username,
             password=generate_password_hash(password, method="pbkdf2:sha256"),
             role="commercial", zone=zone, project=project,
         ))
-        credentials_log.append((username, password))
 
     db.session.commit()
 
@@ -148,30 +154,6 @@ def create_initial_products():
 
 if __name__ == "__main__":
     with app.app_context():
-        # NE PAS appeler db.create_all() ici : la structure de la base est gérée
-        # uniquement par les migrations Alembic (flask db upgrade, déjà exécuté
-        # juste avant ce script dans le Procfile). db.create_all() ne modifie
-        # jamais une table déjà existante, ce qui désynchronisait la base réelle
-        # du schéma attendu par le code au fil des évolutions.
-
-        credentials_log = []
-        create_initial_users(credentials_log)
+        create_initial_users([])
         create_initial_products()
-
-        if credentials_log:
-            os.makedirs(app.instance_path, exist_ok=True)
-            with open(CREDENTIALS_FILE, "w", encoding="utf-8") as f:
-                f.write("Identifiants générés au premier démarrage - à distribuer puis SUPPRIMER ce fichier.\n\n")
-                for username, password in credentials_log:
-                    f.write(f"{username} : {password}\n")
-            print(f"[seed] {len(credentials_log)} compte(s) créé(s).")
-            print(f"[seed] Identifiants écrits dans : {CREDENTIALS_FILE}")
-            print("[seed] Distribue-les puis SUPPRIME ce fichier du serveur.")
-            print("[seed] ---- IDENTIFIANTS (visibles ici dans les logs si tu n'as pas accès au Shell) ----")
-            for username, password in credentials_log:
-                print(f"[seed-credentials] {username} : {password}")
-            print("[seed] ---- FIN DES IDENTIFIANTS ----")
-            print("[seed] IMPORTANT : copie-les MAINTENANT, ils ne seront plus jamais réaffichés "
-                  "(les prochains déploiements ne recréent pas les comptes déjà existants).")
-        else:
-            print("[seed] Rien à faire : les comptes existent déjà.")
+        print("[seed] Seed terminé sans remplacement des données existantes.")

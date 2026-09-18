@@ -26,8 +26,17 @@ class BaseConfig:
         "pool_pre_ping": True,
         "pool_recycle": 300,
     }
-    CACHE_TYPE = "SimpleCache"
+
+    # Une instance unique de SimpleCache ne partage pas les compteurs entre
+    # plusieurs workers/instances. Si CACHE_REDIS_URL ou REDIS_URL est défini,
+    # Flask-Caching utilise Redis/Valkey comme backend partagé.
+    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL") or os.environ.get("REDIS_URL")
+    if CACHE_REDIS_URL:
+        CACHE_TYPE = "RedisCache"
+    else:
+        CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
+
     WTF_CSRF_ENABLED = True
 
     # Session applicative : expiration après 8 h, avec renouvellement pendant
@@ -57,6 +66,8 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "testing-key"
+    CACHE_TYPE = "SimpleCache"
+    CACHE_REDIS_URL = None
 
 
 config_by_name = {
