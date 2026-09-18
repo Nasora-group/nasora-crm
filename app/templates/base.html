@@ -82,13 +82,13 @@
 <div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">★</span><span>Performance</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu">{% if current_user.project|lower == 'nasmedic' %}<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% else %}<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% endif %}<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span><span>Mes évaluations</span></a></div></div>
 {% endif %}
 <span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" aria-label="Se déconnecter"><span class="nav-icon">↪</span><span>Déconnexion</span></button></form>
-{% else %}<a href="{{ url_for('auth.login') }}"><span class="nav-icon">→</span><span>Connexion</span></a>{% endif %}</div></nav>
+{% else %}<a href="{{ url_for('auth.login') }}"><span>Connexion</span></a>{% endif %}</div></nav>
 <main id="main-content" class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
 {% if messages %}<div class="flash-messages" role="status" aria-live="polite">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
 {% block content %}{% endblock %}
 </main>
-<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p><a href="{{ url_for('legal.rgpd') }}">Politique de confidentialité</a> · <a href="{{ url_for('legal.cgu') }}">CGU</a></p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
+<footer><p>&copy; {{ current_year }} Nasora Health &amp; Skincare — CRM interne</p><p><a href="{{ url_for('legal.rgpd') }}">Politique de confidentialité</a> | <a href="{{ url_for('legal.cgu') }}">CGU</a></p><p class="developer-signature">Développé par <strong>Lamine Technologie</strong></p></footer>
 <div id="cookie-banner" class="cookie-banner" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-text">
 <strong id="cookie-title">Respect de votre vie privée</strong>
 <p id="cookie-text">NASORA utilise uniquement les cookies nécessaires au fonctionnement du CRM. Si la mesure d'audience est activée, elle ne sera chargée qu'après votre accord. <a class="cookie-link" href="{{ url_for('legal.rgpd') }}">En savoir plus</a>.</p>
