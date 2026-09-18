@@ -200,7 +200,7 @@ def _product_sales_detail(sale_model, product_model, month, division, scope_to_c
 def _monthly_revenue_detail_route(division, month, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False) for slug, _label, sale_model, product_model in suppliers}
+    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=True) for slug, _label, sale_model, product_model in suppliers}
     return render_template(template_name, month=month, suppliers=suppliers, details=details)
 
 
