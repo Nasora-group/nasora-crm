@@ -7,7 +7,7 @@
             <a href="{{ url_for('planning.edit_planning', planning_id=planning.id) }}" class="btn btn-outline">Modifier</a>
             <form method="POST" action="{{ url_for('planning.delete_planning', planning_id=planning.id) }}">
                 {{ delete_form.hidden_tag() }}
-                <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer ce planning (semaine du {{ planning.date.strftime('%d/%m/%Y') }}) ?');">Supprimer</button>
+                <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer ce planning (semaine du {{ planning.date.strftime('%d/%m/%Y') }}) ?')undefined">Supprimer</button>
             </form>
         </div>
         {% endif %}
@@ -19,7 +19,7 @@
             <div class="planning-day-col-label">{{ jour_label }}</div>
             {% if entries %}
                 {% for type_structure, nom in entries %}
-                <div class="planning-badge" style="--planning-structure-color: {{ structure_colors.get(type_structure, '#6b8e4e') }};">
+                <div class="planning-badge" style="--planning-structure-color: {{ structure_colors.get(type_structure, '#6b8e4e') }}undefined">
                     <span class="planning-badge-type">{{ type_structure }}</span>
                     {% if nom %}<span class="planning-badge-nom">{{ nom }}</span>{% endif %}
                 </div>
