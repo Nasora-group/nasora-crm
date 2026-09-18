@@ -4,11 +4,11 @@
 <div class="planning-page planning-detail-page">
     <div class="planning-detail-head">
         <div>
-            <span class="planning-kicker">Organisation · Tournées</span>
+            <span class="planning-kicker">Organisation | Tournées</span>
             <h1>Les visites de {{ commercial.username }}</h1>
             <p>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</p>
         </div>
-        <a href="{{ url_for('planning.admin_plannings') }}" class="btn btn-outline">← Retour à l'équipe</a>
+        <a href="{{ url_for('planning.admin_plannings') }}" class="btn btn-outline">Retour à l'équipe</a>
     </div>
 
     {% if plannings %}

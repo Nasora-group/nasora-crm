@@ -10,7 +10,7 @@
 <div class="planning-page">
     <section class="planning-hero">
         <div>
-            <span class="planning-kicker">NASORA CRM · ORGANISATION</span>
+            <span class="planning-kicker">NASORA CRM | ORGANISATION</span>
             <h1>Organiser les tournées</h1>
             <p>Préparez facilement les cycles de visites de l'équipe, du lundi au vendredi.</p>
         </div>
@@ -19,14 +19,14 @@
     <section class="planning-info-card">
         <div class="planning-info-icon">✦</div>
         <div>
-            <h2>Un cycle simple sur 4 semaines</h2>
+            <h2>Cycle de visites sur 4 semaines</h2>
             <p>NASORA prépare deux semaines de visites à partir des établissements déjà renseignés par le commercial, puis reprend automatiquement <strong>S3 = S1</strong> et <strong>S4 = S2</strong>.</p>
-            <div class="planning-rules"><span>✓ Lundi → Vendredi</span><span>✓ S3 = S1</span><span>✓ S4 = S2</span><span>✓ Week-end exclu</span></div>
+            <div class="planning-rules"><span>Lundi au vendredi</span><span>Semaine 3 reprend la semaine 1</span><span>Semaine 4 reprend la semaine 2</span><span>Week-end exclu</span></div>
         </div>
     </section>
 
     <section class="planning-section-head">
-        <div><h2>Votre équipe</h2><p>Choisissez le début du cycle et le nombre de visites prévues chaque jour.</p></div>
+        <div><h2>Équipe</h2><p>Choisissez le début du cycle et le nombre de visites prévues chaque jour.</p></div>
     </section>
 
     <div class="planning-admin-list">
@@ -34,7 +34,7 @@
         <article class="planning-admin-card">
             <div class="planning-commercial">
                 <div class="planning-avatar">{{ commercial.username[:1]|upper }}</div>
-                <div><strong>{{ commercial.username }}</strong><span>{{ commercial.project|upper }} · {{ commercial.zone or 'Zone non renseignée' }}</span></div>
+                <div><strong>{{ commercial.username }}</strong><span>{{ commercial.project|upper }} | {{ commercial.zone or 'Zone non renseignée' }}</span></div>
             </div>
             <form method="post" action="{{ url_for('planning.admin_planning_generate', commercial_id=commercial.id) }}" class="planning-generate-form" data-planning-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -53,7 +53,7 @@
                 </label>
                 <button type="submit" class="btn">Créer le cycle</button>
             </form>
-            <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Consulter le planning <span>→</span></a>
+            <a class="planning-view-link" href="{{ url_for('planning.admin_planning_detail', commercial_id=commercial.id) }}">Consulter le planning</a>
         </article>
     {% else %}
         <div class="planning-empty">Aucun commercial n'est disponible pour le moment.</div>
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 startDate.focus();
                 return;
             }
-            if (!window.confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings déjà présents sur les dates concernées resteront protégés.')) {
+            if (!window.confirm('Générer un nouveau cycle de 4 semaines pour ce commercial ? Les plannings déjà présents sur les dates concernées seront mis à jour.')) {
                 event.preventDefault();
             }
         });

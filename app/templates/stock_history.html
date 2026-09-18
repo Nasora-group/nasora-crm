@@ -5,7 +5,7 @@
 <section class="crm-table-card stock-history-card" aria-labelledby="stock-history-title">
 <div class="stock-history-header"><div><span class="crm-overline">ARCHIVES</span><h2 id="stock-history-title">Semaines enregistrées</h2></div><span class="stock-history-count">{{ weeks|length }} semaine{{ 's' if weeks|length != 1 else '' }}</span></div>
 <div class="stock-history-table-wrap"><table class="responsive-table stock-history-table"><caption class="sr-only">Historique des semaines de stocks disponibles</caption><thead><tr><th scope="col">Semaine de référence</th><th scope="col">Consultation</th></tr></thead><tbody>
-{% for week in weeks %}<tr><td><div class="stock-history-date"><span class="stock-history-icon">▦</span><strong>Semaine du {{ week.strftime('%d/%m/%Y') }}</strong></div></td><td><a class="btn btn-outline" href="{{ url_for('stock.available', week=week.isoformat()) }}">Voir les stocks <span aria-hidden="true">→</span></a></td></tr>
+{% for week in weeks %}<tr><td><div class="stock-history-date"><span class="stock-history-icon">▦</span><strong>Semaine du {{ week.strftime('%d/%m/%Y') }}</strong></div></td><td><a class="btn btn-outline" href="{{ url_for('stock.available', week=week.isoformat()) }}">Voir les stocks</a></td></tr>
 {% else %}<tr><td colspan="2"><div class="stock-history-empty" role="status"><span class="stock-history-empty-icon">▣</span><strong>Aucun historique disponible</strong><span>Les semaines apparaîtront ici après leur première saisie.</span></div></td></tr>{% endfor %}
 </tbody></table></div></section>
 <style>

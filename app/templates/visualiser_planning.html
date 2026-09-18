@@ -4,11 +4,11 @@
 <div class="planning-page">
   <section class="planning-hero">
     <div>
-      <span class="planning-kicker">NASORA CRM · MON ACTIVITÉ</span>
+      <span class="planning-kicker">NASORA CRM | MON ACTIVITÉ</span>
       <h1>Mon planning hebdomadaire</h1>
       <p>Consultez vos cycles de visites et gardez une vision claire de vos journées terrain.</p>
     </div>
-    <a href="{{ url_for('planning.saisie') }}" class="btn">+ Saisir un nouveau planning</a>
+    <a href="{{ url_for('planning.saisie') }}" class="btn">Saisir un nouveau planning</a>
   </section>
   {% if plannings %}
     {% for planning in plannings %}
@@ -19,7 +19,7 @@
       <div class="planning-empty-icon">□</div>
       <h2>Aucun planning enregistré</h2>
       <p>Créez votre premier planning hebdomadaire pour organiser vos visites du lundi au vendredi.</p>
-      <a href="{{ url_for('planning.saisie') }}" class="btn">Créer mon planning</a>
+      <a href="{{ url_for('planning.saisie') }}" class="btn">Créer le planning</a>
     </section>
   {% endif %}
 </div>

@@ -4,7 +4,7 @@
 <div class="crm-page-hero stock-page-hero">
   <span class="crm-overline">STOCKS · DISPONIBILITÉ</span>
   <h1>État des stocks</h1>
-  <p class="crm-subtitle">Disponibilité des produits chez les quatre grossistes · semaine du {{ week_start.strftime('%d/%m/%Y') }}.</p>
+  <p class="crm-subtitle">Disponibilité des produits chez les quatre grossistes | semaine du {{ week_start.strftime('%d/%m/%Y') }}.</p>
   <div class="dashboard-nav-actions stock-toolbar">
     <form method="get" action="{{ url_for('stock.available') }}" class="stock-week-filter">
       <label for="week">Semaine</label>
@@ -12,8 +12,8 @@
       <button class="btn" type="submit">Afficher</button>
     </form>
     {% if is_admin %}
-    <a class="btn btn-outline" href="{{ url_for('stock.entry', week_start=week_start.isoformat()) }}">✏️ Saisir / modifier</a>
-    <a class="btn btn-outline" href="{{ url_for('stock.history') }}">🕐 Historique</a>
+    <a class="btn btn-outline" href="{{ url_for('stock.entry', week_start=week_start.isoformat()) }}">Saisir et modifier</a>
+    <a class="btn btn-outline" href="{{ url_for('stock.history') }}">Historique</a>
     {% endif %}
   </div>
 </div>
