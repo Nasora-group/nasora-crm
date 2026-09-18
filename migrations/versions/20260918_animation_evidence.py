@@ -1,7 +1,7 @@
 """Store pharmacy animation proof images in PostgreSQL.
 
 Revision ID: 20260918_animation_evidence
-Revises: 20260907_animation_sale_price
+Revises: 20260907_fix_crm_tenant
 """
 
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 
 revision = "20260918_animation_evidence"
-down_revision = "20260907_animation_sale_price"
+down_revision = "20260907_fix_crm_tenant"
 branch_labels = None
 depends_on = None
 
