@@ -121,7 +121,7 @@ def nasmedic_dashboard():
 def _monthly_revenue_route(division, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=False)
+    labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=True)
     rows = [
         {
             "month": month,
