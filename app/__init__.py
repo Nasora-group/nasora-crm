@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template, request, redirect
+from flask import Flask, jsonify, render_template, request, redirect
 from flask_login import current_user
 from dotenv import load_dotenv
 from app.config import get_config
@@ -29,6 +29,17 @@ def create_app(config_object=None):
     install_readonly_objective_reader()
     from app import visit_sync
     _register_error_handlers(app)
+
+    @app.get("/health")
+    def health_check():
+        """Lightweight Render health endpoint; never exposes application data."""
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
+            return jsonify(status="ok"), 200
+        except Exception:
+            app.logger.exception("Health check database failure")
+            return jsonify(status="error"), 503
 
     @app.before_request
     def force_https_in_production():
