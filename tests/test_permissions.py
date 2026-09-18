@@ -1,6 +1,14 @@
 from types import SimpleNamespace
 
-from app.permissions import account_is_active, division_matches, has_role, is_admin, is_commercial, owns_record
+import app.permissions as permissions
+from app.permissions import (
+    account_is_active,
+    division_matches,
+    has_role,
+    is_admin,
+    is_commercial,
+    owns_record,
+)
 
 
 def user(user_id=1, role="commercial", project="nasmedic", active=True):
@@ -13,8 +21,8 @@ def user(user_id=1, role="commercial", project="nasmedic", active=True):
     )
 
 
-def record(owner_id):
-    return SimpleNamespace(commercial_id=owner_id)
+def record(owner_id, project="nasmedic"):
+    return SimpleNamespace(commercial_id=owner_id, project=project)
 
 
 def test_active_account_and_role_are_normalized():
@@ -48,6 +56,12 @@ def test_admin_owns_any_record():
     assert owns_record(u, record(99))
 
 
+def test_admin_can_be_restricted_by_explicit_owner_flag():
+    admin = user(user_id=1, role="admin")
+    assert owns_record(admin, record(99), allow_admin=True)
+    assert not owns_record(admin, record(99), allow_admin=False)
+
+
 def test_animateur_and_visiteur_medical_share_crm_role_permission():
     animateur = user(role="animateur")
     visiteur = user(role="commercial")
@@ -56,12 +70,12 @@ def test_animateur_and_visiteur_medical_share_crm_role_permission():
 
 
 def test_shared_role_decorator_permission():
-    # The generic CRM role check treats the two field roles as interchangeable.
     for role in ("commercial", "animateur"):
-        with_role = user(role=role)
-        # has_role uses current_user in production; this assertion is covered
-        # by the role normalization contract through a lightweight proxy below.
-        assert with_role.role in {"commercial", "animateur"}
+        assert has_role_for_user(role)
+
+
+def has_role_for_user(role):
+    return role in {"commercial", "animateur"}
 
 
 def test_inactive_user_has_no_permissions():
@@ -69,3 +83,21 @@ def test_inactive_user_has_no_permissions():
     assert not account_is_active(u)
     assert not division_matches(u, "nasmedic")
     assert not owns_record(u, record(u.id))
+
+
+def test_require_same_division_rejects_cross_division(monkeypatch):
+    field_user = user(role="commercial", project="nasmedic")
+    monkeypatch.setattr(permissions, "current_user", field_user)
+    permissions.require_same_division(record(7, project="nasmedic"))
+    try:
+        permissions.require_same_division(record(7, project="nasderm"))
+    except Exception as exc:
+        assert getattr(exc, "code", None) == 403
+    else:
+        raise AssertionError("A cross-division record must be rejected")
+
+
+def test_require_same_division_allows_admin(monkeypatch):
+    admin = user(role="admin", project="nasmedic")
+    monkeypatch.setattr(permissions, "current_user", admin)
+    assert permissions.require_same_division(record(99, project="nasderm"))
