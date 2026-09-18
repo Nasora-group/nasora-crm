@@ -43,6 +43,22 @@ class EricFavreSale(SaleMixin,db.Model):
 class TroisCheneSale(SaleMixin,db.Model):
     __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("TroisCheneProduct")
 
+class AnimationEvidence(db.Model):
+    __tablename__="animation_evidence"
+    id=db.Column(db.Integer,primary_key=True)
+    animateur_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True)
+    pharmacy_name=db.Column(db.String(200),nullable=False,index=True)
+    animation_date=db.Column(db.Date,nullable=False,index=True)
+    project=db.Column(db.String(50),nullable=False,index=True)
+    filename=db.Column(db.String(255),nullable=False)
+    mime_type=db.Column(db.String(100),nullable=False)
+    file_data=db.Column(db.LargeBinary,nullable=False)
+    file_size=db.Column(db.Integer,nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow,nullable=False)
+    updated_at=db.Column(db.DateTime,default=datetime.utcnow,onupdate=datetime.utcnow,nullable=False)
+    animateur=db.relationship("User",foreign_keys=[animateur_id])
+    sales=db.relationship("AnimationSale",back_populates="evidence")
+
 class AnimationSale(db.Model):
     __tablename__="animation_sale"
     id=db.Column(db.Integer,primary_key=True)
@@ -53,8 +69,10 @@ class AnimationSale(db.Model):
     quantity=db.Column(db.Integer,nullable=False)
     unit_price=db.Column(db.Numeric(12,2),nullable=False,default=Decimal("0.00"))
     project=db.Column(db.String(50),nullable=False,index=True)
+    evidence_id=db.Column(db.Integer,db.ForeignKey("animation_evidence.id",ondelete="SET NULL"),nullable=True,index=True)
     created_at=db.Column(db.DateTime,default=datetime.utcnow,nullable=False)
     animateur=db.relationship("User",foreign_keys=[animateur_id],backref=db.backref("animation_sales",lazy="dynamic"))
+    evidence=db.relationship("AnimationEvidence",back_populates="sales")
     @property
     def total_amount(self):
         return (self.unit_price or Decimal("0.00")) * self.quantity
