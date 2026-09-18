@@ -188,6 +188,7 @@ def _group_sales(sales):
                 "total_quantity": sum(i.quantity for i in pharmacy_items),
                 "total_amount": sum((i.total_amount for i in pharmacy_items), Decimal("0.00")),
                 "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in pharmacy_items}),
+                "evidence": next((sale.evidence for sale in pharmacy_items if sale.evidence), None),
             })
         days.append({
             "animation_date": animation_date,
