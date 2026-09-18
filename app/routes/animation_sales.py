@@ -212,18 +212,29 @@ def my_history():
         except ValueError:
             selected_month = ""
 
+    pharmacy_filter = (request.args.get("pharmacy") or "").strip()
+    selected_animator = (request.args.get("animateur_id") or "").strip()
+    animator_id = None
+    if selected_animator.isdigit():
+        animator_id = int(selected_animator)
+
     query = _animation_sales_query()
+    from app.models import AnimationSale
     if month_date:
         next_month = month_date.replace(year=month_date.year + 1, month=1, day=1) if month_date.month == 12 else month_date.replace(month=month_date.month + 1, day=1)
-        from app.models import AnimationSale
         query = query.filter(AnimationSale.animation_date >= month_date, AnimationSale.animation_date < next_month)
+    if pharmacy_filter:
+        query = query.filter(AnimationSale.pharmacy_name.ilike(f"%{pharmacy_filter}%"))
+    if current_user.role == "admin" and animator_id:
+        query = query.filter(AnimationSale.animateur_id == animator_id)
 
-    from app.models import AnimationSale
     sales = query.order_by(AnimationSale.animation_date.desc(), AnimationSale.pharmacy_name.asc(), AnimationSale.id.desc()).all()
     days = _group_sales(sales)
     general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
     general_quantity = sum(day["total_quantity"] for day in days)
-    return render_template("animation_sales_history.html", days=days, general_total=general_total, general_quantity=general_quantity, selected_month=selected_month, is_admin=current_user.role == "admin", current_user_id=current_user.id)
+    animators = User.query.filter_by(role="animateur").order_by(User.username.asc()).all() if current_user.role == "admin" else []
+    pharmacies = sorted({row[0] for row in AnimationSale.query.with_entities(AnimationSale.pharmacy_name).distinct().all() if row[0]})
+    return render_template("animation_sales_history.html", days=days, general_total=general_total, general_quantity=general_quantity, selected_month=selected_month, pharmacy_filter=pharmacy_filter, selected_animator=selected_animator, animators=animators, pharmacies=pharmacies, is_admin=current_user.role == "admin", current_user_id=current_user.id)
 
 
 @animation_sales_bp.route("/<int:sale_id>/modifier", methods=["GET", "POST"])
