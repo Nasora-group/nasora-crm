@@ -375,7 +375,7 @@ def delete_visit(client_id, visit_id):
     visit = ClientVisit.query.filter_by(id=visit_id, client_id=client.id).first_or_404()
     if not _commercial_can_access_client(client):
         return render_template("403.html"), 403
-    if current_user.role == "commercial" and visit.commercial_id != current_user.id:
+    if is_commercial() and visit.commercial_id != current_user.id:
         return render_template("403.html"), 403
     if visit.prospection_id is not None:
         flash("Cette visite est liée à une prospection et ne peut pas être supprimée depuis la Base NASORA.", "warning")
