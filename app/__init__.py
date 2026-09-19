@@ -65,7 +65,8 @@ def create_app(config_object=None):
             "current_year": datetime.now(UTC).year,
             "first_active_supplier_slug": active_slugs[0] if active_slugs else None,
             "structure_colors": STRUCTURE_COLORS,
-            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID", "").strip(),\n            "admin_unread_notifications": (AdminNotification.query.filter_by(admin_id=current_user.id, is_read=False).count() if current_user.is_authenticated and current_user.role == "admin" else 0),
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID", "").strip(),
+            "admin_unread_notifications": (AdminNotification.query.filter_by(admin_id=current_user.id, is_read=False).count() if current_user.is_authenticated and current_user.role == "admin" else 0),
         }
     from app.utils import format_planning_slot, planning_entries
     app.jinja_env.filters["planning_slot"] = format_planning_slot
