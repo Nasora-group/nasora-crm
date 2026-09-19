@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Notifications administrateur - NASORA CRM{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Notifications</h1><p>Les dernières activités saisies par les Visiteurs médicaux et Animateurs(trices).</p></div>
+  {% if notifications %}<form method="POST" action="{{ url_for('admin_notifications.mark_all_read') }}">{{ formulaire_csrf.hidden_tag() if formulaire_csrf else '' }}<button class="btn btn-outline" type="submit">Tout marquer comme lu</button></form>{% endif %}
+</div>
+<div class="notification-list">
+{% for notification in notifications %}
+  <a class="notification-card {% if not notification.is_read %}is-unread{% endif %}" href="{{ url_for('admin_notifications.open_notification', notification_id=notification.id) }}">
+    <div class="notification-icon">🔔</div>
+    <div class="notification-body">
+      <div class="notification-top"><strong>{{ notification.title }}</strong><span>{{ notification.created_at.strftime('%d/%m/%Y %H:%M') }}</span></div>
+      <div>{{ notification.message }}</div>
+      <small>{{ notification.actor.username if notification.actor else 'Utilisateur' }} · {{ 'Non lu' if not notification.is_read else 'Lu' }}</small>
+    </div>
+  </a>
+{% else %}
+  <div class="empty-state">Aucune notification pour le moment.</div>
+{% endfor %}
+</div>
+<style>
+.notification-list{display:grid;gap:10px;margin-top:20px}.notification-card{display:flex;gap:14px;padding:15px 18px;border:1px solid #dce8e2;border-radius:12px;background:#fff;color:inherit;text-decoration:none}.notification-card.is-unread{border-left:4px solid #228b5e;background:#f7fbf9}.notification-icon{font-size:20px}.notification-body{flex:1}.notification-top{display:flex;justify-content:space-between;gap:15px;margin-bottom:5px}.notification-top span,.notification-body small{color:var(--ink-soft);font-size:12px}.empty-state{padding:30px;text-align:center;border:1px dashed #cbd9d2;border-radius:12px;color:var(--ink-soft)}
+</style>
+{% endblock %}
