@@ -97,7 +97,7 @@ def _division_dashboard(division, template_name):
     if _commercial_only_scope():
         prospection_query = prospection_query.filter(Prospection.commercial_id == current_user.id)
     prospections = prospection_query.order_by(Prospection.date.desc()).all()
-    labels, totals, _ = _monthly_revenue_for_division(division); objectives_kpis = _objectives_kpis(division, labels, totals); top_5_commerciaux = _division_visit_ranking(division)
+    labels, totals, _ = _monthly_revenue_for_division(division, scope_to_commercial=False); objectives_kpis = _objectives_kpis(division, labels, totals); top_5_commerciaux = _division_visit_ranking(division)
     commerciaux_query = User.query.filter_by(project=division, role="commercial")
     if _commercial_only_scope():
         commerciaux_query = commerciaux_query.filter(User.id == current_user.id)
@@ -121,7 +121,7 @@ def nasmedic_dashboard():
 def _monthly_revenue_route(division, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=True)
+    labels, totals, combined = _monthly_revenue_for_division(division, scope_to_commercial=False)
     rows = [
         {
             "month": month,
@@ -200,7 +200,7 @@ def _product_sales_detail(sale_model, product_model, month, division, scope_to_c
 def _monthly_revenue_detail_route(division, month, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=True) for slug, _label, sale_model, product_model in suppliers}
+    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False) for slug, _label, sale_model, product_model in suppliers}
     return render_template(template_name, month=month, suppliers=suppliers, details=details)
 
 
