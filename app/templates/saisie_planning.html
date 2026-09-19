@@ -2,7 +2,7 @@
 
 {% block content %}
 <h1>{{ 'Modifier le planning du ' ~ planning.date.strftime('%d/%m/%Y') if mode == 'edit' else 'Saisie du planning hebdomadaire' }}</h1>
-<p style="color:var(--ink-soft);">Pour chaque jour, coche autant de structures que nécessaire. Les structures déjà sélectionnées restent affichées. Pour chaque structure cochée, renseigne son nom exact.</p>
+<p style="color:var(--ink-soft);">Pour chaque jour, sélectionne les structures dans la liste déroulante. Tu peux en sélectionner autant que nécessaire. Les structures déjà sélectionnées restent dans la liste.</p>
 
 {% if mode == 'create' %}
 <div class="planning-help" style="margin:16px 0;padding:14px 18px;border-radius:10px;background:rgba(34,139,94,.08);border:1px solid rgba(34,139,94,.2);">
@@ -22,25 +22,18 @@
         {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
         <div class="planning-day-card">
             <h3 class="planning-day-title">{{ jour_label }}</h3>
-            <div class="planning-structures-list" data-slot="{{ jour }}" data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
+            {{ formulaire[jour].label(class="form-label", style="display:none;") }}
+
+            <select name="{{ jour }}" class="form-control planning-select" multiple="multiple"
+                    data-slot="{{ jour }}"
+                    data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
                 {% for value, label in formulaire[jour].choices %}
-                <div class="planning-structure-row">
-                    <label class="planning-structure-choice">
-                        <input
-                            type="checkbox"
-                            name="{{ jour }}"
-                            value="{{ value }}"
-                            class="planning-structure-checkbox"
-                            data-slot="{{ jour }}"
-                            data-value="{{ value }}"
-                            {% if existing_types and value in existing_types.get(jour, []) %}checked{% endif %}
-                        >
-                        <span>{{ label }}</span>
-                    </label>
-                    <div class="planning-structure-name" data-structure="{{ value }}"></div>
-                </div>
+                    <option value="{{ value }}" {% if existing_types and value in existing_types.get(jour, []) %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
-            </div>
+            </select>
+
+            <div class="planning-selected-summary" id="summary_{{ jour }}"></div>
+            <div class="structure-details" id="details_{{ jour }}"></div>
         </div>
         {% endfor %}
     </div>
@@ -55,44 +48,44 @@
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
 <style>
-.planning-structures-list {
+.planning-select {
+    width: 100%;
+    min-height: 46px;
+}
+
+.planning-selected-summary {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.planning-structure-row {
-    border: 1px solid rgba(34,139,94,.18);
-    border-radius: 8px;
-    padding: 9px 11px;
-    background: #fff;
-}
-
-.planning-structure-choice {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.planning-structure-checkbox {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-}
-
-.planning-structure-name {
+    flex-wrap: wrap;
+    gap: 6px;
     margin-top: 8px;
 }
 
-.planning-structure-name:empty {
+.planning-selected-summary:empty {
     display: none;
 }
 
-.planning-structure-name input {
-    width: 100%;
+.planning-selected-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(34,139,94,.10);
+    border: 1px solid rgba(34,139,94,.22);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.structure-detail-item {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(34,139,94,.25);
+    border-left: 4px solid #228b5e;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.structure-detail-item .form-label {
+    display: block;
 }
 </style>
 
@@ -102,45 +95,85 @@ document.addEventListener('DOMContentLoaded', function () {
         return value.replace(/ /g, '_');
     }
 
-    function renderStructureName(checkbox) {
-        var slot = checkbox.getAttribute('data-slot');
-        var value = checkbox.getAttribute('data-value');
-        var row = checkbox.closest('.planning-structure-row');
-        var container = row ? row.querySelector('.planning-structure-name') : null;
-        if (!container) return;
-
-        if (!checkbox.checked) {
-            container.innerHTML = '';
-            return;
-        }
-
-        if (container.querySelector('input')) {
-            return;
-        }
-
-        var list = checkbox.closest('.planning-structures-list');
-        var existing = {};
+    function getExisting(selectEl) {
         try {
-            existing = JSON.parse(list.getAttribute('data-existing') || '{}');
+            return JSON.parse(selectEl.getAttribute('data-existing') || '{}');
         } catch (e) {
-            existing = {};
+            return {};
         }
-
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'form-input';
-        input.name = slot + '_nom__' + slugify(value);
-        input.required = true;
-        input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
-        input.value = existing[value] || '';
-
-        container.appendChild(input);
     }
 
-    document.querySelectorAll('.planning-structure-checkbox').forEach(function (checkbox) {
-        renderStructureName(checkbox);
-        checkbox.addEventListener('change', function () {
-            renderStructureName(checkbox);
+    function getSelectedValues(selectEl) {
+        return Array.prototype.slice.call(selectEl.options)
+            .filter(function (option) { return option.selected; })
+            .map(function (option) { return option.value; });
+    }
+
+    function renderDay(selectEl) {
+        var slot = selectEl.getAttribute('data-slot');
+        var details = document.getElementById('details_' + slot);
+        var summary = document.getElementById('summary_' + slot);
+        if (!details || !summary) return;
+
+        var existing = getExisting(selectEl);
+        var selectedValues = getSelectedValues(selectEl);
+
+        summary.innerHTML = '';
+        selectedValues.forEach(function (value) {
+            var option = Array.prototype.slice.call(selectEl.options).find(function (item) {
+                return item.value === value;
+            });
+            if (!option) return;
+
+            var badge = document.createElement('span');
+            badge.className = 'planning-selected-item';
+            badge.textContent = option.textContent;
+            summary.appendChild(badge);
+        });
+
+        Array.prototype.slice.call(details.querySelectorAll('[data-structure]')).forEach(function (item) {
+            if (selectedValues.indexOf(item.getAttribute('data-structure')) === -1) {
+                item.remove();
+            }
+        });
+
+        selectedValues.forEach(function (value) {
+            var already = null;
+            Array.prototype.slice.call(details.querySelectorAll('[data-structure]')).some(function (item) {
+                if (item.getAttribute('data-structure') === value) {
+                    already = item;
+                    return true;
+                }
+                return false;
+            });
+            if (already) return;
+
+            var wrapper = document.createElement('div');
+            wrapper.className = 'structure-detail-item';
+            wrapper.setAttribute('data-structure', value);
+
+            var label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = 'Nom précis de ' + value + ' *';
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input';
+            input.name = slot + '_nom__' + slugify(value);
+            input.required = true;
+            input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
+            input.value = existing[value] || '';
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            details.appendChild(wrapper);
+        });
+    }
+
+    document.querySelectorAll('.planning-select').forEach(function (select) {
+        renderDay(select);
+        select.addEventListener('change', function () {
+            renderDay(select);
         });
     });
 
@@ -149,14 +182,15 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', function (event) {
             var missing = [];
 
-            document.querySelectorAll('.planning-structure-checkbox:checked').forEach(function (checkbox) {
-                var slot = checkbox.getAttribute('data-slot');
-                var value = checkbox.getAttribute('data-value');
-                var field = form.elements[slot + '_nom__' + slugify(value)];
+            document.querySelectorAll('.planning-select').forEach(function (select) {
+                var slot = select.getAttribute('data-slot');
 
-                if (!field || !field.value.trim()) {
-                    missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + value);
-                }
+                getSelectedValues(select).forEach(function (value) {
+                    var field = form.elements[slot + '_nom__' + slugify(value)];
+                    if (!field || !field.value.trim()) {
+                        missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + value);
+                    }
+                });
             });
 
             if (missing.length) {
