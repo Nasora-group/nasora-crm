@@ -5,6 +5,8 @@ from datetime import date
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 
+from sqlalchemy.orm import load_only
+
 from app.models import Prospection, User
 from app.utils import roles_required
 from app.visit_metrics import professional_key
@@ -57,7 +59,20 @@ def direction():
         if specialite:
             query = query.filter(Prospection.specialite == specialite)
 
-        rows = query.order_by(Prospection.date.asc(), Prospection.id.asc()).all()
+        rows = (
+            query.options(load_only(
+                Prospection.id,
+                Prospection.date,
+                Prospection.commercial_id,
+                Prospection.specialite,
+                Prospection.telephone,
+                Prospection.nom_client,
+                Prospection.structure,
+                Prospection.establishment,
+            ))
+            .order_by(Prospection.date.asc(), Prospection.id.asc())
+            .all()
+        )
         total_prospections = len(rows)
         professionals = {key for row in rows if (key := professional_key(row))}
         structures = {
