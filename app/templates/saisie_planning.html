@@ -45,72 +45,91 @@
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
 <script>
-var STRUCTURE_COLORS = {{ structure_colors|default({})|tojson }};
-
-$(document).ready(function() {
-    $('.select2').select2({ placeholder: 'Choisir une ou plusieurs structures' });
-
+document.addEventListener('DOMContentLoaded', function () {
     function slugify(value) {
         return value.replace(/ /g, '_');
     }
 
     function renderDetailInputs(selectEl) {
-        var $select = $(selectEl);
-        var slot = $select.data('slot');
-        var $container = $('#details_' + slot);
-        var selected = $select.val() || [];
-        var existing = $select.data('existing') || {};
+        var slot = selectEl.getAttribute('data-slot');
+        var container = document.getElementById('details_' + slot);
+        if (!container) return;
 
-        $container.children('[data-structure]').each(function() {
-            if (selected.indexOf($(this).data('structure')) === -1) {
-                $(this).remove();
+        var selected = Array.prototype.slice.call(selectEl.selectedOptions).map(function (option) {
+            return option.value;
+        });
+
+        var existing = {};
+        try {
+            existing = JSON.parse(selectEl.getAttribute('data-existing') || '{}');
+        } catch (e) {
+            existing = {};
+        }
+
+        Array.prototype.slice.call(container.querySelectorAll('[data-structure]')).forEach(function (item) {
+            if (selected.indexOf(item.getAttribute('data-structure')) === -1) {
+                item.remove();
             }
         });
 
-        selected.forEach(function(value) {
-            if ($container.children('[data-structure="' + value + '"]').length > 0) {
+        selected.forEach(function (value) {
+            if (container.querySelector('[data-structure="' + CSS.escape(value) + '"]')) {
                 return;
             }
-            var slug = slugify(value);
-            var fieldName = slot + '_nom__' + slug;
-            var color = STRUCTURE_COLORS[value] || '#6b8e4e';
 
-            var $wrapper = $('<div class="structure-detail-item"></div>')
-                .attr('data-structure', value)
-                .css('border-left', '4px solid ' + color);
-            var $label = $('<label class="form-label"></label>').text('Nom précis (' + value + ')');
-            var $input = $('<input type="text" class="form-input" required>');
-            $input.attr('name', fieldName)
-                .attr('placeholder', 'ex : ' + (value === 'PHARMACIES' ? 'Pharmacie Zenith' : 'Hôpital Principal de Dakar'))
-                .val(existing[value] || '');
+            var fieldName = slot + '_nom__' + slugify(value);
+            var wrapper = document.createElement('div');
+            wrapper.className = 'structure-detail-item';
+            wrapper.setAttribute('data-structure', value);
+            wrapper.style.cssText = 'margin-top:10px;padding:12px 14px;border:1px solid rgba(34,139,94,.25);border-left:4px solid #228b5e;border-radius:8px;background:#fff;';
 
-            $wrapper.append($label).append($input);
-            $container.append($wrapper);
+            var label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = 'Nom précis de ' + value + ' *';
+            label.style.display = 'block';
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input';
+            input.name = fieldName;
+            input.required = true;
+            input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
+            input.value = existing[value] || '';
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            container.appendChild(wrapper);
         });
     }
 
-    $('.planning-select').each(function() {
-        renderDetailInputs(this);
-        $(this).on('change', function() { renderDetailInputs(this); });
+    document.querySelectorAll('.planning-select').forEach(function (select) {
+        renderDetailInputs(select);
+        select.addEventListener('change', function () {
+            renderDetailInputs(select);
+        });
     });
 
-    $('#planning-form').on('submit', function(event) {
-        var missing = [];
-        $('.planning-select').each(function() {
-            var slot = $(this).data('slot');
-            var selected = $(this).val() || [];
-            selected.forEach(function(value) {
-                var field = document.getElementsByName(slot + '_nom__' + slugify(value))[0];
-                if (!field || !field.value.trim()) {
-                    missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + value);
-                }
+    var form = document.getElementById('planning-form');
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            var missing = [];
+
+            document.querySelectorAll('.planning-select').forEach(function (select) {
+                var slot = select.getAttribute('data-slot');
+                Array.prototype.slice.call(select.selectedOptions).forEach(function (option) {
+                    var field = form.elements[slot + '_nom__' + slugify(option.value)];
+                    if (!field || !field.value.trim()) {
+                        missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + option.value);
+                    }
+                });
             });
+
+            if (missing.length) {
+                event.preventDefault();
+                alert('Renseigne le nom précis de chaque structure sélectionnée : ' + missing.join(', '));
+            }
         });
-        if (missing.length) {
-            event.preventDefault();
-            alert('Renseigne le nom précis de chaque structure sélectionnée : ' + missing.join(', '));
-        }
-    });
+    }
 });
 </script>
 {% endblock %}
