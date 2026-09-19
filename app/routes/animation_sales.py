@@ -295,13 +295,34 @@ def edit_animation_sale(sale_id):
                     sale.evidence.animation_date = animation_date
                     sale.evidence.project = division
 
+                # Une même animation peut contenir plusieurs lignes produits partageant
+                # le même justificatif. Si la pharmacie ou la date est modifiée sur une
+                # ligne, garder toutes les lignes de cette animation regroupées.
+                from app.models import AnimationSale
+                sibling_sales = []
+                if sale.evidence_id:
+                    sibling_sales = AnimationSale.query.filter(
+                        AnimationSale.evidence_id == sale.evidence_id,
+                        AnimationSale.id != sale.id,
+                    ).all()
+                    for sibling in sibling_sales:
+                        sibling.pharmacy_name = pharmacy
+                        sibling.animation_date = animation_date
+                        sibling.project = division
+
                 sale.pharmacy_name = pharmacy
                 sale.animation_date = animation_date
                 sale.product_name = product_name
                 sale.quantity = quantity
                 sale.unit_price = unit_price
                 sale.project = division
-                notify_admins(current_user, "animation_updated", "Animation modifiée", "Une vente d'animation a été modifiée.", "animation_sales.my_history")
+                notify_admins(
+                    current_user,
+                    "animation_updated",
+                    "Animation modifiée",
+                    "Une vente d'animation a été modifiée.",
+                    "animation_sales.my_history",
+                )
                 db.session.commit()
                 flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
                 return redirect(url_for("animation_sales.my_history"))
