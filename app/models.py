@@ -35,13 +35,13 @@ class GilbertProduct(ProductMixin,db.Model): __tablename__="gilbert_product"
 class EricFavreProduct(ProductMixin,db.Model): __tablename__="eric_favre_product"
 class TroisCheneProduct(ProductMixin,db.Model): __tablename__="trois_chene_product"
 class NovaPharmaSale(SaleMixin,db.Model):
-    __tablename__="nova_pharma_sale"; product_id=db.Column(db.Integer,db.ForeignKey("nova_pharma_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("NovaPharmaProduct"); commercial=db.relationship("User")
+    __tablename__="nova_pharma_sale"; product_id=db.Column(db.Integer,db.ForeignKey("nova_pharma_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); product=db.relationship("NovaPharmaProduct"); commercial=db.relationship("User")
 class GilbertSale(SaleMixin,db.Model):
-    __tablename__="gilbert_sale"; product_id=db.Column(db.Integer,db.ForeignKey("gilbert_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("GilbertProduct"); commercial=db.relationship("User")
+    __tablename__="gilbert_sale"; product_id=db.Column(db.Integer,db.ForeignKey("gilbert_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); product=db.relationship("GilbertProduct"); commercial=db.relationship("User")
 class EricFavreSale(SaleMixin,db.Model):
-    __tablename__="eric_favre_sale"; product_id=db.Column(db.Integer,db.ForeignKey("eric_favre_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("EricFavreProduct"); commercial=db.relationship("User")
+    __tablename__="eric_favre_sale"; product_id=db.Column(db.Integer,db.ForeignKey("eric_favre_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); product=db.relationship("EricFavreProduct"); commercial=db.relationship("User")
 class TroisCheneSale(SaleMixin,db.Model):
-    __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False); product=db.relationship("TroisCheneProduct")
+    __tablename__="trois_chene_sale"; product_id=db.Column(db.Integer,db.ForeignKey("trois_chene_product.id"),nullable=False); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); product=db.relationship("TroisCheneProduct")
 
 class AnimationEvidence(db.Model):
     __tablename__="animation_evidence"
