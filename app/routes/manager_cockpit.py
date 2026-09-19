@@ -6,7 +6,7 @@ from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import AnimationSale, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
+from app.models import AnimationSale, Evaluation, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.visit_objectives_readonly import read_visit_targets
