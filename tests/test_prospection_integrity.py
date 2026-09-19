@@ -183,10 +183,9 @@ def test_prospection_cannot_attach_to_another_commercial_client(app):
         db.session.add(prospect)
         db.session.commit()
 
+        # Le professionnel de l'autre Visiteur médical ne doit pas être réutilisé.
         client = _find_client_for_prospection(prospect)
-        assert client is not None
-        assert client.id != foreign_client.id
-        assert client.owner_id == first.id
+        assert client is None
         assert Client.query.filter_by(id=foreign_client.id, owner_id=second.id).one().phone == "775555555"
 
 
