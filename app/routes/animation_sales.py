@@ -365,12 +365,66 @@ def animation_evidence(evidence_id):
 @login_required
 @roles_required("admin")
 def animateur_history(user_id):
+    """Show one animateur's history with the same pharmacy/month filters as the main history."""
     from app.models import AnimationSale
+
     animateur = User.query.get_or_404(user_id)
     if animateur.role != "animateur":
         abort(404)
-    sales = AnimationSale.query.filter_by(animateur_id=animateur.id).order_by(AnimationSale.animation_date.desc(), AnimationSale.pharmacy_name.asc(), AnimationSale.id.desc()).all()
+
+    selected_month = (request.args.get("month") or "").strip()
+    month_date = None
+    if selected_month:
+        try:
+            month_date = datetime.strptime(selected_month, "%Y-%m").date()
+        except ValueError:
+            selected_month = ""
+
+    pharmacy_filter = (request.args.get("pharmacy") or "").strip()
+    query = AnimationSale.query.filter_by(animateur_id=animateur.id)
+
+    if month_date:
+        next_month = (
+            month_date.replace(year=month_date.year + 1, month=1, day=1)
+            if month_date.month == 12
+            else month_date.replace(month=month_date.month + 1, day=1)
+        )
+        query = query.filter(
+            AnimationSale.animation_date >= month_date,
+            AnimationSale.animation_date < next_month,
+        )
+    if pharmacy_filter:
+        query = query.filter(AnimationSale.pharmacy_name.ilike(f"%{pharmacy_filter}%"))
+
+    sales = query.order_by(
+        AnimationSale.animation_date.desc(),
+        AnimationSale.pharmacy_name.asc(),
+        AnimationSale.id.desc(),
+    ).all()
     days = _group_sales(sales)
     general_total = sum((day["total_amount"] for day in days), Decimal("0.00"))
     general_quantity = sum(day["total_quantity"] for day in days)
-    return render_template("animation_sales_history.html", days=days, general_total=general_total, general_quantity=general_quantity, selected_month="", is_admin=True, animateur=animateur, current_user_id=current_user.id)
+
+    pharmacies = sorted({
+        row[0]
+        for row in AnimationSale.query.filter_by(animateur_id=animateur.id)
+        .with_entities(AnimationSale.pharmacy_name)
+        .distinct()
+        .all()
+        if row[0]
+    })
+
+    return render_template(
+        "animation_sales_history.html",
+        days=days,
+        general_total=general_total,
+        general_quantity=general_quantity,
+        selected_month=selected_month,
+        pharmacy_filter=pharmacy_filter,
+        selected_animator="",
+        animators=[],
+        pharmacies=pharmacies,
+        is_admin=True,
+        animateur=animateur,
+        current_user_id=current_user.id,
+    )
