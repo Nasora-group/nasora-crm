@@ -57,18 +57,23 @@ def _find_client_for_prospection(prospection):
     name = (prospection.nom_client or "").strip()
     normalized_phone = _normalize_phone(phone)
     normalized_name = _normalize_text(name)
+    owner_scope = (Client.owner_id.is_(None) | (Client.owner_id == prospection.commercial_id))
     if normalized_phone and not _invalid_phone(phone):
         candidates = Client.query.filter(
             Client.phone.isnot(None),
-            (Client.owner_id.is_(None) | (Client.owner_id == prospection.commercial_id)),
+            owner_scope,
         ).all()
         for client in candidates:
             if _normalize_phone(client.phone) == normalized_phone:
                 return client
     if not normalized_name:
         return None
-    same_name = [c for c in Client.query.filter(Client.name.isnot(None)).all() if _normalize_text(c.name) == normalized_name]
-    owned = [c for c in same_name if c.owner_id in (None, prospection.commercial_id)]
+    candidates = Client.query.filter(
+        Client.name.isnot(None),
+        owner_scope,
+        func.lower(Client.name) == name.lower(),
+    ).all()
+    owned = [c for c in candidates if _normalize_text(c.name) == normalized_name]
     if owned:
         return sorted(owned, key=lambda c: (c.owner_id is not None, c.id))[0]
     return None
@@ -239,12 +244,31 @@ def index():
 @login_required
 @roles_required("commercial")
 def prospections():
-    rows = Prospection.query.filter_by(commercial_id=current_user.id).order_by(Prospection.date.desc(), Prospection.id.desc()).all()
+    page = Prospection.query.filter_by(commercial_id=current_user.id).order_by(
+        Prospection.date.desc(), Prospection.id.desc()
+    ).paginate(page=request.args.get("page", 1, type=int), per_page=50, error_out=False)
+    rows = page.items
+    client_ids = {row.client_id for row in rows if row.client_id}
+    clients_by_id = {}
+    if client_ids:
+        clients_by_id = {
+            client.id: client
+            for client in Client.query.filter(Client.id.in_(client_ids)).all()
+        }
     establishments_by_prospection = {}
     for row in rows:
-        client = _find_client_for_prospection(row)
-        establishments_by_prospection[row.id] = ((row.establishment or "").strip() or (client.establishment if client and client.establishment else ""))
-    return render_template("dashboard_prospections.html", prospections=rows, planning_statuses={}, establishments_by_prospection=establishments_by_prospection)
+        client = clients_by_id.get(row.client_id)
+        establishments_by_prospection[row.id] = (
+            (row.establishment or "").strip()
+            or (client.establishment if client and client.establishment else "")
+        )
+    return render_template(
+        "dashboard_prospections.html",
+        prospections=rows,
+        prospections_pagination=page,
+        planning_statuses={},
+        establishments_by_prospection=establishments_by_prospection,
+    )
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/modifier", methods=["GET", "POST"])
