@@ -205,6 +205,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     allowClear: true
                 });
             }
+            selects.off('.planningNames');
+            selects.on('change.planningNames select2:select.planningNames select2:unselect.planningNames', function () {
+                renderDay(this);
+            });
             return true;
         }
         return false;
