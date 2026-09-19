@@ -266,7 +266,7 @@ def commercial_revenue_data(username):
 def commercial_revenue_detail(username, month):
     """API du détail produit pour un mois donné, limité au commercial."""
     commercial = User.query.filter_by(username=username, role="commercial").first_or_404()
-    if current_user.role == "commercial" and current_user.id != commercial.id:
+    if is_commercial(current_user) and current_user.id != commercial.id:
         return jsonify({"error": "Accès non autorisé."}), 403
 
     division = (commercial.project or "").lower()
@@ -291,7 +291,7 @@ def commercial_revenue_detail(username, month):
 def commercial_revenue_detail_page(username, month):
     """Page HTML robuste du détail CA, sans dépendre de JavaScript."""
     commercial = User.query.filter_by(username=username, role="commercial").first_or_404()
-    if current_user.role == "commercial" and current_user.id != commercial.id:
+    if is_commercial(current_user) and current_user.id != commercial.id:
         return render_template("403.html"), 403
     division = (commercial.project or "").lower()
     if division not in DIVISION_SUPPLIERS:
