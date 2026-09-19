@@ -131,14 +131,11 @@ def _planned_visit_days(commercial_id=None, start=None, end=None):
 
 
 def _planning_execution(field_users, start, end, visits_by_user):
-    """Prévu vs réalisé par Visiteur médical pour la période."""
-    rows = Planning.query.filter(Planning.date >= start, Planning.date < end).all()
-    fields = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
+    """Prévu vs réalisé par Visiteur médical, en comptant les créneaux réels du planning."""
     planned_by_user = Counter()
-    for row in rows:
-        planned_by_user[row.commercial_id] += sum(
-            1 for field in fields if (getattr(row, field, "") or "").strip()
-        )
+    for user in field_users:
+        planned_by_user[user.id] = _planned_visit_days(user.id, start, end)
+
     details = []
     for user in field_users:
         planned = planned_by_user.get(user.id, 0)
