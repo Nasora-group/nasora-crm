@@ -2,7 +2,7 @@
 
 {% block content %}
 <h1>{{ 'Modifier le planning du ' ~ planning.date.strftime('%d/%m/%Y') if mode == 'edit' else 'Saisie du planning hebdomadaire' }}</h1>
-<p style="color:var(--ink-soft);">Sélectionner les structures prévues pour chaque jour, puis précise le nom exact de chacune (ex : sélectionner « HOPITAL » puis indiquer « Hôpital Principal de Dakar »).</p>
+<p style="color:var(--ink-soft);">Pour chaque jour, coche autant de structures que nécessaire. Les structures déjà sélectionnées restent affichées. Pour chaque structure cochée, renseigne son nom exact.</p>
 
 {% if mode == 'create' %}
 <div class="planning-help" style="margin:16px 0;padding:14px 18px;border-radius:10px;background:rgba(34,139,94,.08);border:1px solid rgba(34,139,94,.2);">
@@ -22,15 +22,25 @@
         {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
         <div class="planning-day-card">
             <h3 class="planning-day-title">{{ jour_label }}</h3>
-            {{ formulaire[jour].label(class="form-label", style="display:none;") }}
-            <select name="{{ jour }}" class="form-control select2 planning-select" multiple="multiple"
-                    data-slot="{{ jour }}"
-                    data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
+            <div class="planning-structures-list" data-slot="{{ jour }}" data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
                 {% for value, label in formulaire[jour].choices %}
-                    <option value="{{ value }}" {% if existing_types and value in existing_types.get(jour, []) %}selected{% endif %}>{{ label }}</option>
+                <div class="planning-structure-row">
+                    <label class="planning-structure-choice">
+                        <input
+                            type="checkbox"
+                            name="{{ jour }}"
+                            value="{{ value }}"
+                            class="planning-structure-checkbox"
+                            data-slot="{{ jour }}"
+                            data-value="{{ value }}"
+                            {% if existing_types and value in existing_types.get(jour, []) %}checked{% endif %}
+                        >
+                        <span>{{ label }}</span>
+                    </label>
+                    <div class="planning-structure-name" data-structure="{{ value }}"></div>
+                </div>
                 {% endfor %}
-            </select>
-            <div class="structure-details" id="details_{{ jour }}"></div>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -44,68 +54,93 @@
 </form>
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
+<style>
+.planning-structures-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.planning-structure-row {
+    border: 1px solid rgba(34,139,94,.18);
+    border-radius: 8px;
+    padding: 9px 11px;
+    background: #fff;
+}
+
+.planning-structure-choice {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.planning-structure-checkbox {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+}
+
+.planning-structure-name {
+    margin-top: 8px;
+}
+
+.planning-structure-name:empty {
+    display: none;
+}
+
+.planning-structure-name input {
+    width: 100%;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     function slugify(value) {
         return value.replace(/ /g, '_');
     }
 
-    function renderDetailInputs(selectEl) {
-        var slot = selectEl.getAttribute('data-slot');
-        var container = document.getElementById('details_' + slot);
+    function renderStructureName(checkbox) {
+        var slot = checkbox.getAttribute('data-slot');
+        var value = checkbox.getAttribute('data-value');
+        var row = checkbox.closest('.planning-structure-row');
+        var container = row ? row.querySelector('.planning-structure-name') : null;
         if (!container) return;
 
-        var selected = Array.prototype.slice.call(selectEl.selectedOptions).map(function (option) {
-            return option.value;
-        });
+        if (!checkbox.checked) {
+            container.innerHTML = '';
+            return;
+        }
 
+        if (container.querySelector('input')) {
+            return;
+        }
+
+        var list = checkbox.closest('.planning-structures-list');
         var existing = {};
         try {
-            existing = JSON.parse(selectEl.getAttribute('data-existing') || '{}');
+            existing = JSON.parse(list.getAttribute('data-existing') || '{}');
         } catch (e) {
             existing = {};
         }
 
-        Array.prototype.slice.call(container.querySelectorAll('[data-structure]')).forEach(function (item) {
-            if (selected.indexOf(item.getAttribute('data-structure')) === -1) {
-                item.remove();
-            }
-        });
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-input';
+        input.name = slot + '_nom__' + slugify(value);
+        input.required = true;
+        input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
+        input.value = existing[value] || '';
 
-        selected.forEach(function (value) {
-            if (container.querySelector('[data-structure="' + CSS.escape(value) + '"]')) {
-                return;
-            }
-
-            var fieldName = slot + '_nom__' + slugify(value);
-            var wrapper = document.createElement('div');
-            wrapper.className = 'structure-detail-item';
-            wrapper.setAttribute('data-structure', value);
-            wrapper.style.cssText = 'margin-top:10px;padding:12px 14px;border:1px solid rgba(34,139,94,.25);border-left:4px solid #228b5e;border-radius:8px;background:#fff;';
-
-            var label = document.createElement('label');
-            label.className = 'form-label';
-            label.textContent = 'Nom précis de ' + value + ' *';
-            label.style.display = 'block';
-
-            var input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'form-input';
-            input.name = fieldName;
-            input.required = true;
-            input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
-            input.value = existing[value] || '';
-
-            wrapper.appendChild(label);
-            wrapper.appendChild(input);
-            container.appendChild(wrapper);
-        });
+        container.appendChild(input);
     }
 
-    document.querySelectorAll('.planning-select').forEach(function (select) {
-        renderDetailInputs(select);
-        select.addEventListener('change', function () {
-            renderDetailInputs(select);
+    document.querySelectorAll('.planning-structure-checkbox').forEach(function (checkbox) {
+        renderStructureName(checkbox);
+        checkbox.addEventListener('change', function () {
+            renderStructureName(checkbox);
         });
     });
 
@@ -114,14 +149,14 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', function (event) {
             var missing = [];
 
-            document.querySelectorAll('.planning-select').forEach(function (select) {
-                var slot = select.getAttribute('data-slot');
-                Array.prototype.slice.call(select.selectedOptions).forEach(function (option) {
-                    var field = form.elements[slot + '_nom__' + slugify(option.value)];
-                    if (!field || !field.value.trim()) {
-                        missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + option.value);
-                    }
-                });
+            document.querySelectorAll('.planning-structure-checkbox:checked').forEach(function (checkbox) {
+                var slot = checkbox.getAttribute('data-slot');
+                var value = checkbox.getAttribute('data-value');
+                var field = form.elements[slot + '_nom__' + slugify(value)];
+
+                if (!field || !field.value.trim()) {
+                    missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + value);
+                }
             });
 
             if (missing.length) {
