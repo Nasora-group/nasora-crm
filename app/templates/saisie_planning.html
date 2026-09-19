@@ -24,6 +24,7 @@
             <h3 class="planning-day-title">{{ jour_label }}</h3>
             {{ formulaire[jour].label(class="form-label", style="display:none;") }}
 
+            <p class="planning-structure-help">Après chaque sélection, indique le <strong>nom précis de la structure</strong>. Ce champ est obligatoire.</p>
             <select name="{{ jour }}" class="form-control planning-select select2" multiple="multiple" data-placeholder="Sélectionner une ou plusieurs structures"
                     data-slot="{{ jour }}"
                     data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
@@ -86,6 +87,13 @@
 
 .structure-detail-item .form-label {
     display: block;
+    margin-bottom: 6px;
+}
+
+.planning-structure-help {
+    margin: 6px 0 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
 }
 </style>
 
@@ -186,13 +194,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Utiliser Select2 en multi-sélection : ajouter une structure ne retire jamais
     // les structures déjà sélectionnées. La liste reste ouverte après chaque choix.
-    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
-        window.jQuery('.planning-select').select2({
-            width: '100%',
-            closeOnSelect: false,
-            placeholder: 'Sélectionner une ou plusieurs structures',
-            allowClear: true
-        });
+    function initPlanningSelect2() {
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+            var selects = window.jQuery('.planning-select');
+            if (!selects.hasClass('select2-hidden-accessible')) {
+                selects.select2({
+                    width: '100%',
+                    closeOnSelect: false,
+                    placeholder: 'Sélectionner une ou plusieurs structures',
+                    allowClear: true
+                });
+            }
+            return true;
+        }
+        return false;
+    }
+
+    if (!initPlanningSelect2()) {
+        var select2Attempts = 0;
+        var select2Timer = window.setInterval(function () {
+            select2Attempts += 1;
+            if (initPlanningSelect2() || select2Attempts >= 40) {
+                window.clearInterval(select2Timer);
+            }
+        }, 100);
     }
 
     var form = document.getElementById('planning-form');
