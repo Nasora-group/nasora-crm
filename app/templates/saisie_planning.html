@@ -45,7 +45,7 @@
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
 <script>
-var STRUCTURE_COLORS = {{ structure_colors | tojson }};
+var STRUCTURE_COLORS = {{ structure_colors|default({})|tojson }};
 
 $(document).ready(function() {
     $('.select2').select2({ placeholder: 'Choisir une ou plusieurs structures' });
@@ -79,8 +79,8 @@ $(document).ready(function() {
                 .attr('data-structure', value)
                 .css('border-left', '4px solid ' + color);
             var $label = $('<label class="form-label"></label>').text('Nom précis (' + value + ')');
-            var $input = $('<input type="text" class="form-input">')
-                .attr('name', fieldName)
+            var $input = $('<input type="text" class="form-input" required>');
+            $input.attr('name', fieldName)
                 .attr('placeholder', 'ex : ' + (value === 'PHARMACIES' ? 'Pharmacie Zenith' : 'Hôpital Principal de Dakar'))
                 .val(existing[value] || '');
 
@@ -92,6 +92,24 @@ $(document).ready(function() {
     $('.planning-select').each(function() {
         renderDetailInputs(this);
         $(this).on('change', function() { renderDetailInputs(this); });
+    });
+
+    $('#planning-form').on('submit', function(event) {
+        var missing = [];
+        $('.planning-select').each(function() {
+            var slot = $(this).data('slot');
+            var selected = $(this).val() || [];
+            selected.forEach(function(value) {
+                var field = document.getElementsByName(slot + '_nom__' + slugify(value))[0];
+                if (!field || !field.value.trim()) {
+                    missing.push(slot.charAt(0).toUpperCase() + slot.slice(1) + ' : ' + value);
+                }
+            });
+        });
+        if (missing.length) {
+            event.preventDefault();
+            alert('Renseigne le nom précis de chaque structure sélectionnée : ' + missing.join(', '));
+        }
     });
 });
 </script>
