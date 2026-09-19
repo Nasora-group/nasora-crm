@@ -247,3 +247,80 @@ def index():
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
     )
+
+
+@manager_cockpit_bp.route("/admin/cockpit-manager/visiteur/<int:commercial_id>")
+@login_required
+@roles_required("admin")
+def visitor_detail(commercial_id):
+    today = date.today()
+    month_raw = (request.args.get("month") or "").strip()
+    try:
+        if month_raw:
+            year, month = (int(part) for part in month_raw.split("-", 1))
+            selected_day = date(year, month, 1)
+        else:
+            selected_day = today.replace(day=1)
+    except (TypeError, ValueError):
+        selected_day = today.replace(day=1)
+
+    start, end = _month_bounds(selected_day)
+    visitor = User.query.filter(
+        User.id == commercial_id,
+        User.role.in_(("commercial", "animateur")),
+        User.is_active_account.is_(True),
+    ).first_or_404()
+
+    revenue = 0.0
+    supplier_totals = {}
+    product_counter = Counter()
+    for division in DIVISION_SUPPLIERS:
+        amount, products, suppliers = _revenue_for_range(division, start, end, visitor.id)
+        revenue += amount
+        product_counter.update(products)
+        for label, value in suppliers.items():
+            supplier_totals[label] = supplier_totals.get(label, 0.0) + value
+
+    visits = _unique_visits(visitor.id, start, end)
+    prospections = Prospection.query.filter(
+        Prospection.commercial_id == visitor.id,
+        Prospection.date >= start,
+        Prospection.date < end,
+    ).count()
+    planned = _planned_visit_days(visitor.id, start, end)
+    execution = round(len(visits) * 100 / planned, 1) if planned else None
+
+    clients_query = Client.query.filter(Client.owner_id == visitor.id)
+    clients_count = clients_query.count()
+    high_potential = clients_query.filter(Client.potential >= 4).count()
+    visit_target = int(read_visit_targets([visitor]).get(visitor.id, 0) or 0)
+    visit_pct = round(len(visits) * 100 / visit_target, 1) if visit_target else None
+
+    animation_total = 0.0
+    animation_lines = 0
+    animation_products = Counter()
+    if visitor.role == "animateur":
+        animation_total, animation_lines, animation_products, _ = _animation_revenue(start, end, visitor.id)
+
+    return render_template(
+        "manager_visitor_detail.html",
+        visitor=visitor,
+        start=start,
+        end=end,
+        month_label=selected_day.strftime("%m/%Y"),
+        previous_month=(start - timedelta(days=1)).replace(day=1).strftime("%Y-%m"),
+        revenue=revenue,
+        supplier_totals=supplier_totals,
+        top_products=product_counter.most_common(8),
+        visit_count=len(visits),
+        prospection_count=prospections,
+        planned_visit_days=planned,
+        execution_pct=execution,
+        visit_target=visit_target,
+        visit_pct=visit_pct,
+        clients_count=clients_count,
+        high_potential=high_potential,
+        animation_total=animation_total,
+        animation_lines=animation_lines,
+        top_animation_products=animation_products.most_common(6),
+    )
