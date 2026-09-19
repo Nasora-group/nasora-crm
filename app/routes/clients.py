@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func, exists
 from app.extensions import db
-from app.models import User, Prospection, STRUCTURES
+from app.models import User, Prospection, STRUCTURES, DIVISIONS
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.permissions import is_commercial
@@ -58,11 +58,17 @@ def _legacy_history_for_client(client):
 
 
 def _commercial_client_query():
+    division = (current_user.project or "").strip().lower()
     owned_query = Client.query.filter(Client.owner_id == current_user.id)
+    if division in DIVISIONS:
+        owned_query = owned_query.filter(Client.division == division)
     active_prospections = Prospection.query.filter_by(commercial_id=current_user.id).all()
     if not active_prospections:
         return owned_query
-    candidates = Client.query.filter(or_(Client.owner_id.is_(None), Client.owner_id == current_user.id)).all()
+    candidates_query = Client.query.filter(or_(Client.owner_id.is_(None), Client.owner_id == current_user.id))
+    if division in DIVISIONS:
+        candidates_query = candidates_query.filter(Client.division == division)
+    candidates = candidates_query.all()
     visible_ids = {client.id for client in candidates if client.owner_id == current_user.id}
     for prospect in active_prospections:
         prospect_phone = _normalize_phone(prospect.telephone)
@@ -81,7 +87,10 @@ def _commercial_client_query():
 
 
 def _commercial_can_access_client(client):
-    return not is_commercial() or client.owner_id in (None, current_user.id)
+    if not is_commercial():
+        return True
+    division = (current_user.project or "").strip().lower()
+    return client.owner_id in (None, current_user.id) and (not division or client.division == division)
 
 
 def _find_duplicate_client(phone, name, structure, exclude_id=None):
@@ -120,7 +129,7 @@ def _refresh_client_visit_dates(client):
 
 
 def _client_form_context(client=None, include_commerciaux=True):
-    return dict(client=client, structure_choices=[s[0] for s in STRUCTURES], commerciaux=(User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all() if include_commerciaux else []))
+    return dict(client=client, structure_choices=[s[0] for s in STRUCTURES], divisions=DIVISIONS, commerciaux=(User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username).all() if include_commerciaux else []))
 
 
 def _parse_potential(raw_value):
@@ -198,7 +207,11 @@ def new_client():
                 flash(f"Un professionnel existe déjà avec ce {match_type}. Consultez sa fiche avant d'en créer une nouvelle.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=duplicate.id))
             owner_id = current_user.id if is_commercial() else (request.form.get("owner_id", type=int) or None)
-            c = Client(name=name, specialty=request.form.get("specialty", "").strip() or None, structure=structure, establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id)
+            division = (current_user.project or "").strip().lower() if is_commercial() else (request.form.get("division") or "").strip().lower()
+            if division not in DIVISIONS:
+                flash("La division NASMEDIC ou NASDERM est obligatoire.", "error")
+                return render_template("client_form.html", **_client_form_context(None))
+            c = Client(name=name, specialty=request.form.get("specialty", "").strip() or None, structure=structure, establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id, division=division)
             db.session.add(c)
             db.session.commit()
             flash("Professionnel ajouté à la base CRM.", "success")
@@ -231,6 +244,15 @@ def edit_client(client_id):
             if duplicate:
                 flash(f"Modification bloquée : un autre professionnel existe déjà avec ce {match_type}.", "warning")
                 return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
+            if not is_commercial():
+                division = (request.form.get("division") or "").strip().lower()
+                if division not in DIVISIONS:
+                    flash("La division NASMEDIC ou NASDERM est obligatoire.", "error")
+                    return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
+                client.division = division
+            elif client.division != (current_user.project or "").strip().lower():
+                db.session.rollback()
+                return render_template("403.html"), 403
             client.name = name
             client.specialty = request.form.get("specialty", "").strip() or None
             client.structure = structure
@@ -375,7 +397,7 @@ def delete_visit(client_id, visit_id):
     visit = ClientVisit.query.filter_by(id=visit_id, client_id=client.id).first_or_404()
     if not _commercial_can_access_client(client):
         return render_template("403.html"), 403
-    if current_user.role == "commercial" and visit.commercial_id != current_user.id:
+    if is_commercial() and visit.commercial_id != current_user.id:
         return render_template("403.html"), 403
     if visit.prospection_id is not None:
         flash("Cette visite est liée à une prospection et ne peut pas être supprimée depuis la Base NASORA.", "warning")
