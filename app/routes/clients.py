@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models import User, Prospection, STRUCTURES
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
+from app.permissions import is_commercial
 
 clients_bp = Blueprint("clients", __name__)
 
@@ -50,7 +51,7 @@ def _legacy_history_for_client(client):
             if len(token) >= 5:
                 filters.append(Prospection.nom_client.ilike(f"%{token}%"))
     query = Prospection.query.filter(or_(*filters)) if filters else Prospection.query.filter(False)
-    if current_user.role == "commercial":
+    if is_commercial():
         query = query.filter(Prospection.commercial_id == current_user.id)
     candidates = query.order_by(Prospection.date.desc()).all()
     return [visit for visit in candidates if _legacy_matches(client, visit)]
@@ -80,7 +81,7 @@ def _commercial_client_query():
 
 
 def _commercial_can_access_client(client):
-    return current_user.role != "commercial" or client.owner_id in (None, current_user.id)
+    return not is_commercial() or client.owner_id in (None, current_user.id)
 
 
 def _find_duplicate_client(phone, name, structure, exclude_id=None):
@@ -140,7 +141,7 @@ def list_clients():
     structure = (request.args.get("structure") or "").strip()
     potential = (request.args.get("potential") or "").strip()
     visited = (request.args.get("visited") or "").strip()
-    query = _commercial_client_query() if current_user.role == "commercial" else Client.query
+    query = _commercial_client_query() if is_commercial() else Client.query
     if q:
         term = f"%{q}%"
         query = query.filter(or_(Client.name.ilike(term), Client.establishment.ilike(term), Client.phone.ilike(term), Client.zone.ilike(term)))
@@ -196,7 +197,7 @@ def new_client():
             if duplicate:
                 flash(f"Un professionnel existe déjà avec ce {match_type}. Consultez sa fiche avant d'en créer une nouvelle.", "warning")
                 return redirect(url_for("clients.client_detail", client_id=duplicate.id))
-            owner_id = current_user.id if current_user.role == "commercial" else (request.form.get("owner_id", type=int) or None)
+            owner_id = current_user.id if is_commercial() else (request.form.get("owner_id", type=int) or None)
             c = Client(name=name, specialty=request.form.get("specialty", "").strip() or None, structure=structure, establishment=request.form.get("establishment", "").strip() or None, phone=request.form.get("phone", "").strip() or None, email=request.form.get("email", "").strip() or None, zone=request.form.get("zone", "").strip() or None, address=request.form.get("address", "").strip() or None, potential=potential, notes=request.form.get("notes", "").strip() or None, owner_id=owner_id)
             db.session.add(c)
             db.session.commit()
@@ -261,7 +262,7 @@ def client_detail(client_id):
         return render_template("403.html"), 403
     legacy_history = _legacy_history_for_client(client)
     visits = ClientVisit.query.filter_by(client_id=client.id)
-    if current_user.role == "commercial":
+    if is_commercial():
         visits = visits.filter(ClientVisit.commercial_id == current_user.id)
     visits = visits.order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).all()
     display_last_visit = client.last_visit
@@ -327,7 +328,7 @@ def edit_visit(client_id, visit_id):
     visit = ClientVisit.query.filter_by(id=visit_id, client_id=client.id).first_or_404()
     if not _commercial_can_access_client(client):
         return render_template("403.html"), 403
-    if current_user.role == "commercial" and visit.commercial_id != current_user.id:
+    if is_commercial() and visit.commercial_id != current_user.id:
         return render_template("403.html"), 403
     if visit.prospection_id is not None:
         flash("Cette visite est liée à une prospection et ne peut pas être modifiée depuis la Base NASORA.", "warning")
