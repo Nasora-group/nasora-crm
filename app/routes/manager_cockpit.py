@@ -106,6 +106,30 @@ def _planned_visit_days(commercial_id=None, start=None, end=None):
     return sum(1 for row in rows for field in fields if (getattr(row, field, "") or "").strip())
 
 
+def _planning_execution(field_users, start, end, visits_by_user):
+    """Prévu vs réalisé par Visiteur médical pour la période."""
+    rows = Planning.query.filter(Planning.date >= start, Planning.date < end).all()
+    fields = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
+    planned_by_user = Counter()
+    for row in rows:
+        planned_by_user[row.commercial_id] += sum(
+            1 for field in fields if (getattr(row, field, "") or "").strip()
+        )
+    details = []
+    for user in field_users:
+        planned = planned_by_user.get(user.id, 0)
+        realized = visits_by_user.get(user.id, 0)
+        execution = round(realized * 100 / planned, 1) if planned else None
+        details.append({
+            "id": user.id,
+            "name": user.username,
+            "planned": planned,
+            "realized": realized,
+            "execution": execution,
+        })
+    return details
+
+
 def _stock_alerts(division=None, limit=12):
     """Retourne les références actives en rupture ou stock très faible."""
     slugs = DIVISION_SUPPLIERS.keys() if not division else (division,)
@@ -166,6 +190,10 @@ def index():
         monthly_objective = None
 
     visits = _unique_visits(selected_commercial_id, start, end)
+    visits_by_user = Counter(row.commercial_id for row in visits)
+    planning_execution = _planning_execution(field_users, start, end, visits_by_user)
+    if selected_commercial_id:
+        planning_execution = [row for row in planning_execution if row["id"] == selected_commercial_id]
     prospection_query = Prospection.query.filter(Prospection.date >= start, Prospection.date < end)
     if selected_commercial_id:
         prospection_query = prospection_query.filter(Prospection.commercial_id == selected_commercial_id)
@@ -214,7 +242,7 @@ def index():
         previous_revenue=previous_revenue, previous_pct=previous_pct, objective_amount=objective_amount,
         revenue_pct=revenue_pct, visit_count=len(visits), prospection_count=prospection_count, planned_visit_days=planned_visit_days, execution_pct=execution_pct, clients_count=clients_count, high_potential=high_potential,
         animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
-        ranking=ranking, alerts=alerts, stock_alerts=stock_alerts, top_products=product_counter.most_common(8),
+        ranking=ranking, planning_execution=planning_execution, alerts=alerts, stock_alerts=stock_alerts, top_products=product_counter.most_common(8),
         top_animation_products=animation_products.most_common(6),
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
