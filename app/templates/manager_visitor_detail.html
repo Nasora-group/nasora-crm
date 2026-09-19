@@ -63,6 +63,6 @@
 <section class="visitor-card visitor-links"><h2>🛍 Animations</h2><span class="visitor-helper">Sell-Out enregistré par cet Animateur(trice).</span>{% if animation_total %}<div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>CA animation</td><td><strong>{{ '{:,.0f}'.format(animation_total).replace(',', ' ') }} FCFA</strong></td></tr><tr><td>Lignes de vente</td><td><strong>{{ animation_lines }}</strong></td></tr></tbody></table></div>{% if top_animation_products %}<p class="visitor-helper" style="margin-top:14px">Produits d'animation</p><div class="visitor-bars">{% set max_anim=top_animation_products[0][1] %}{% for name,qty in top_animation_products %}<div class="visitor-bar"><span class="visitor-bar-label">{{ name }}</span><div class="visitor-track"><div class="visitor-fill" style="width:{{ (qty*100/max_anim) if max_anim else 0 }}%"></div></div><strong>{{ qty }}</strong></div>{% endfor %}</div>{% endif %}{% else %}<div class="visitor-empty">Aucune vente d'animation.</div>{% endif %}</section>
 {% endif %}
 
-<div class="visitor-note">Les visites sont dédoublonnées selon Visiteur médical + professionnel + date. Le planning correspond aux journées renseignées dans les champs lundi à vendredi.</div>
+<div class="visitor-note">Les visites sont dédoublonnées selon Visiteur médical + professionnel + date. Le planning correspond aux créneaux renseignés dans les champs lundi à vendredi.</div>
 </div>
 {% endblock %}
