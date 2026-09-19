@@ -9,7 +9,7 @@ from sqlalchemy import func, text
 
 from app.extensions import db
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
-from app.permissions import require_division
+from app.permissions import is_commercial, require_division
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def _ensure_division_access(division):
 
 def _commercial_only_scope():
     """True when the current user must only see their own commercial data."""
-    return getattr(current_user, "role", None) == "commercial"
+    return is_commercial(current_user)
 
 
 def _month_sql_expression():
