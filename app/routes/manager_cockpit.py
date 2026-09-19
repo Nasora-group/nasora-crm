@@ -108,17 +108,26 @@ def _ranking(commercials, division, start, end, visit_targets):
 
 
 def _planned_visit_days(commercial_id=None, start=None, end=None):
-    """Compte les journées terrain renseignées dans les plannings hebdomadaires."""
+    """Compte les créneaux réellement planifiés dans la période, y compris les semaines commencées avant le mois."""
     query = Planning.query
     if commercial_id is not None:
         query = query.filter(Planning.commercial_id == commercial_id)
     if start is not None:
-        query = query.filter(Planning.date >= start)
+        query = query.filter(Planning.date < start + timedelta(days=7))
     if end is not None:
-        query = query.filter(Planning.date < end)
+        query = query.filter(Planning.date >= end - timedelta(days=7))
     rows = query.all()
-    fields = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
-    return sum(1 for row in rows for field in fields if (getattr(row, field, "") or "").strip())
+    fields = (("lundi", 0), ("mardi", 1), ("mercredi", 2), ("jeudi", 3), ("vendredi", 4))
+    total = 0
+    for row in rows:
+        for field, offset in fields:
+            planned_date = row.date + timedelta(days=offset)
+            if start is not None and planned_date < start:
+                continue
+            if end is not None and planned_date >= end:
+                continue
+            total += len(decode_planning_slot(getattr(row, field, None)))
+    return total
 
 
 def _planning_execution(field_users, start, end, visits_by_user):
