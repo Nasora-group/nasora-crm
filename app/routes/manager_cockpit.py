@@ -6,7 +6,7 @@ from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import AnimationSale, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User
+from app.models import AnimationSale, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.visit_objectives_readonly import read_visit_targets
@@ -92,6 +92,20 @@ def _ranking(commercials, division, start, end, visit_targets):
     return ranking
 
 
+def _planned_visit_days(commercial_id=None, start=None, end=None):
+    """Compte les journées terrain renseignées dans les plannings hebdomadaires."""
+    query = Planning.query
+    if commercial_id is not None:
+        query = query.filter(Planning.commercial_id == commercial_id)
+    if start is not None:
+        query = query.filter(Planning.date >= start)
+    if end is not None:
+        query = query.filter(Planning.date < end)
+    rows = query.all()
+    fields = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
+    return sum(1 for row in rows for field in fields if (getattr(row, field, "") or "").strip())
+
+
 def _stock_alerts(division=None, limit=12):
     """Retourne les références actives en rupture ou stock très faible."""
     slugs = DIVISION_SUPPLIERS.keys() if not division else (division,)
@@ -152,6 +166,12 @@ def index():
         monthly_objective = None
 
     visits = _unique_visits(selected_commercial_id, start, end)
+    prospection_query = Prospection.query.filter(Prospection.date >= start, Prospection.date < end)
+    if selected_commercial_id:
+        prospection_query = prospection_query.filter(Prospection.commercial_id == selected_commercial_id)
+    prospection_count = prospection_query.count()
+    planned_visit_days = _planned_visit_days(selected_commercial_id, start, end)
+    execution_pct = round(len(visits) * 100 / planned_visit_days, 1) if planned_visit_days else None
     clients_query = Client.query.filter(Client.owner_id == selected_commercial_id) if selected_commercial_id else Client.query
     clients_count = clients_query.count()
     high_potential = clients_query.filter(Client.potential >= 4).count()
@@ -192,7 +212,7 @@ def index():
         "manager_cockpit.html", today=today, start=start, end=end, divisions=divisions, division=division,
         commercials=field_users, selected_commercial_id=selected_commercial_id, revenue=revenue,
         previous_revenue=previous_revenue, previous_pct=previous_pct, objective_amount=objective_amount,
-        revenue_pct=revenue_pct, visit_count=len(visits), clients_count=clients_count, high_potential=high_potential,
+        revenue_pct=revenue_pct, visit_count=len(visits), prospection_count=prospection_count, planned_visit_days=planned_visit_days, execution_pct=execution_pct, clients_count=clients_count, high_potential=high_potential,
         animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
         ranking=ranking, alerts=alerts, stock_alerts=stock_alerts, top_products=product_counter.most_common(8),
         top_animation_products=animation_products.most_common(6),
