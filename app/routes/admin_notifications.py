@@ -2,7 +2,7 @@ from flask import Blueprint, redirect, render_template, url_for, request
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import AdminNotification
-from app.utils import roles_required
+from app.utils import roles_required\nfrom app.forms import CSRFOnlyForm
 
 admin_notifications_bp = Blueprint("admin_notifications", __name__, url_prefix="/admin/notifications")
 
@@ -18,7 +18,7 @@ def index():
         .limit(100)
         .all()
     )
-    return render_template("admin_notifications.html", notifications=notifications)
+    return render_template("admin_notifications.html", notifications=notifications, formulaire_csrf=CSRFOnlyForm())
 
 
 @admin_notifications_bp.route("/<int:notification_id>/ouvrir")
