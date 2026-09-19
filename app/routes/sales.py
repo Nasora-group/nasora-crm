@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy import func
 
 from app.extensions import db
 from app.forms import SupplierSalesForm, SaleEditForm, CSRFOnlyForm
@@ -146,9 +147,9 @@ def sales_history(slug):
     if selected_month:
         dialect = db.engine.dialect.name
         month_expr = (
-            db.func.strftime("%Y-%m", sale_model.date)
+            func.strftime("%Y-%m", sale_model.date)
             if dialect == "sqlite"
-            else db.func.to_char(sale_model.date, "YYYY-MM")
+            else func.to_char(sale_model.date, "YYYY-MM")
         )
         query = query.filter(month_expr == selected_month)
 
@@ -162,23 +163,23 @@ def sales_history(slug):
         .all()
     )
 
-    amount_expr = db.func.coalesce(sale_model.quantity, 0) * db.func.coalesce(sale_model.price, 0)
-    total_amount = db.session.query(db.func.coalesce(db.func.sum(amount_expr), 0)).select_from(sale_model)
+    amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
+    total_amount = db.session.query(func.coalesce(func.sum(amount_expr), 0)).select_from(sale_model)
     if selected_month:
         dialect = db.engine.dialect.name
         month_expr = (
-            db.func.strftime("%Y-%m", sale_model.date)
+            func.strftime("%Y-%m", sale_model.date)
             if dialect == "sqlite"
-            else db.func.to_char(sale_model.date, "YYYY-MM")
+            else func.to_char(sale_model.date, "YYYY-MM")
         )
         total_amount = total_amount.filter(month_expr == selected_month)
     total_amount = total_amount.scalar() or Decimal("0.00")
 
     dialect = db.engine.dialect.name
     month_expr = (
-        db.func.strftime("%Y-%m", sale_model.date)
+        func.strftime("%Y-%m", sale_model.date)
         if dialect == "sqlite"
-        else db.func.to_char(sale_model.date, "YYYY-MM")
+        else func.to_char(sale_model.date, "YYYY-MM")
     )
     available_months = [
         month
