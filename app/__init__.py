@@ -18,7 +18,7 @@ def create_app(config_object=None):
             raise RuntimeError("SECRET_KEY manquant : définis la variable d'environnement SECRET_KEY avant de lancer l'application en production.")
     _configure_logging(app)
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
-    from app.models import User
+    from app.models import User, AdminNotification
     from app.models_stock import StockEntry
     @login_manager.user_loader
     def load_user(user_id):
@@ -65,7 +65,7 @@ def create_app(config_object=None):
             "current_year": datetime.now(UTC).year,
             "first_active_supplier_slug": active_slugs[0] if active_slugs else None,
             "structure_colors": STRUCTURE_COLORS,
-            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID", "").strip(),
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID", "").strip(),\n            "admin_unread_notifications": (AdminNotification.query.filter_by(admin_id=current_user.id, is_read=False).count() if current_user.is_authenticated and current_user.role == "admin" else 0),
         }
     from app.utils import format_planning_slot, planning_entries
     app.jinja_env.filters["planning_slot"] = format_planning_slot
@@ -97,9 +97,9 @@ def _register_blueprints(app):
     from app.routes.vm_cockpit import vm_cockpit_bp
     from app.routes.stock import stock_bp
     from app.routes.visit_targets import visit_targets_bp
-    from app.routes.legal import legal_bp
+    from app.routes.legal import legal_bp\n    from app.routes.admin_notifications import admin_notifications_bp
     from app.routes.seo import seo_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
+    app.register_blueprint(auth_bp); app.register_blueprint(admin_notifications_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
