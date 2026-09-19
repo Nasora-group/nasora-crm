@@ -9,6 +9,7 @@ from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS
 from app.services.planning_ai import PlanningCandidate, generate_two_weeks, planning_entries_for_week
 from app.permissions import owns_record, is_commercial
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
+from app.services.admin_notifications import notify_admins
 
 planning_bp = Blueprint("planning", __name__)
 
@@ -154,6 +155,7 @@ def saisie():
                 db.session.add(existing)
             for champ, valeur in creneaux.items():
                 setattr(existing, champ, valeur)
+            notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
             db.session.commit()
         except Exception:
             db.session.rollback()
