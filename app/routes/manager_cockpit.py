@@ -93,10 +93,14 @@ def _client_visit_summary(client_id, start=None, end=None, commercial_id=None):
 
 def _ranking(commercials, division, start, end, visit_targets):
     ranking = []
-    if not division:
-        return ranking
     for commercial in commercials:
-        revenue, _, _ = _revenue_for_range(division, start, end, commercial.id)
+        if division:
+            revenue, _, _ = _revenue_for_range(division, start, end, commercial.id)
+        else:
+            revenue = 0.0
+            for item_division in DIVISION_SUPPLIERS:
+                amount, _, _ = _revenue_for_range(item_division, start, end, commercial.id)
+                revenue += amount
         visits = len(_unique_visits(commercial.id, start, end))
         target = int(visit_targets.get(commercial.id, 0) or 0)
         visit_pct = round(visits * 100 / target, 1) if target else 0.0
