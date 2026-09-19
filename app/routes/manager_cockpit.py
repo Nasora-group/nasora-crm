@@ -135,8 +135,8 @@ def _planning_realization_detail(commercial_id, start, end):
     """Compare les créneaux précis du planning aux visites réellement saisies."""
     rows = Planning.query.filter(
         Planning.commercial_id == commercial_id,
-        Planning.date >= start,
         Planning.date < end,
+        Planning.date >= start - timedelta(days=4),
     ).order_by(Planning.date.asc()).all()
 
     weekday_fields = (
@@ -153,6 +153,8 @@ def _planning_realization_detail(commercial_id, start, end):
             if not entries:
                 continue
             planned_date = row.date + timedelta(days=offset)
+            if planned_date < start or planned_date >= end:
+                continue
             planned_by_day[planned_date] = [
                 {"structure": structure, "name": name}
                 for structure, name in entries
