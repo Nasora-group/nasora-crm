@@ -2,7 +2,8 @@ from flask import Blueprint, redirect, render_template, url_for, request
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import AdminNotification
-from app.utils import roles_required\nfrom app.forms import CSRFOnlyForm
+from app.utils import roles_required
+from app.forms import CSRFOnlyForm
 
 admin_notifications_bp = Blueprint("admin_notifications", __name__, url_prefix="/admin/notifications")
 
