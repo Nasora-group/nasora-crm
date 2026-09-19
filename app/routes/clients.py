@@ -3,7 +3,7 @@ import re
 import unicodedata
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, exists
 from app.extensions import db
 from app.models import User, Prospection, STRUCTURES
 from app.models_clients import Client, ClientVisit
@@ -139,12 +139,23 @@ def list_clients():
     q = (request.args.get("q") or "").strip()
     structure = (request.args.get("structure") or "").strip()
     potential = (request.args.get("potential") or "").strip()
+    visited = (request.args.get("visited") or "").strip()
     query = _commercial_client_query() if current_user.role == "commercial" else Client.query
     if q:
         term = f"%{q}%"
         query = query.filter(or_(Client.name.ilike(term), Client.establishment.ilike(term), Client.phone.ilike(term), Client.zone.ilike(term)))
     if structure:
         query = query.filter(Client.structure == structure)
+    if visited == "1":
+        query = query.filter(
+            exists().where(
+                (ClientVisit.client_id == Client.id)
+                & ClientVisit.is_duplicate.is_(False)
+            )
+        )
+    else:
+        visited = ""
+
     if potential:
         try:
             potential_value = int(potential)
@@ -159,7 +170,14 @@ def list_clients():
     total = query.with_entities(func.count(func.distinct(Client.id))).scalar() or 0
     structures = query.with_entities(func.count(func.distinct(Client.structure))).scalar() or 0
     high_potential = query.filter(Client.potential >= 4).with_entities(func.count(func.distinct(Client.id))).scalar() or 0
-    return render_template("admin_clients.html", clients=pagination.items, pagination=pagination, total=total, structures=structures, high_potential=high_potential, q=q, structure=structure, potential=potential, structure_choices=[s[0] for s in STRUCTURES])
+    visited_count_query = query.filter(
+        exists().where(
+            (ClientVisit.client_id == Client.id)
+            & ClientVisit.is_duplicate.is_(False)
+        )
+    )
+    visited_count = visited_count_query.with_entities(func.count(func.distinct(Client.id))).scalar() or 0
+    return render_template("admin_clients.html", clients=pagination.items, pagination=pagination, total=total, structures=structures, high_potential=high_potential, visited_count=visited_count, q=q, structure=structure, potential=potential, visited=visited, structure_choices=[s[0] for s in STRUCTURES])
 
 
 @clients_bp.route("/admin/clients/new", methods=["GET", "POST"])
