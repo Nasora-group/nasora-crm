@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Fiche professionnel — NASORA CRM{% endblock %}
+{% block content %}
+<style>
+.client-page{max-width:1380px;margin:0 auto;padding:20px 0 42px}.client-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;padding:24px 28px;margin-bottom:18px;border:1px solid #dfe9e2;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(31,61,42,.06)}.client-kicker{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4d8060}.client-head h1{margin:5px 0 4px;color:#183225;font-size:1.65rem}.client-head p{margin:0;color:#6d7972;font-size:.86rem}.client-filter{display:flex;gap:8px;align-items:end}.client-filter label{display:block;font-size:.7rem;font-weight:700;color:#5c6b62;margin-bottom:5px}.client-filter input,.client-filter button{height:40px;border:1px solid #d5dfd8;border-radius:9px;padding:0 10px;background:#fbfdfb}.client-filter button{cursor:pointer}.client-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}.client-kpi{padding:15px;border:1px solid #e0e8e2;border-radius:14px;background:#fff}.client-kpi small{display:block;color:#748078;font-size:.68rem}.client-kpi strong{display:block;margin-top:5px;color:#193529;font-size:1.25rem}.client-kpi span{display:block;margin-top:3px;color:#7a857e;font-size:.67rem}.client-grid{display:grid;grid-template-columns:1fr 1.7fr;gap:16px}.client-card{min-width:0;border:1px solid #e0e8e2;border-radius:15px;background:#fff;padding:18px;box-shadow:0 5px 16px rgba(30,55,39,.045)}.client-card h2{margin:0 0 4px;color:#243c30;font-size:1rem}.client-helper{display:block;color:#7a857e;font-size:.72rem;margin-bottom:13px}.client-table-wrap{overflow:auto}.client-table{width:100%;border-collapse:collapse;font-size:.75rem}.client-table th{background:#f5f9f6;color:#65736b;text-align:left;font-size:.66rem;text-transform:uppercase;padding:9px;border-bottom:1px solid #e3eae5}.client-table td{padding:9px;border-bottom:1px solid #edf1ee;color:#34443b;vertical-align:top}.client-table tr:last-child td{border-bottom:0}.client-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:.64rem;font-weight:700;background:#edf5ef;color:#326b43}.client-empty{padding:18px;text-align:center;color:#7b857f;font-size:.77rem;background:#f8faf8;border-radius:10px}.client-note{margin-top:16px;padding:10px 12px;border:1px solid #dce8df;background:#f7fbf8;border-radius:10px;color:#53645a;font-size:.72rem}.client-link{color:#2d7044;text-decoration:none;font-weight:700}@media(max-width:1100px){.client-kpis{grid-template-columns:repeat(3,1fr)}.client-grid{grid-template-columns:1fr}}@media(max-width:700px){.client-head{flex-direction:column;padding:18px}.client-kpis{grid-template-columns:repeat(2,1fr)}.client-filter{width:100%}.client-filter>div{flex:1}.client-filter input{width:100%}}
+</style>
+<div class="client-page">
+<section class="client-head">
+<div><div class="client-kicker">NASORA CRM · FICHE PROFESSIONNEL</div><h1>{{ client.name }}</h1><p>{{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p></div>
+<form method="get" class="client-filter"><div><label for="month">Mois</label><input id="month" type="month" name="month" value="{{ start.strftime('%Y-%m') }}"></div><button type="submit">Actualiser</button></form>
+</section>
+
+<div class="client-kpis">
+<article class="client-kpi"><small>Potentiel</small><strong>{{ client.potential }}/5</strong><span>Potentiel CRM</span></article>
+<article class="client-kpi"><small>Visites du mois</small><strong>{{ month_visit_count }}</strong><span>Visites uniques</span></article>
+<article class="client-kpi"><small>Visites cumulées</small><strong>{{ total_visit_count }}</strong><span>Historique enregistré</span></article>
+<article class="client-kpi"><small>Dernière visite</small><strong>{% if last_visit %}{{ last_visit.date.strftime('%d/%m/%Y') }}{% else %}N/A{% endif %}</strong><span>Dernier passage</span></article>
+<article class="client-kpi"><small>Prochaine visite</small><strong>{% if client.next_visit %}{{ client.next_visit.strftime('%d/%m/%Y') }}{% else %}N/A{% endif %}</strong><span>Relance CRM</span></article>
+<article class="client-kpi"><small>Zone</small><strong>{{ client.zone or 'N/A' }}</strong><span>Secteur</span></article>
+</div>
+
+<div class="client-grid">
+<section class="client-card"><h2>👤 Informations</h2><span class="client-helper">Informations enregistrées dans la base CRM.</span><div class="client-table-wrap"><table class="client-table"><tbody>
+<tr><td>Nom</td><td><strong>{{ client.name }}</strong></td></tr>
+<tr><td>Structure</td><td>{{ client.structure }}</td></tr>
+<tr><td>Établissement</td><td>{{ client.establishment or 'Non renseigné' }}</td></tr>
+<tr><td>Spécialité</td><td>{{ client.specialty or 'Non renseignée' }}</td></tr>
+<tr><td>Téléphone</td><td>{{ client.phone or 'Non renseigné' }}</td></tr>
+<tr><td>Email</td><td>{{ client.email or 'Non renseigné' }}</td></tr>
+<tr><td>Adresse</td><td>{{ client.address or 'Non renseignée' }}</td></tr>
+<tr><td>Zone</td><td>{{ client.zone or 'Non renseignée' }}</td></tr>
+<tr><td>Propriétaire CRM</td><td>{{ client.owner.username if client.owner else 'Non attribué' }}</td></tr>
+<tr><td>Notes</td><td>{{ client.notes or 'Aucune note' }}</td></tr>
+</tbody></table></div></section>
+
+<section class="client-card"><h2>📋 Historique des visites</h2><span class="client-helper">Les 30 dernières visites uniques enregistrées pour ce professionnel.</span>{% if visit_history %}<div class="client-table-wrap"><table class="client-table"><thead><tr><th>Date</th><th>Visiteur médical</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte rendu</th><th>Prochaine visite</th></tr></thead><tbody>{% for row in visit_history %}<tr><td><strong>{{ row.date.strftime('%d/%m/%Y') }}</strong></td><td>{{ row.visitor }}</td><td>{{ row.products_presented }}</td><td>{{ row.products_prescribed }}</td><td>{{ row.report }}</td><td>{% if row.next_visit %}{{ row.next_visit.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="client-empty">Aucune visite enregistrée pour ce professionnel.</div>{% endif %}</section>
+</div>
+<div class="client-note">La fiche rassemble les informations du professionnel et son historique terrain sans modifier les données existantes.</div>
+</div>
+{% endblock %}

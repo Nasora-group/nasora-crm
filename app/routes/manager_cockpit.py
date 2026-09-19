@@ -77,6 +77,20 @@ def _unique_visits(commercial_id=None, start=None, end=None):
     return unique
 
 
+
+def _client_visit_summary(client_id, start=None, end=None, commercial_id=None):
+    query = ClientVisit.query.filter(
+        ClientVisit.client_id == client_id,
+        ClientVisit.is_duplicate.is_(False),
+    )
+    if start is not None:
+        query = query.filter(ClientVisit.date >= start)
+    if end is not None:
+        query = query.filter(ClientVisit.date < end)
+    if commercial_id is not None:
+        query = query.filter(ClientVisit.commercial_id == commercial_id)
+    return query.order_by(ClientVisit.date.desc(), ClientVisit.id.desc()).all()
+
 def _ranking(commercials, division, start, end, visit_targets):
     ranking = []
     if not division:
@@ -378,6 +392,14 @@ def visitor_detail(commercial_id):
             supplier_totals[label] = supplier_totals.get(label, 0.0) + value
 
     visits = _unique_visits(visitor.id, start, end)
+    visited_clients = {}
+    for visit in visits:
+        if visit.client:
+            visited_clients[visit.client.id] = visit.client
+    visited_clients = sorted(
+        visited_clients.values(),
+        key=lambda item: ((item.establishment or item.name or "").casefold(), item.name.casefold()),
+    )
     prospections = Prospection.query.filter(
         Prospection.commercial_id == visitor.id,
         Prospection.date >= start,
@@ -442,8 +464,55 @@ def visitor_detail(commercial_id):
         evaluation=evaluation,
         clients_count=clients_count,
         high_potential=high_potential,
+        visited_clients=visited_clients,
         animation_total=animation_total,
         animation_lines=animation_lines,
         top_animation_products=animation_products.most_common(6),
         planning_realization=_planning_realization_detail(visitor.id, start, end),
+    )
+
+
+@manager_cockpit_bp.route("/admin/cockpit-manager/professionnel/<int:client_id>")
+@login_required
+@roles_required("admin")
+def client_detail(client_id):
+    client = Client.query.get_or_404(client_id)
+    today = date.today()
+    month_raw = (request.args.get("month") or "").strip()
+    try:
+        if month_raw:
+            year, month = (int(part) for part in month_raw.split("-", 1))
+            selected_day = date(year, month, 1)
+        else:
+            selected_day = today.replace(day=1)
+    except (TypeError, ValueError):
+        selected_day = today.replace(day=1)
+
+    start, end = _month_bounds(selected_day)
+    visits = _client_visit_summary(client.id, start, end)
+    all_visits = _client_visit_summary(client.id)
+    last_visit = all_visits[0] if all_visits else None
+
+    visit_history = []
+    for visit in all_visits[:30]:
+        visit_history.append({
+            "date": visit.date,
+            "visitor": visit.commercial.username if visit.commercial else "—",
+            "products_presented": visit.products_presented or "—",
+            "products_prescribed": visit.products_prescribed or "—",
+            "report": visit.report or "—",
+            "next_visit": visit.next_visit,
+        })
+
+    return render_template(
+        "manager_client_detail.html",
+        client=client,
+        start=start,
+        end=end,
+        month_label=selected_day.strftime("%m/%Y"),
+        visits=visits,
+        month_visit_count=len(visits),
+        total_visit_count=len(all_visits),
+        last_visit=last_visit,
+        visit_history=visit_history,
     )
