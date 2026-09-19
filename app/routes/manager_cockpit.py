@@ -392,6 +392,14 @@ def visitor_detail(commercial_id):
             supplier_totals[label] = supplier_totals.get(label, 0.0) + value
 
     visits = _unique_visits(visitor.id, start, end)
+    visited_clients = {}
+    for visit in visits:
+        if visit.client:
+            visited_clients[visit.client.id] = visit.client
+    visited_clients = sorted(
+        visited_clients.values(),
+        key=lambda item: ((item.establishment or item.name or "").casefold(), item.name.casefold()),
+    )
     prospections = Prospection.query.filter(
         Prospection.commercial_id == visitor.id,
         Prospection.date >= start,
@@ -456,6 +464,7 @@ def visitor_detail(commercial_id):
         evaluation=evaluation,
         clients_count=clients_count,
         high_potential=high_potential,
+        visited_clients=visited_clients,
         animation_total=animation_total,
         animation_lines=animation_lines,
         top_animation_products=animation_products.most_common(6),
