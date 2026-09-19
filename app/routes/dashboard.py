@@ -15,6 +15,7 @@ from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 from app.visit_metrics import professional_key
+from app.services.admin_notifications import notify_admins
 
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -229,6 +230,7 @@ def index():
             for duplicate_visit in linked_visits[1:]:
                 duplicate_visit.prospection_id = None
                 db.session.delete(duplicate_visit)
+            notify_admins(current_user, "prospection_created", "Nouvelle prospection", "Une nouvelle prospection a été enregistrée.", "dashboard.prospections")
             db.session.commit()
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
@@ -303,6 +305,7 @@ def edit_prospection(prospection_id):
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
             _sync_professional_from_existing_prospection(prospection, form.nom_structure.data, existing_client=previous_client, previous_payload=previous_payload)
+            notify_admins(current_user, "prospection_updated", "Prospection modifiée", "Une prospection a été modifiée.", "dashboard.prospections")
             db.session.commit()
             flash("Prospection mise à jour avec succès.", "success")
             return redirect(url_for("dashboard.prospections"))
