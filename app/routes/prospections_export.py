@@ -38,7 +38,12 @@ def _query_from_filters():
     if end_date:
         query = query.filter(Prospection.date <= end_date)
     if commercial:
-        query = query.filter(Prospection.commercial_id == int(commercial))
+        try:
+            commercial_id = int(commercial)
+        except (TypeError, ValueError):
+            commercial = ""
+        else:
+            query = query.filter(Prospection.commercial_id == commercial_id)
     if zone:
         query = query.filter(User.zone == zone)
     if specialite:
