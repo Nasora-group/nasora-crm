@@ -180,6 +180,18 @@ def edit_planning(planning_id):
             flash("La date de début doit être un lundi.", "error")
             return _render_saisie(formulaire, "edit", planning)
 
+        # En modification aussi, chaque structure sélectionnée doit avoir son nom précis.
+        missing_names = []
+        for jour in WORKING_DAYS:
+            for structure in request.form.getlist(jour):
+                slug = STRUCTURE_SLUGS.get(structure, structure.replace(" ", "_"))
+                nom = request.form.get(f"{jour}_nom__{slug}", "").strip()
+                if not nom:
+                    missing_names.append(f"{jour.capitalize()} : {structure}")
+        if missing_names:
+            flash("Renseigne le nom précis de chaque structure sélectionnée : " + ", ".join(missing_names), "error")
+            return _render_saisie(formulaire, "edit", planning)
+
         target = Planning.query.filter(
             Planning.commercial_id == current_user.id,
             Planning.date == formulaire.date.data,
