@@ -21,7 +21,7 @@
 <div class="visitor-kpis">
 <article class="visitor-kpi"><small>CA du mois</small><strong>{{ '{:,.0f}'.format(revenue).replace(',', ' ') }} FCFA</strong><span>Ventes enregistrées</span></article>
 <article class="visitor-kpi"><small>Visites réelles</small><strong>{{ visit_count }}</strong><span>Visites uniques</span></article>
-<article class="visitor-kpi"><small>Planning prévu</small><strong>{{ planned_visit_days }}</strong><span>Journées renseignées</span></article>
+<article class="visitor-kpi"><small>Planning prévu</small><strong>{{ planned_visit_days }}</strong><span>Créneaux renseignés</span></article>
 <article class="visitor-kpi"><small>Exécution</small><strong>{% if execution_pct is not none %}{{ execution_pct }} %{% else %}N/A{% endif %}</strong><span>Réalisé / prévu</span></article>
 <article class="visitor-kpi"><small>Objectif visites</small><strong>{{ visit_target }}</strong><span>Objectif configuré</span></article>
 <article class="visitor-kpi"><small>Objectif atteint</small><strong>{% if visit_pct is not none %}{{ visit_pct }} %{% else %}N/A{% endif %}</strong><span>Visites / objectif</span></article>
@@ -30,7 +30,7 @@
 </div>
 
 <div class="visitor-grid">
-<section class="visitor-card"><h2>📅 Planning et réalisation</h2><span class="visitor-helper">Lecture rapide de l'activité terrain du mois.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Journées prévues</td><td><strong>{{ planned_visit_days }}</strong></td></tr><tr><td>Visites réelles uniques</td><td><strong>{{ visit_count }}</strong></td></tr><tr><td>Écart</td><td><strong>{{ visit_count - planned_visit_days }}</strong></td></tr><tr><td>Taux d'exécution</td><td>{% if execution_pct is not none %}<span class="visitor-badge">{{ execution_pct }} %</span>{% else %}<span class="visitor-badge">N/A</span>{% endif %}</td></tr></tbody></table></div></section>
+<section class="visitor-card"><h2>📅 Planning et réalisation</h2><span class="visitor-helper">Lecture rapide de l'activité terrain du mois.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Créneaux prévus</td><td><strong>{{ planned_visit_days }}</strong></td></tr><tr><td>Visites réelles uniques</td><td><strong>{{ visit_count }}</strong></td></tr><tr><td>Écart</td><td><strong>{{ visit_count - planned_visit_days }}</strong></td></tr><tr><td>Taux d'exécution</td><td>{% if execution_pct is not none %}<span class="visitor-badge">{{ execution_pct }} %</span>{% else %}<span class="visitor-badge">N/A</span>{% endif %}</td></tr></tbody></table></div></section>
 <section class="visitor-card visitor-links"><h2>🎯 Prévu → Réalisé</h2><span class="visitor-helper">Comparaison des structures et établissements planifiés avec les visites réellement saisies.</span>
 <div class="visitor-table-wrap"><table class="visitor-table"><tbody>
 <tr><td>Créneaux planifiés</td><td><strong>{{ planning_realization.planned }}</strong></td></tr>
