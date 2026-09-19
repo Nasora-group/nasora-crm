@@ -383,14 +383,139 @@ def direction():
     if specialite:
         query = query.filter(Prospection.specialite == specialite)
 
-    rows = query.all()
-    total_prospections = len(rows)
-    professionals = {professional_key(r) for r in rows if professional_key(r)}
-    structures = {(_normalize_text(r.establishment or r.nom_client), r.commercial_id) for r in rows if _normalize_text(r.establishment or r.nom_client)}
-    specialites_counter = Counter((r.specialite or "Non renseignée").strip() or "Non renseignée" for r in rows)
-    zones_counter = Counter(((r.establishment or "Non renseignée").strip() or "Non renseignée") for r in rows)
-    commerciaux = User.query.filter_by(role="commercial", is_active_account=True).order_by(User.username.asc()).all()
-    visit_targets = _visit_targets_for_commercials(commerciaux)
-    commercial_counts = Counter(r.commercial_id for r in rows)
-    commercial_rows = [{"commercial": c, "count": commercial_counts.get(c.id, 0), "target": visit_targets.get(c.id, 100)} for c in commerciaux]
-    return render_template("dashboard_direction.html", rows=rows, total_prospections=total_prospections, professionals=len(professionals), structures=len(structures), specialites_counter=specialites_counter, zones_counter=zones_counter, commerciaux=commerciaux, commercial_rows=commercial_rows, filters={"date_start": date_start_raw, "date_end": date_end_raw, "commercial_id": commercial_raw, "zone": zone, "specialite": specialite})
+    # Le dashboard n'affiche pas les objets Prospection eux-mêmes.
+    # On ne charge donc que les colonnes nécessaires aux KPI, ce qui réduit
+    # fortement la mémoire consommée lorsque l'historique devient volumineux.
+    metric_rows = query.with_entities(
+        Prospection.date,
+        Prospection.nom_client,
+        Prospection.telephone,
+        Prospection.structure,
+        Prospection.establishment,
+        Prospection.specialite,
+        Prospection.commercial_id,
+        User.zone,
+        User.username,
+    ).all()
+
+    total_prospections = len(metric_rows)
+    professionals = {
+        professional_key(row)
+        for row in metric_rows
+        if professional_key(row)
+    }
+    structures = {
+        (_normalize_text(row.establishment or row.nom_client), row.commercial_id)
+        for row in metric_rows
+        if _normalize_text(row.establishment or row.nom_client)
+    }
+    specialites_counter = Counter(
+        (row.specialite or "Non renseignée").strip() or "Non renseignée"
+        for row in metric_rows
+    )
+    zones_counter = Counter(
+        (row.zone or "Non renseignée").strip() or "Non renseignée"
+        for row in metric_rows
+    )
+    commercial_counter = Counter(row.commercial_id for row in metric_rows)
+    evolution_counter = Counter(row.date.isoformat() for row in metric_rows if row.date)
+
+    commercials = (
+        User.query.filter_by(role="commercial")
+        .order_by(User.username)
+        .all()
+    )
+    zones = [
+        z
+        for (z,) in User.query.filter(
+            User.role == "commercial",
+            User.zone.isnot(None),
+        ).with_entities(User.zone).distinct().order_by(User.zone).all()
+    ]
+    specialites = [
+        s
+        for (s,) in Prospection.query.with_entities(Prospection.specialite)
+        .distinct()
+        .order_by(Prospection.specialite)
+        .all()
+        if s
+    ]
+
+    visit_targets = _visit_targets_for_commercials(commercials)
+    objectifs = []
+    for commercial in commercials:
+        if commercial_id and commercial.id != commercial_id:
+            continue
+        realise = commercial_counter.get(commercial.id, 0)
+        activity_target = visit_targets.get(commercial.id, 100)
+        taux = round(realise * 100 / activity_target, 1) if activity_target else 0
+        if taux >= 100:
+            statut, badge = "Objectif atteint", "bg-success"
+        elif taux >= 80:
+            statut, badge = "À surveiller", "bg-warning text-dark"
+        else:
+            statut, badge = "Insuffisant", "bg-danger"
+        objectifs.append(
+            {
+                "name": commercial.username,
+                "commercial_id": commercial.id,
+                "objectif": activity_target,
+                "realise": realise,
+                "taux": taux,
+                "statut": statut,
+                "badge": badge,
+            }
+        )
+
+    commercial_chart_rows = [
+        (cid, count)
+        for cid, count in commercial_counter.most_common()
+    ]
+    charts = {
+        "specialites": {
+            "labels": list(specialites_counter.keys()),
+            "values": list(specialites_counter.values()),
+        },
+        "zones": {
+            "labels": list(zones_counter.keys()),
+            "values": list(zones_counter.values()),
+        },
+        "commercials": {
+            "labels": [
+                next(
+                    (c.username for c in commercials if c.id == cid),
+                    str(cid),
+                )
+                for cid, _ in commercial_chart_rows
+            ],
+            "values": [count for _, count in commercial_chart_rows],
+        },
+        "evolution": {
+            "labels": [label for label, _ in sorted(evolution_counter.items())],
+            "values": [count for _, count in sorted(evolution_counter.items())],
+        },
+    }
+
+    kpis = [
+        {"label": "Prospections", "value": total_prospections},
+        {"label": "Professionnels", "value": len(professionals)},
+        {"label": "Structures", "value": len(structures)},
+    ]
+
+    return render_template(
+        "dashboard_direction.html",
+        kpis=kpis,
+        charts=charts,
+        objectifs=objectifs,
+        commercials=commercials,
+        commerciaux=commercials,
+        zones=zones,
+        specialites=specialites,
+        filters={
+            "date_start": date_start_raw,
+            "date_end": date_end_raw,
+            "commercial_id": commercial_raw,
+            "zone": zone,
+            "specialite": specialite,
+        },
+    )
