@@ -116,6 +116,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!details || !summary) return;
 
         var existing = getExisting(selectEl);
+        var entered = {};
+        Array.prototype.slice.call(details.querySelectorAll('input[data-structure-input]')).forEach(function (input) {
+            entered[input.getAttribute('data-structure-input')] = input.value;
+        });
         var selectedValues = getSelectedValues(selectEl);
 
         summary.innerHTML = '';
@@ -162,7 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
             input.name = slot + '_nom__' + slugify(value);
             input.required = true;
             input.placeholder = value === 'PHARMACIES' ? 'Ex : Pharmacie Zenith' : 'Ex : Hôpital Principal de Dakar';
-            input.value = existing[value] || '';
+            input.setAttribute('data-structure-input', value);
+            input.value = Object.prototype.hasOwnProperty.call(entered, value)
+                ? entered[value]
+                : (existing[value] || '');
 
             wrapper.appendChild(label);
             wrapper.appendChild(input);
