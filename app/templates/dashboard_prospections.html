@@ -83,8 +83,20 @@
 {% endif %}
 </div>
 
+{% if prospections_pagination and prospections_pagination.pages > 1 %}
+<nav class="prospection-pagination" aria-label="Pagination des prospections">
+  {% if prospections_pagination.has_prev %}
+    <a class="btn btn-sm btn-outline" href="{{ url_for('dashboard.prospections', page=prospections_pagination.prev_num) }}">Précédent</a>
+  {% endif %}
+  <span>Page {{ prospections_pagination.page }} / {{ prospections_pagination.pages }} · {{ prospections_pagination.total }} au total</span>
+  {% if prospections_pagination.has_next %}
+    <a class="btn btn-sm btn-outline" href="{{ url_for('dashboard.prospections', page=prospections_pagination.next_num) }}">Suivant</a>
+  {% endif %}
+</nav>
+{% endif %}
+
 <style>
-.prospection-filters{margin-bottom:16px}
+.prospection-pagination{display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap}.prospection-filters{margin-bottom:16px}
 .prospection-filter-grid{display:grid;grid-template-columns:minmax(300px,2fr) minmax(180px,1fr) auto;gap:12px;align-items:end}
 .prospection-filter-grid label{display:flex;flex-direction:column;gap:6px;font-weight:600}
 .prospection-table-card{overflow:hidden}
