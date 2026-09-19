@@ -10,7 +10,7 @@ from sqlalchemy import bindparam, func, text
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, User, get_active_products_for_division, STRUCTURES
+from app.models import Prospection, User, get_active_products_for_division, STRUCTURES, DIVISIONS
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
@@ -59,10 +59,12 @@ def _find_client_for_prospection(prospection):
     normalized_phone = _normalize_phone(phone)
     normalized_name = _normalize_text(name)
     owner_scope = (Client.owner_id.is_(None) | (Client.owner_id == prospection.commercial_id))
+    division_scope = Client.division == (prospection.commercial.project if prospection.commercial else "")
     if normalized_phone and not _invalid_phone(phone):
         candidates = Client.query.filter(
             Client.phone.isnot(None),
             owner_scope,
+            division_scope,
         ).all()
         for client in candidates:
             if _normalize_phone(client.phone) == normalized_phone:
@@ -72,6 +74,7 @@ def _find_client_for_prospection(prospection):
     candidates = Client.query.filter(
         Client.name.isnot(None),
         owner_scope,
+        division_scope,
         func.lower(Client.name) == name.lower(),
     ).all()
     owned = [c for c in candidates if _normalize_text(c.name) == normalized_name]
@@ -93,6 +96,7 @@ def _sync_client_fields(prospection, client, establishment=None):
             phone=phone if valid_phone else None,
             potential=3,
             owner_id=prospection.commercial_id,
+            division=(prospection.commercial.project if prospection.commercial else None),
             last_visit=prospection.date,
         )
         db.session.add(client)
@@ -107,6 +111,10 @@ def _sync_client_fields(prospection, client, establishment=None):
             client.phone = phone
         if client.owner_id is None:
             client.owner_id = prospection.commercial_id
+        if not client.division:
+            client.division = prospection.commercial.project
+        elif client.division != prospection.commercial.project:
+            raise ValueError("Ce professionnel appartient à une autre division.")
     return client
 
 
