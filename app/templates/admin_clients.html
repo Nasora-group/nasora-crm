@@ -19,7 +19,7 @@
     <p class="nasora-base-subtitle">Gérez, recherchez et consultez votre portefeuille de professionnels.</p>
   </div>
   <div class="hero-actions nasora-base-actions">
-    <a class="btn" href="{{ url_for('clients.new_client') }}">＋ Nouveau professionnel</a>
+    <a class="btn" href="{{ url_for('clients.new_client') }}">＋ Nouveau professionnel</a><a class="btn btn-outline" href="{{ url_for('clients.list_clients', visited='1', q=q, structure=structure, potential=potential) }}">👥 Professionnels visités{% if visited_count %} ({{ visited_count }}){% endif %}</a>
     {% if current_user.role == 'admin' %}<a class="btn btn-outline" href="{{ url_for('clients_export.export_clients_excel') }}">↧ Exporter Excel</a>{% endif %}
   </div>
 </div>
@@ -27,7 +27,7 @@
 <div class="kpi-grid">
   <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">👥</div><div class="kpi-body"><span class="kpi-label">Professionnels</span><span class="kpi-value">{{ total }}</span></div></div>
   <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">📍</div><div class="kpi-body"><span class="kpi-label">Structures</span><span class="kpi-value">{{ structures }}</span></div></div>
-  <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">★</div><div class="kpi-body"><span class="kpi-label">Potentiel élevé</span><span class="kpi-value">{{ high_potential }}</span></div></div>
+  <div class="kpi-card nasora-base-kpi"><div class="kpi-icon">★</div><div class="kpi-body"><span class="kpi-label">Potentiel élevé</span><span class="kpi-value">{{ high_potential }}</span></div></div><div class="kpi-card nasora-base-kpi"><div class="kpi-icon">✓</div><div class="kpi-body"><span class="kpi-label">Professionnels visités</span><span class="kpi-value">{{ visited_count }}</span></div></div>
 </div>
 
 <form class="filter-form nasora-base-filters" method="get">
@@ -38,7 +38,7 @@
 </form>
 
 <div class="panel">
-  <div class="panel-header"><div><h2>Portefeuille professionnel</h2><span class="muted">{{ total }} contact{{ 's' if total != 1 else '' }} au total</span></div></div>
+  <div class="panel-header"><div><h2>{% if visited == '1' %}Professionnels visités{% else %}Portefeuille professionnel{% endif %}</h2><span class="muted">{{ total }} contact{{ 's' if total != 1 else '' }} au total</span></div><div>{% if visited == '1' %}<a class="btn btn-outline" href="{{ url_for('clients.list_clients', q=q, structure=structure, potential=potential) }}">Tous les professionnels</a>{% endif %}</div></div>
   <div class="responsive-table nasora-base-table-wrap"><table class="nasora-base-table"><thead><tr><th>Professionnel</th><th>Spécialité</th><th>Structure</th><th>Zone</th><th>Téléphone</th><th>Potentiel</th><th>Dernière visite</th><th>Prochaine visite</th><th>Action</th></tr></thead><tbody>
   {% for c in clients %}
   <tr>
@@ -57,9 +57,9 @@
 
 {% if pagination %}
 <div class="nasora-base-pagination">
-  {% if pagination.has_prev %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.prev_num, q=q, structure=structure, potential=potential) }}">‹</a>{% endif %}
+  {% if pagination.has_prev %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.prev_num, q=q, structure=structure, potential=potential, visited=visited) }}">‹</a>{% endif %}
   <span class="nasora-base-page nasora-base-page-current">Page {{ pagination.page }} / {{ pagination.pages or 1 }}</span>
-  {% if pagination.has_next %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.next_num, q=q, structure=structure, potential=potential) }}">›</a>{% endif %}
+  {% if pagination.has_next %}<a class="nasora-base-page" href="{{ url_for('clients.list_clients', page=pagination.next_num, q=q, structure=structure, potential=potential, visited=visited) }}">›</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}
