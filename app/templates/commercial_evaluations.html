@@ -14,7 +14,7 @@
             <td>{{ mois_labels[e.month] }} {{ e.year }}</td>
             <td>{{ "%.1f"|format(e.total_score) }} / 100</td>
             <td><span class="badge {{ 'badge-active' if e.niveau in ['Bon', 'Excellent'] else 'badge-inactive' }}">{{ e.niveau }}</span></td>
-            <td><a href="{{ url_for('evaluations.my_evaluation_detail', year=e.year, month=e.month) }}" class="btn btn-outline">Voir le détail</a></td>
+            <td><a href="{{ url_for('commercial_evaluations.my_evaluation_detail', year=e.year, month=e.month) }}" class="btn btn-outline">Voir le détail</a></td>
         </tr>
         {% else %}
         <tr><td colspan="4">Aucune évaluation disponible pour le moment.</td></tr>
