@@ -8,6 +8,7 @@ from sqlalchemy import func
 from app.extensions import db
 from app.models import AnimationSale, Evaluation, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
 from app.models_clients import Client, ClientVisit
+from app.utils import decode_planning_slot
 from app.utils import roles_required
 from app.visit_objectives_readonly import read_visit_targets
 
@@ -129,6 +130,100 @@ def _planning_execution(field_users, start, end, visits_by_user):
         })
     return details
 
+
+def _planning_realization_detail(commercial_id, start, end):
+    """Compare les créneaux précis du planning aux visites réellement saisies."""
+    rows = Planning.query.filter(
+        Planning.commercial_id == commercial_id,
+        Planning.date < end,
+        Planning.date >= start - timedelta(days=4),
+    ).order_by(Planning.date.asc()).all()
+
+    weekday_fields = (
+        ("lundi", 0),
+        ("mardi", 1),
+        ("mercredi", 2),
+        ("jeudi", 3),
+        ("vendredi", 4),
+    )
+    planned_by_day = {}
+    for row in rows:
+        for field, offset in weekday_fields:
+            entries = decode_planning_slot(getattr(row, field, None))
+            if not entries:
+                continue
+            planned_date = row.date + timedelta(days=offset)
+            if planned_date < start or planned_date >= end:
+                continue
+            planned_by_day[planned_date] = [
+                {"structure": structure, "name": name}
+                for structure, name in entries
+                if structure or name
+            ]
+
+    visits = _unique_visits(commercial_id, start, end)
+    visits_by_day = {}
+    for visit in visits:
+        client = visit.client
+        visits_by_day.setdefault(visit.date, []).append({
+            "structure": (client.structure or "").strip() if client else "",
+            "name": ((client.establishment or client.name or "").strip()) if client else "",
+        })
+
+    rows_out = []
+    all_dates = sorted(set(planned_by_day) | set(visits_by_day))
+    for day in all_dates:
+        planned = planned_by_day.get(day, [])
+        realized = visits_by_day.get(day, [])
+        realized_keys = {
+            ((item["structure"] or "").strip().casefold(),
+             (item["name"] or "").strip().casefold())
+            for item in realized
+        }
+        matched = 0
+        for item in planned:
+            key = (
+                (item["structure"] or "").strip().casefold(),
+                (item["name"] or "").strip().casefold(),
+            )
+            if key in realized_keys:
+                matched += 1
+
+        planned_names = {
+            ((item["structure"] or "").strip().casefold(),
+             (item["name"] or "").strip().casefold())
+            for item in planned
+        }
+        extra_realized = [
+            item for item in realized
+            if (
+                (item["structure"] or "").strip().casefold(),
+                (item["name"] or "").strip().casefold(),
+            ) not in planned_names
+        ]
+        rows_out.append({
+            "date": day,
+            "planned": len(planned),
+            "realized": len(realized),
+            "matched": matched,
+            "missing": max(len(planned) - matched, 0),
+            "extra": len(extra_realized),
+            "planned_items": planned,
+            "extra_items": extra_realized,
+        })
+
+    total_planned = sum(row["planned"] for row in rows_out)
+    total_realized = sum(row["realized"] for row in rows_out)
+    total_matched = sum(row["matched"] for row in rows_out)
+    return {
+        "days": rows_out,
+        "planned": total_planned,
+        "realized": total_realized,
+        "matched": total_matched,
+        "missing": max(total_planned - total_matched, 0),
+        "extra": sum(row["extra"] for row in rows_out),
+        "execution": round(total_matched * 100 / total_planned, 1) if total_planned else None,
+    }
 
 def _stock_alerts(division=None, limit=12):
     """Retourne les références actives en rupture ou stock très faible."""
@@ -350,4 +445,5 @@ def visitor_detail(commercial_id):
         animation_total=animation_total,
         animation_lines=animation_lines,
         top_animation_products=animation_products.most_common(6),
+        planning_realization=_planning_realization_detail(visitor.id, start, end),
     )
