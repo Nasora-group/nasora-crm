@@ -31,6 +31,21 @@
 
 <div class="visitor-grid">
 <section class="visitor-card"><h2>📅 Planning et réalisation</h2><span class="visitor-helper">Lecture rapide de l'activité terrain du mois.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Journées prévues</td><td><strong>{{ planned_visit_days }}</strong></td></tr><tr><td>Visites réelles uniques</td><td><strong>{{ visit_count }}</strong></td></tr><tr><td>Écart</td><td><strong>{{ visit_count - planned_visit_days }}</strong></td></tr><tr><td>Taux d'exécution</td><td>{% if execution_pct is not none %}<span class="visitor-badge">{{ execution_pct }} %</span>{% else %}<span class="visitor-badge">N/A</span>{% endif %}</td></tr></tbody></table></div></section>
+<section class="visitor-card visitor-links"><h2>🎯 Prévu → Réalisé</h2><span class="visitor-helper">Comparaison des structures et établissements planifiés avec les visites réellement saisies.</span>
+<div class="visitor-table-wrap"><table class="visitor-table"><tbody>
+<tr><td>Créneaux planifiés</td><td><strong>{{ planning_realization.planned }}</strong></td></tr>
+<tr><td>Visites réelles</td><td><strong>{{ planning_realization.realized }}</strong></td></tr>
+<tr><td>Correspondances</td><td><strong>{{ planning_realization.matched }}</strong></td></tr>
+<tr><td>Créneaux non réalisés</td><td><strong>{{ planning_realization.missing }}</strong></td></tr>
+<tr><td>Visites hors planning</td><td><strong>{{ planning_realization.extra }}</strong></td></tr>
+<tr><td>Taux de correspondance</td><td>{% if planning_realization.execution is not none %}<span class="visitor-badge">{{ planning_realization.execution }} %</span>{% else %}<span class="visitor-badge">N/A</span>{% endif %}</td></tr>
+</tbody></table></div>
+{% if planning_realization.days %}
+<div class="visitor-table-wrap" style="margin-top:14px"><table class="visitor-table"><thead><tr><th>Date</th><th>Prévu</th><th>Réalisé</th><th>Correspondances</th><th>Non réalisé</th><th>Hors planning</th></tr></thead><tbody>
+{% for row in planning_realization.days %}<tr><td>{{ row.date.strftime('%d/%m/%Y') }}</td><td>{{ row.planned }}</td><td>{{ row.realized }}</td><td>{{ row.matched }}</td><td>{{ row.missing }}</td><td>{{ row.extra }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<div class="visitor-empty">Aucun planning ou aucune visite enregistrée pour ce mois.</div>{% endif %}
+</section>
 <section class="visitor-card"><h2>💼 Portefeuille</h2><span class="visitor-helper">Professionnels rattachés au Visiteur médical.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Total professionnels</td><td><strong>{{ clients_count }}</strong></td></tr><tr><td>Fort potentiel</td><td><strong>{{ high_potential }}</strong></td></tr><tr><td>Prospections du mois</td><td><strong>{{ prospection_count }}</strong></td></tr></tbody></table></div></section>
 </div>
 
