@@ -10,6 +10,7 @@ from app.extensions import db
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
+from app.permissions import is_commercial
 from app.visit_metrics import unique_visit_count_for_commercial
 
 vm_cockpit_bp = Blueprint("vm_cockpit", __name__)
@@ -237,7 +238,7 @@ def index():
 def commercial_revenue_data(username):
     """API dédiée à la fiche commerciale : CA uniquement de sa division."""
     commercial = User.query.filter_by(username=username, role="commercial").first_or_404()
-    if current_user.role == "commercial" and current_user.id != commercial.id:
+    if is_commercial(current_user) and current_user.id != commercial.id:
         return jsonify({"error": "Accès non autorisé."}), 403
 
     division = (commercial.project or "").lower()
