@@ -16,6 +16,7 @@ class Client(db.Model):
     potential = db.Column(db.Integer, nullable=False, default=3)
     notes = db.Column(db.Text, nullable=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    division = db.Column(db.String(50), nullable=True, index=True)
     last_visit = db.Column(db.Date, nullable=True)
     next_visit = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
