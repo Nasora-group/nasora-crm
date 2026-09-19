@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy import func
 
 from app.extensions import db
 from app.forms import SupplierSalesForm, SaleEditForm, CSRFOnlyForm
@@ -138,64 +139,69 @@ def sales_history(slug):
     supplier = _get_active_supplier_or_404(slug)
     sale_model = supplier["sale_model"]
     product_model = supplier["product_model"]
-    query = sale_model.query.join(product_model, sale_model.product_id == product_model.id)
-    all_dates = [row[0] for row in db.session.query(sale_model.date).all()]
-    available_months = sorted({d.strftime("%Y-%m") for d in all_dates if d}, reverse=True)
-    selected_month = request.args.get("month", "")
-    sales = query.order_by(sale_model.date.desc(), sale_model.id.desc()).all()
-    if selected_month:
-        sales = [s for s in sales if s.date and s.date.strftime("%Y-%m") == selected_month]
+    selected_month = (request.args.get("month") or "").strip()
     page = max(1, request.args.get("page", 1, type=int) or 1)
     per_page = 25
-    total = len(sales)
+
+    query = sale_model.query.join(product_model, sale_model.product_id == product_model.id)
+    if selected_month:
+        dialect = db.engine.dialect.name
+        month_expr = (
+            func.strftime("%Y-%m", sale_model.date)
+            if dialect == "sqlite"
+            else func.to_char(sale_model.date, "YYYY-MM")
+        )
+        query = query.filter(month_expr == selected_month)
+
+    total = query.count()
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = min(page, total_pages)
-    page_items = sales[(page - 1) * per_page:page * per_page]
-    total_amount = sum((Decimal(str(s.quantity or 0)) * Decimal(str(s.price or 0)) for s in sales), Decimal("0.00"))
-    return render_template("admin_sales_history.html", supplier=supplier, slug=slug, sales=page_items, available_months=available_months, selected_month=selected_month, page=page, total_pages=total_pages, total_amount=total_amount, total_count=total, delete_form=CSRFOnlyForm(), suppliers=SUPPLIERS)
+    page_items = (
+        query.order_by(sale_model.date.desc(), sale_model.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
 
+    amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
+    total_amount = db.session.query(func.coalesce(func.sum(amount_expr), 0)).select_from(sale_model)
+    if selected_month:
+        dialect = db.engine.dialect.name
+        month_expr = (
+            func.strftime("%Y-%m", sale_model.date)
+            if dialect == "sqlite"
+            else func.to_char(sale_model.date, "YYYY-MM")
+        )
+        total_amount = total_amount.filter(month_expr == selected_month)
+    total_amount = total_amount.scalar() or Decimal("0.00")
 
-@sales_bp.route("/admin/ventes/<slug>/<int:sale_id>/modifier", methods=["GET", "POST"])
-@login_required
-@roles_required("admin")
-def edit_sale(slug, sale_id):
-    supplier = _get_active_supplier_or_404(slug)
-    sale = supplier["sale_model"].query.get_or_404(sale_id)
-    form = SaleEditForm(obj=sale)
-    if form.validate_on_submit():
-        try:
-            sale.date = form.date.data
-            sale.quantity = form.quantity.data
-            sale.price = form.price.data
-            db.session.commit()
-            flash(f"Vente « {sale.product.name} » du {sale.date.strftime('%d/%m/%Y')} mise à jour.", "success")
-            return redirect(url_for("sales.sales_history", slug=slug))
-        except Exception:
-            db.session.rollback()
-            logger.exception("Erreur lors de la modification de la vente #%s", sale_id)
-            flash("Erreur lors de la mise à jour de la vente.", "error")
-    return render_template("admin_sale_form.html", form=form, supplier=supplier, slug=slug, sale=sale)
+    dialect = db.engine.dialect.name
+    month_expr = (
+        func.strftime("%Y-%m", sale_model.date)
+        if dialect == "sqlite"
+        else func.to_char(sale_model.date, "YYYY-MM")
+    )
+    available_months = [
+        month
+        for (month,) in db.session.query(month_expr.label("month"))
+        .filter(sale_model.date.isnot(None))
+        .distinct()
+        .order_by(month_expr.desc())
+        .all()
+        if month
+    ]
 
-
-@sales_bp.route("/admin/ventes/<slug>/<int:sale_id>/supprimer", methods=["POST"])
-@login_required
-@roles_required("admin")
-def delete_sale(slug, sale_id):
-    supplier = _get_active_supplier_or_404(slug)
-    sale = supplier["sale_model"].query.get_or_404(sale_id)
-    form = CSRFOnlyForm()
-    if not form.validate_on_submit():
-        flash("Requête invalide.", "error")
-        return redirect(url_for("sales.sales_history", slug=slug))
-    product_name = sale.product.name
-    sale_date = sale.date.strftime("%d/%m/%Y")
-    db.session.delete(sale)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("Erreur lors de la suppression de la vente #%s", sale_id)
-        flash("Erreur lors de la suppression de la vente.", "error")
-        return redirect(url_for("sales.sales_history", slug=slug))
-    flash(f"Vente « {product_name} » du {sale_date} supprimée.", "success")
-    return redirect(url_for("sales.sales_history", slug=slug))
+    return render_template(
+        "admin_sales_history.html",
+        supplier=supplier,
+        slug=slug,
+        sales=page_items,
+        available_months=available_months,
+        selected_month=selected_month,
+        page=page,
+        total_pages=total_pages,
+        total_amount=total_amount,
+        total_count=total,
+        delete_form=CSRFOnlyForm(),
+        suppliers=SUPPLIERS,
+    )
