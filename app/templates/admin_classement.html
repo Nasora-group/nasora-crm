@@ -13,7 +13,7 @@
     </form>
 
     <div class="eval-live-kpis ranking-kpis">
-        <div class="eval-live-card"><span>Commerciaux évalués</span><strong>{{ evalues|length }}</strong><small>sur la période</small></div>
+        <div class="eval-live-card"><span>Visiteurs médicaux évalués</span><strong>{{ evalues|length }}</strong><small>sur la période</small></div>
         <div class="eval-live-card"><span>Score moyen</span><strong>{{ "%.1f"|format(average) if average is not none else '—' }}<em>/ 100</em></strong><small>performance équipe</small></div>
         <div class="eval-live-card"><span>Excellent</span><strong>{{ excellent_count }}</strong><small>90 à 100 / 100</small></div>
         <div class="eval-live-card"><span>Bon</span><strong>{{ bon_count }}</strong><small>75 à 89,9 / 100</small></div>
