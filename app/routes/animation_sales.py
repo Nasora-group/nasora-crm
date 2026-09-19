@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, AnimationEvidence, get_active_products_for_division, get_active_product_prices_for_division
 from app.utils import roles_required
+from app.services.admin_notifications import notify_admins
 
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
 
@@ -148,6 +149,7 @@ def new_animation_sale():
                     project=division,
                     evidence_id=evidence.id,
                 ))
+            notify_admins(current_user, "animation_created", "Nouvelle animation", "Une animation a été enregistrée.", "animation_sales.my_history")
             db.session.commit()
             flash(f"Animation enregistrée : {len(items)} produit(s) vendu(s).", "success")
             return redirect(url_for("animation_sales.my_history"))
@@ -299,6 +301,7 @@ def edit_animation_sale(sale_id):
                 sale.quantity = quantity
                 sale.unit_price = unit_price
                 sale.project = division
+                notify_admins(current_user, "animation_updated", "Animation modifiée", "Une vente d'animation a été modifiée.", "animation_sales.my_history")
                 db.session.commit()
                 flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
                 return redirect(url_for("animation_sales.my_history"))
