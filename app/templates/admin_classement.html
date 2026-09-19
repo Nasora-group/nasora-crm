@@ -30,7 +30,7 @@
 
     {% if non_evalues %}
     <section class="eval-panel ranking-unrated"><div class="eval-panel-head"><div><span>À compléter</span><h2>Visiteurs médicaux non évalués</h2><p>Les commerciaux suivants n'ont pas encore d'évaluation sur cette période.</p></div></div>
-    <div class="responsive-table"><table><thead><tr><th>Commercial</th><th>Division</th><th>Visites</th><th>Action</th></tr></thead><tbody>{% for row in non_evalues %}<tr><td><strong>{{ row.commercial.username }}</strong></td><td>{{ row.commercial.project|upper }}</td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn">Évaluer</a></td></tr>{% endfor %}</tbody></table></div></section>
+    <div class="responsive-table"><table><thead><tr><th>Visiteur médical</th><th>Division</th><th>Visites</th><th>Action</th></tr></thead><tbody>{% for row in non_evalues %}<tr><td><strong>{{ row.commercial.username }}</strong></td><td>{{ row.commercial.project|upper }}</td><td>{{ row.visits }}</td><td><a href="{{ url_for('evaluations.edit_evaluation', commercial_id=row.commercial.id, year=year, month=month) }}" class="btn">Évaluer</a></td></tr>{% endfor %}</tbody></table></div></section>
     {% endif %}
 </div>
 {% endblock %}
