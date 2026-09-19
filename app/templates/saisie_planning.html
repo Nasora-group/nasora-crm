@@ -24,7 +24,7 @@
             <h3 class="planning-day-title">{{ jour_label }}</h3>
             {{ formulaire[jour].label(class="form-label", style="display:none;") }}
 
-            <select name="{{ jour }}" class="form-control planning-select" multiple="multiple"
+            <select name="{{ jour }}" class="form-control planning-select select2" multiple="multiple" data-placeholder="Sélectionner une ou plusieurs structures"
                     data-slot="{{ jour }}"
                     data-existing='{{ (existing_details[jour] if existing_details else {}) | tojson }}'>
                 {% for value, label in formulaire[jour].choices %}
@@ -183,6 +183,17 @@ document.addEventListener('DOMContentLoaded', function () {
             renderDay(select);
         });
     });
+
+    // Utiliser Select2 en multi-sélection : ajouter une structure ne retire jamais
+    // les structures déjà sélectionnées. La liste reste ouverte après chaque choix.
+    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+        window.jQuery('.planning-select').select2({
+            width: '100%',
+            closeOnSelect: false,
+            placeholder: 'Sélectionner une ou plusieurs structures',
+            allowClear: true
+        });
+    }
 
     var form = document.getElementById('planning-form');
     if (form) {
