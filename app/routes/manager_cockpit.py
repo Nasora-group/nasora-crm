@@ -6,7 +6,7 @@ from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import AnimationSale, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
+from app.models import AnimationSale, Evaluation, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.visit_objectives_readonly import read_visit_targets
@@ -241,7 +241,7 @@ def index():
         commercials=field_users, selected_commercial_id=selected_commercial_id, revenue=revenue,
         previous_revenue=previous_revenue, previous_pct=previous_pct, objective_amount=objective_amount,
         revenue_pct=revenue_pct, visit_count=len(visits), prospection_count=prospection_count, planned_visit_days=planned_visit_days, execution_pct=execution_pct, clients_count=clients_count, high_potential=high_potential,
-        animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
+        previous_revenue=previous_revenue, previous_visits=previous_visits, previous_prospections=previous_prospections,\n        revenue_evolution=revenue_evolution, visits_evolution=visits_evolution, prospection_evolution=prospection_evolution,\n        evaluation=evaluation,\n        animation_total=animation_total, animation_lines=animation_lines, supplier_totals=supplier_totals,
         ranking=ranking, planning_execution=planning_execution, alerts=alerts, stock_alerts=stock_alerts, top_products=product_counter.most_common(8),
         top_animation_products=animation_products.most_common(6),
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
@@ -265,6 +265,7 @@ def visitor_detail(commercial_id):
         selected_day = today.replace(day=1)
 
     start, end = _month_bounds(selected_day)
+    previous_start = (start - timedelta(days=1)).replace(day=1)
     visitor = User.query.filter(
         User.id == commercial_id,
         User.role.in_(("commercial", "animateur")),
@@ -296,6 +297,25 @@ def visitor_detail(commercial_id):
     visit_target = int(read_visit_targets([visitor]).get(visitor.id, 0) or 0)
     visit_pct = round(len(visits) * 100 / visit_target, 1) if visit_target else None
 
+    previous_revenue = 0.0
+    for division in DIVISION_SUPPLIERS:
+        amount, _, _ = _revenue_for_range(division, previous_start, start, visitor.id)
+        previous_revenue += amount
+    previous_visits = len(_unique_visits(visitor.id, previous_start, start))
+    previous_prospections = Prospection.query.filter(
+        Prospection.commercial_id == visitor.id,
+        Prospection.date >= previous_start,
+        Prospection.date < start,
+    ).count()
+    revenue_evolution = round((revenue - previous_revenue) * 100 / previous_revenue, 1) if previous_revenue else None
+    visits_evolution = round((len(visits) - previous_visits) * 100 / previous_visits, 1) if previous_visits else None
+    prospection_evolution = round((prospections - previous_prospections) * 100 / previous_prospections, 1) if previous_prospections else None
+
+    evaluation = Evaluation.query.filter_by(
+        commercial_id=visitor.id,
+        year=selected_day.year,
+        month=selected_day.month,
+    ).first()
     animation_total = 0.0
     animation_lines = 0
     animation_products = Counter()
