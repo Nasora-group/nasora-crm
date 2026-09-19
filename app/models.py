@@ -109,3 +109,18 @@ class Evaluation(db.Model):
         if total>=75:return "Bon"
         if total>=60:return "Moyen"
         return "Insuffisant"
+
+
+class AdminNotification(db.Model):
+    __tablename__ = "admin_notification"
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    event_type = db.Column(db.String(50), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    target_url = db.Column(db.String(500), nullable=False)
+    is_read = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    admin = db.relationship("User", foreign_keys=[admin_id])
+    actor = db.relationship("User", foreign_keys=[actor_id])
