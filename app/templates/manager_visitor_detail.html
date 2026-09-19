@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Fiche Visiteur médical — NASORA CRM{% endblock %}
+{% block content %}
+<style>
+.visitor-page{max-width:1380px;margin:0 auto;padding:20px 0 42px}
+.visitor-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;padding:24px 28px;margin-bottom:18px;border:1px solid #dfe9e2;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(31,61,42,.06)}
+.visitor-kicker{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4d8060}
+.visitor-head h1{margin:5px 0 4px;color:#183225;font-size:1.65rem}.visitor-head p{margin:0;color:#6d7972;font-size:.86rem}
+.visitor-filter{display:flex;gap:8px;align-items:end}.visitor-filter label{display:block;font-size:.7rem;font-weight:700;color:#5c6b62;margin-bottom:5px}.visitor-filter input,.visitor-filter button{height:40px;border:1px solid #d5dfd8;border-radius:9px;padding:0 10px;background:#fbfdfb}.visitor-filter button{cursor:pointer}
+.visitor-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px;margin-bottom:18px}.visitor-kpi{padding:15px;border:1px solid #e0e8e2;border-radius:14px;background:#fff}.visitor-kpi small{display:block;color:#748078;font-size:.68rem}.visitor-kpi strong{display:block;margin-top:5px;color:#193529;font-size:1.25rem}.visitor-kpi span{display:block;margin-top:3px;color:#7a857e;font-size:.67rem}
+.visitor-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.visitor-card{min-width:0;border:1px solid #e0e8e2;border-radius:15px;background:#fff;padding:18px;box-shadow:0 5px 16px rgba(30,55,39,.045)}.visitor-card h2{margin:0 0 4px;color:#243c30;font-size:1rem}.visitor-helper{display:block;color:#7a857e;font-size:.72rem;margin-bottom:13px}
+.visitor-table-wrap{overflow:auto}.visitor-table{width:100%;border-collapse:collapse;font-size:.75rem}.visitor-table th{background:#f5f9f6;color:#65736b;text-align:left;font-size:.66rem;text-transform:uppercase;padding:9px;border-bottom:1px solid #e3eae5}.visitor-table td{padding:9px;border-bottom:1px solid #edf1ee;color:#34443b}.visitor-table tr:last-child td{border-bottom:0}.visitor-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:.64rem;font-weight:700;background:#edf5ef;color:#326b43}.visitor-empty{padding:18px;text-align:center;color:#7b857f;font-size:.77rem;background:#f8faf8;border-radius:10px}.visitor-bars{display:grid;gap:9px}.visitor-bar{display:grid;grid-template-columns:150px 1fr 80px;gap:9px;align-items:center;font-size:.73rem}.visitor-bar-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.visitor-track{height:9px;background:#edf2ee;border-radius:999px;overflow:hidden}.visitor-fill{height:100%;background:#4f8b62;border-radius:999px}.visitor-links{margin-top:16px}.visitor-link{color:#2d7044;text-decoration:none;font-weight:700}.visitor-note{margin-top:16px;padding:10px 12px;border:1px solid #dce8df;background:#f7fbf8;border-radius:10px;color:#53645a;font-size:.72rem}
+@media(max-width:1200px){.visitor-kpis{grid-template-columns:repeat(4,1fr)}}@media(max-width:850px){.visitor-grid{grid-template-columns:1fr}.visitor-head{flex-direction:column}.visitor-kpis{grid-template-columns:repeat(2,1fr)}.visitor-filter{width:100%}.visitor-filter>div{flex:1}.visitor-filter input{width:100%}}
+</style>
+<div class="visitor-page">
+<section class="visitor-head">
+<div><div class="visitor-kicker">NASORA CRM · FICHE TERRAIN</div><h1>{{ visitor.username }}</h1><p>{{ 'Animateur(trice)' if visitor.role == 'animateur' else 'Visiteur médical' }} · Synthèse du mois {{ month_label }}</p></div>
+<form method="get" class="visitor-filter"><div><label for="month">Mois</label><input id="month" type="month" name="month" value="{{ start.strftime('%Y-%m') }}"></div><button type="submit">Actualiser</button></form>
+</section>
+
+<div class="visitor-kpis">
+<article class="visitor-kpi"><small>CA du mois</small><strong>{{ '{:,.0f}'.format(revenue).replace(',', ' ') }} FCFA</strong><span>Ventes enregistrées</span></article>
+<article class="visitor-kpi"><small>Visites réelles</small><strong>{{ visit_count }}</strong><span>Visites uniques</span></article>
+<article class="visitor-kpi"><small>Planning prévu</small><strong>{{ planned_visit_days }}</strong><span>Journées renseignées</span></article>
+<article class="visitor-kpi"><small>Exécution</small><strong>{% if execution_pct is not none %}{{ execution_pct }} %{% else %}N/A{% endif %}</strong><span>Réalisé / prévu</span></article>
+<article class="visitor-kpi"><small>Objectif visites</small><strong>{{ visit_target }}</strong><span>Objectif configuré</span></article>
+<article class="visitor-kpi"><small>Objectif atteint</small><strong>{% if visit_pct is not none %}{{ visit_pct }} %{% else %}N/A{% endif %}</strong><span>Visites / objectif</span></article>
+<article class="visitor-kpi"><small>Prospections</small><strong>{{ prospection_count }}</strong><span>Ce mois</span></article>
+<article class="visitor-kpi"><small>Professionnels</small><strong>{{ clients_count }}</strong><span>{{ high_potential }} à fort potentiel</span></article>
+</div>
+
+<div class="visitor-grid">
+<section class="visitor-card"><h2>📅 Planning et réalisation</h2><span class="visitor-helper">Lecture rapide de l'activité terrain du mois.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Journées prévues</td><td><strong>{{ planned_visit_days }}</strong></td></tr><tr><td>Visites réelles uniques</td><td><strong>{{ visit_count }}</strong></td></tr><tr><td>Écart</td><td><strong>{{ visit_count - planned_visit_days }}</strong></td></tr><tr><td>Taux d'exécution</td><td>{% if execution_pct is not none %}<span class="visitor-badge">{{ execution_pct }} %</span>{% else %}<span class="visitor-badge">N/A</span>{% endif %}</td></tr></tbody></table></div></section>
+<section class="visitor-card"><h2>💼 Portefeuille</h2><span class="visitor-helper">Professionnels rattachés au Visiteur médical.</span><div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>Total professionnels</td><td><strong>{{ clients_count }}</strong></td></tr><tr><td>Fort potentiel</td><td><strong>{{ high_potential }}</strong></td></tr><tr><td>Prospections du mois</td><td><strong>{{ prospection_count }}</strong></td></tr></tbody></table></div></section>
+</div>
+
+<div class="visitor-grid visitor-links">
+<section class="visitor-card"><h2>🏆 Produits vendus</h2><span class="visitor-helper">Quantités sur le mois sélectionné.</span>{% if top_products %}{% set max_product=top_products[0][1] %}<div class="visitor-bars">{% for name,qty in top_products %}<div class="visitor-bar"><span class="visitor-bar-label">{{ name }}</span><div class="visitor-track"><div class="visitor-fill" style="width:{{ (qty*100/max_product) if max_product else 0 }}%"></div></div><strong>{{ qty }}</strong></div>{% endfor %}</div>{% else %}<div class="visitor-empty">Aucune vente enregistrée.</div>{% endif %}</section>
+<section class="visitor-card"><h2>📦 CA par laboratoire</h2><span class="visitor-helper">Répartition du CA de {{ month_label }}.</span>{% if supplier_totals %}{% set max_supplier=supplier_totals.values()|max %}<div class="visitor-bars">{% for name,amount in supplier_totals.items() %}<div class="visitor-bar"><span class="visitor-bar-label">{{ name }}</span><div class="visitor-track"><div class="visitor-fill" style="width:{{ (amount*100/max_supplier) if max_supplier else 0 }}%"></div></div><strong>{{ '{:,.0f}'.format(amount).replace(',', ' ') }}</strong></div>{% endfor %}</div>{% else %}<div class="visitor-empty">Aucune vente enregistrée.</div>{% endif %}</section>
+</div>
+
+{% if visitor.role == 'animateur' %}
+<section class="visitor-card visitor-links"><h2>🛍 Animations</h2><span class="visitor-helper">Sell-Out enregistré par cet Animateur(trice).</span>{% if animation_total %}<div class="visitor-table-wrap"><table class="visitor-table"><tbody><tr><td>CA animation</td><td><strong>{{ '{:,.0f}'.format(animation_total).replace(',', ' ') }} FCFA</strong></td></tr><tr><td>Lignes de vente</td><td><strong>{{ animation_lines }}</strong></td></tr></tbody></table></div>{% if top_animation_products %}<p class="visitor-helper" style="margin-top:14px">Produits d'animation</p><div class="visitor-bars">{% set max_anim=top_animation_products[0][1] %}{% for name,qty in top_animation_products %}<div class="visitor-bar"><span class="visitor-bar-label">{{ name }}</span><div class="visitor-track"><div class="visitor-fill" style="width:{{ (qty*100/max_anim) if max_anim else 0 }}%"></div></div><strong>{{ qty }}</strong></div>{% endfor %}</div>{% endif %}{% else %}<div class="visitor-empty">Aucune vente d'animation.</div>{% endif %}</section>
+{% endif %}
+
+<div class="visitor-note">Les visites sont dédoublonnées selon Visiteur médical + professionnel + date. Le planning correspond aux journées renseignées dans les champs lundi à vendredi.</div>
+</div>
+{% endblock %}
