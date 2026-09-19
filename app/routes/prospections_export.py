@@ -13,18 +13,30 @@ from app.utils import roles_required
 prospections_export_bp = Blueprint("prospections_export", __name__)
 
 
+def _parse_optional_date(raw):
+    value = (raw or "").strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def _query_from_filters():
     query = Prospection.query.join(User).filter(User.role == "commercial")
     date_start = (request.args.get("date_start") or "").strip()
     date_end = (request.args.get("date_end") or "").strip()
+    start_date = _parse_optional_date(date_start)
+    end_date = _parse_optional_date(date_end)
     commercial = (request.args.get("commercial") or "").strip()
     zone = (request.args.get("zone") or "").strip()
     specialite = (request.args.get("specialite") or "").strip()
 
-    if date_start:
-        query = query.filter(Prospection.date >= date.fromisoformat(date_start))
-    if date_end:
-        query = query.filter(Prospection.date <= date.fromisoformat(date_end))
+    if start_date:
+        query = query.filter(Prospection.date >= start_date)
+    if end_date:
+        query = query.filter(Prospection.date <= end_date)
     if commercial:
         query = query.filter(Prospection.commercial_id == int(commercial))
     if zone:
