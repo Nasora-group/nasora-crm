@@ -8,7 +8,7 @@ without changing the stock route or existing data.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "20260921_fix_stock_tenant_default"
+revision = "20260921_stock_tenant_default"
 down_revision = "20260919_admin_notifications"
 branch_labels = None
 depends_on = None
