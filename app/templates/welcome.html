@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Accueil — NASORA HEALTH &amp; SKINCARE{% endblock %}
+{% block title %}NASORA CRM | NASORA Health &amp; Skincare{% endblock %}
 
 {% block content %}
 <section class="welcome-shell" aria-labelledby="welcome-title">
     <div class="welcome-hero">
         <div>
             <div class="welcome-kicker"><span class="welcome-kicker-dot"></span> NASORA CRM · SaaS</div>
-            <h1 id="welcome-title" class="welcome-title">Pilotez votre activité commerciale <span>avec une seule plateforme.</span></h1>
-            <p class="welcome-copy">NASORA CRM centralise le suivi terrain, les prospections, les plannings, les performances commerciales et les stocks dans une expérience simple, professionnelle et pensée pour vos équipes.</p>
+            <h1 id="welcome-title" class="welcome-title">NASORA CRM : pilotez votre activité commerciale <span>avec une seule plateforme.</span></h1>
+            <p class="welcome-copy">NASORA CRM est la plateforme de gestion commerciale et de pilotage terrain de NASORA Health &amp; Skincare. Elle centralise les prospections, les plannings, les performances commerciales et les stocks dans une expérience simple, professionnelle et pensée pour vos équipes.</p>
 
             <div class="welcome-actions">
                 {% if current_user.is_authenticated %}
@@ -42,7 +42,7 @@
     <div class="welcome-section">
         <div class="welcome-section-head">
             <div>
-                <h2>Un espace de travail pensé pour l'action</h2>
+                <h2>NASORA CRM : un espace de travail pensé pour l'action</h2>
                 <p>Retrouvez rapidement les fonctions essentielles de votre CRM.</p>
             </div>
         </div>
@@ -102,6 +102,17 @@
                 {% endif %}
             </article>
         </div>
+    </div>
+
+    <div class="welcome-section welcome-seo-section">
+        <div class="welcome-section-head">
+            <div>
+                <h2>NASORA Health &amp; Skincare</h2>
+                <p>NASORA CRM accompagne la gestion et le suivi de l'activité commerciale de NASORA.</p>
+            </div>
+        </div>
+        <p>NASORA CRM permet de centraliser le planning, les visites terrain, les prospections, les indicateurs de performance et le suivi des stocks. La plateforme est conçue pour donner aux équipes NASORA un espace de travail unique et structuré.</p>
+        <p>Cette page présente l'accès public à <strong>NASORA CRM</strong>. Les données et fonctionnalités opérationnelles restent protégées derrière l'authentification.</p>
     </div>
 
     {% if not current_user.is_authenticated %}
