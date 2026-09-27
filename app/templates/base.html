@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}NASORA CRM{% endblock %}</title>
 <meta name="description" content="NASORA CRM : plateforme professionnelle de gestion commerciale, prospections, planning, performances, stocks et activité terrain.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "NASORA Health & Skincare",
+  "alternateName": ["NASORA", "NASORA CRM"],
+  "url": "{{ url_for('auth.home', _external=True) }}",
+  "logo": "{{ url_for('static', filename='images/logo.jpg', _external=True) }}",
+  "description": "NASORA CRM est une plateforme professionnelle de gestion commerciale et de pilotage de l'activité terrain.",
+  "sameAs": []
+}
+</script>
 <meta name="robots" content="{% if request.path.startswith('/api/') or current_user.is_authenticated %}noindex, nofollow, noarchive{% else %}index, follow, max-image-preview:large{% endif %}">
 <link rel="canonical" href="{{ request.url.split('?')[0] }}">
 <meta property="og:type" content="website">
