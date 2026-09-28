@@ -138,16 +138,21 @@ def new_animation_sale():
             return _render_sale_form(products, prices, request.form)
 
         try:
-            evidence_data = _read_animation_evidence(request.files.get("animation_evidence"))
-            evidence = AnimationEvidence(
-                animateur_id=current_user.id,
-                pharmacy_name=pharmacy,
-                animation_date=animation_date,
-                project=division,
-                **evidence_data,
-            )
-            db.session.add(evidence)
-            db.session.flush()
+            # Le justificatif photo est facultatif. S'il est fourni, on le valide et
+            # on le rattache aux lignes de vente de cette animation.
+            evidence = None
+            uploaded_evidence = request.files.get("animation_evidence")
+            if uploaded_evidence and uploaded_evidence.filename:
+                evidence_data = _read_animation_evidence(uploaded_evidence)
+                evidence = AnimationEvidence(
+                    animateur_id=current_user.id,
+                    pharmacy_name=pharmacy,
+                    animation_date=animation_date,
+                    project=division,
+                    **evidence_data,
+                )
+                db.session.add(evidence)
+                db.session.flush()
 
             from app.models import AnimationSale
             for product_name, quantity, unit_price in items:
@@ -159,7 +164,7 @@ def new_animation_sale():
                     quantity=quantity,
                     unit_price=unit_price,
                     project=division,
-                    evidence_id=evidence.id,
+                    evidence_id=evidence.id if evidence else None,
                 ))
             # La vente d'animation doit rester enregistrable même si la
             # notification administrateur rencontre un problème (table absente,
