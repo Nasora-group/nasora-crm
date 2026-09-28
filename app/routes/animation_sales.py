@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
+import logging
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file
 from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
@@ -11,6 +12,7 @@ from app.utils import roles_required
 from app.services.admin_notifications import notify_admins
 
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
+logger = logging.getLogger(__name__)
 
 
 def _render_sale_form(products, prices, form_data):
@@ -169,9 +171,17 @@ def new_animation_sale():
 
             flash(f"Animation enregistrée : {len(items)} produit(s) vendu(s).", "success")
             return redirect(url_for("animation_sales.my_history"))
-        except Exception:
+        except Exception as exc:
             db.session.rollback()
-            flash("Impossible d'enregistrer les ventes de l'animation. Aucun changement n'a été appliqué.", "error")
+            logger.exception(
+                "Échec de l'enregistrement d'une animation: animateur_id=%s, division=%s, pharmacie=%r, date=%s, produits=%s",
+                current_user.id,
+                division,
+                pharmacy,
+                animation_date,
+                [item[0] for item in items],
+            )
+            flash(f"Impossible d'enregistrer les ventes de l'animation. Erreur technique : {type(exc).__name__}.", "error")
             return _render_sale_form(products, prices, request.form)
 
     return _render_sale_form(products, prices, {})
