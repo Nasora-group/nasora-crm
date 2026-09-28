@@ -57,25 +57,35 @@ def _read_animation_evidence(file_storage):
 
     filename = secure_filename(file_storage.filename)
     extension = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    mime_type = (file_storage.mimetype or "").lower().strip()
-    allowed_extensions = ALLOWED_EVIDENCE_TYPES.get(mime_type)
-    if not allowed_extensions or extension not in allowed_extensions:
-        raise ValueError("Le justificatif doit être une image JPG, PNG ou WEBP.")
 
     data = file_storage.read(MAX_EVIDENCE_SIZE + 1)
     if len(data) > MAX_EVIDENCE_SIZE:
         raise ValueError("Le justificatif ne doit pas dépasser 5 Mo.")
 
-    valid_signature = (
-        (mime_type == "image/jpeg" and data.startswith(b"\xff\xd8\xff"))
-        or (mime_type == "image/png" and data.startswith(b"\x89PNG\r\n\x1a\n"))
-        or (mime_type == "image/webp" and len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP")
-    )
-    if not valid_signature:
-        raise ValueError("Le fichier envoyé ne correspond pas à une image JPG, PNG ou WEBP valide.")
+    # Certains navigateurs/téléphones envoient un MIME vide ou différent
+    # de l'extension. La signature binaire du fichier est plus fiable.
+    if data.startswith(b"\xff\xd8\xff"):
+        detected_mime = "image/jpeg"
+        detected_extensions = (".jpg", ".jpeg")
+    elif data.startswith(b"\x89PNG\r\n\x1a\n"):
+        detected_mime = "image/png"
+        detected_extensions = (".png",)
+    elif len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        detected_mime = "image/webp"
+        detected_extensions = (".webp",)
+    else:
+        raise ValueError("Le fichier envoyé n'est pas une image JPG, PNG ou WEBP valide.")
+
+    # On accepte le MIME fourni par le navigateur s'il est correct, mais
+    # on utilise le type détecté pour éviter les blocages liés au téléphone.
+    mime_type = detected_mime
+    if extension and extension not in detected_extensions:
+        raise ValueError("L'extension du justificatif ne correspond pas à son format d'image.")
+    if not extension:
+        extension = detected_extensions[0]
 
     return {
-        "filename": filename[:255] or "justificatif-animation",
+        "filename": (filename[:255] if filename else "justificatif-animation") or "justificatif-animation",
         "mime_type": mime_type,
         "file_data": data,
         "file_size": len(data),
