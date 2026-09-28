@@ -149,8 +149,24 @@ def new_animation_sale():
                     project=division,
                     evidence_id=evidence.id,
                 ))
-            notify_admins(current_user, "animation_created", "Nouvelle animation", "Une animation a été enregistrée.", "animation_sales.my_history")
+            # La vente d'animation doit rester enregistrable même si la
+            # notification administrateur rencontre un problème (table absente,
+            # erreur de requête, etc.). On valide d'abord les données métier.
             db.session.commit()
+
+            try:
+                notify_admins(
+                    current_user,
+                    "animation_created",
+                    "Nouvelle animation",
+                    "Une animation a été enregistrée.",
+                    "animation_sales.my_history",
+                )
+                db.session.commit()
+            except Exception:
+                # Une notification ne doit jamais annuler une vente déjà enregistrée.
+                db.session.rollback()
+
             flash(f"Animation enregistrée : {len(items)} produit(s) vendu(s).", "success")
             return redirect(url_for("animation_sales.my_history"))
         except Exception:
