@@ -157,3 +157,42 @@ def ruptures():
         rows=critical,
         division=division,
     )
+
+
+@v2_products_bp.route("/reassorts")
+@login_required
+@roles_required("admin")
+def reassorts():
+    division = (request.args.get("division") or "nasmedic").lower()
+    if division not in DIVISION_SUPPLIERS:
+        division = "nasmedic"
+    month = request.args.get("month") or date.today().strftime("%Y-%m")
+    rows = _catalog_rows(division, month)
+    priorities = []
+    for row in rows:
+        affected = [
+            wholesaler
+            for wholesaler, quantity in row["stocks"].items()
+            if quantity <= 10
+        ]
+        if not affected:
+            continue
+        priorities.append({
+            **row,
+            "priority": "Urgent" if any(row["stocks"][w] <= 0 for w in affected) else "À réapprovisionner",
+            "affected_wholesalers": affected,
+        })
+    priorities.sort(
+        key=lambda row: (
+            0 if row["priority"] == "Urgent" else 1,
+            -row["ruptures"],
+            -row["low_stocks"],
+            row["product"].lower(),
+        )
+    )
+    return render_template(
+        "v2/product_reassorts.html",
+        rows=priorities,
+        division=division,
+        month=month,
+    )
