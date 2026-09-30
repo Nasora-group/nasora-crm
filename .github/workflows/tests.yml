@@ -2,7 +2,7 @@ name: NASORA CRM tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2/develop]
   pull_request:
     branches: [main]
 

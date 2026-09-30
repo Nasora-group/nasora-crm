@@ -10,6 +10,7 @@ from app.services.planning_ai import PlanningCandidate, generate_two_weeks, plan
 from app.permissions import owns_record, is_commercial
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
 from app.services.admin_notifications import notify_admins
+from app.services.audit import audit_event
 
 planning_bp = Blueprint("planning", __name__)
 
@@ -157,6 +158,7 @@ def saisie():
                 setattr(existing, champ, valeur)
             notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
             db.session.commit()
+            audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer le planning pour le moment. Votre saisie n'a pas été enregistrée.", "error")

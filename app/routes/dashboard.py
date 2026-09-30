@@ -16,6 +16,7 @@ from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 from app.visit_metrics import professional_key
 from app.services.admin_notifications import notify_admins
+from app.services.audit import audit_event
 
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -232,6 +233,7 @@ def index():
                 db.session.delete(duplicate_visit)
             notify_admins(current_user, "prospection_created", "Nouvelle prospection", "Une nouvelle prospection a été enregistrée.", "dashboard.prospections")
             db.session.commit()
+            audit_event("prospection_created", "prospection", prospection.id, {"client": prospection.nom_client, "date": prospection.date.isoformat()})
             flash("Prospection enregistrée avec succès.", "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
