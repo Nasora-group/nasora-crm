@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request
-from flask_login import current_user, login_required
+from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
@@ -36,18 +36,10 @@ def _scope_users(division):
     return query.order_by(User.username.asc()).all()
 
 
-def _selected_users(division, user_id):
-    users = _scope_users(division)
-    if user_id:
-        users = [user for user in users if user.id == user_id]
-    return users
-
-
 def _revenue_kpi(division, start, end, user_id=None):
     total = 0.0
     by_supplier = {}
-    supplier_defs = DIVISION_SUPPLIERS.get(division, [])
-    for slug in supplier_defs:
+    for slug in DIVISION_SUPPLIERS.get(division, []):
         supplier = SUPPLIERS[slug]
         sale_model = supplier["sale_model"]
         query = db.session.query(
@@ -66,10 +58,7 @@ def _revenue_kpi(division, start, end, user_id=None):
         if user_id:
             query = query.filter(sale_model.commercial_id == user_id)
         amount = float(query.scalar() or 0)
-        by_supplier[slug] = {
-            "label": supplier["label"],
-            "amount": amount,
-        }
+        by_supplier[slug] = {"label": supplier["label"], "amount": amount}
         total += amount
     return total, by_supplier
 
@@ -153,9 +142,7 @@ def pilotage():
     prospection_query = Prospection.query.filter(
         Prospection.date >= start,
         Prospection.date < end,
-    ).join(User, Prospection.commercial_id == User.id).filter(
-        User.role == "commercial",
-    )
+    ).join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
     if division != "all":
         prospection_query = prospection_query.filter(User.project == division)
     if selected_user_id:
@@ -174,29 +161,33 @@ def pilotage():
         ClientVisit.date >= start,
         ClientVisit.date < end,
         ClientVisit.is_duplicate.is_(False),
-    ).join(User, ClientVisit.commercial_id == User.id).filter(
-        User.role == "commercial",
-    )
+    ).join(User, ClientVisit.commercial_id == User.id).filter(User.role == "commercial")
     if division != "all":
         visit_query = visit_query.filter(User.project == division)
     if selected_user_id:
         visit_query = visit_query.filter(ClientVisit.commercial_id == selected_user_id)
     real_visits = visit_query.count()
 
-    planning_weeks, planned_slots, named_structures = _planning_kpi(start, end, division, selected_user_id)
+    planning_weeks, planned_slots, named_structures = _planning_kpi(
+        start, end, division, selected_user_id
+    )
 
     revenue = 0.0
     revenue_by_division = {}
     animation = {"sales_lines": 0, "quantity": 0, "revenue": 0.0, "pharmacies": 0}
     stock = {"ruptures": 0, "faible": 0}
     for current_division in divisions:
-        amount, supplier_rows = _revenue_kpi(current_division, start, end, selected_user_id)
+        amount, supplier_rows = _revenue_kpi(
+            current_division, start, end, selected_user_id
+        )
         revenue += amount
         revenue_by_division[current_division] = {
             "amount": amount,
             "suppliers": supplier_rows,
         }
-        current_animation = _animation_kpi(current_division, start, end, selected_user_id)
+        current_animation = _animation_kpi(
+            current_division, start, end, selected_user_id
+        )
         animation["sales_lines"] += current_animation["sales_lines"]
         animation["quantity"] += current_animation["quantity"]
         animation["revenue"] += current_animation["revenue"]
@@ -211,7 +202,9 @@ def pilotage():
         Client.next_visit <= today + timedelta(days=7),
     )
     if division != "all":
-        upcoming_query = upcoming_query.join(User, Client.owner_id == User.id).filter(User.project == division)
+        upcoming_query = upcoming_query.join(User, Client.owner_id == User.id).filter(
+            User.project == division
+        )
     if selected_user_id:
         upcoming_query = upcoming_query.filter(Client.owner_id == selected_user_id)
     upcoming_followups = upcoming_query.count()
@@ -222,14 +215,14 @@ def pilotage():
             func.count(ClientVisit.id),
         ).group_by(ClientVisit.commercial_id).all()
     )
+    prospection_counts = Counter(row.commercial_id for row in prospections)
+
     performance = []
     for user in users:
-        user_prospections = sum(1 for row in prospections if row.commercial_id == user.id)
-        user_visits = int(visit_counts.get(user.id, 0))
         performance.append({
             "user": user,
-            "prospections": user_prospections,
-            "visits": user_visits,
+            "prospections": prospection_counts.get(user.id, 0),
+            "visits": int(visit_counts.get(user.id, 0)),
         })
 
     kpis = {
