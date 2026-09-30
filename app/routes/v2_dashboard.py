@@ -211,10 +211,16 @@ def pilotage():
         upcoming_query = upcoming_query.filter(Client.owner_id == selected_user_id)
     upcoming_followups = upcoming_query.count()
 
+    visit_counts = dict(
+        visit_query.with_entities(
+            ClientVisit.commercial_id,
+            func.count(ClientVisit.id),
+        ).group_by(ClientVisit.commercial_id).all()
+    )
     performance = []
     for user in users:
         user_prospections = sum(1 for row in prospections if row.commercial_id == user.id)
-        user_visits = sum(1 for row in real_visits and [] )
+        user_visits = int(visit_counts.get(user.id, 0))
         performance.append({
             "user": user,
             "prospections": user_prospections,
