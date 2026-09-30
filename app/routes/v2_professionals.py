@@ -35,7 +35,7 @@ def index():
     if q:
         like = f"%{q}%"
         query = query.filter(
-            db.or_(
+            or_(
                 Client.name.ilike(like),
                 Client.structure.ilike(like),
                 Client.establishment.ilike(like),
