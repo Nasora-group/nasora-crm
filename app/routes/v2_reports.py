@@ -162,7 +162,7 @@ def export_activity():
 @roles_required("admin")
 def export_stocks():
     start, end = _date_range()
-    rows = StockEntry.query.filter(StockEntry.week_start.between(start, end)).order_by(StockEntry.week_start.desc(), StockEntry.division, StockEntry.product_name).all()
+    rows = StockEntry.query.filter(StockEntry.week_start.between(start, end))\n    division = (request.args.get("division") or "all").strip().lower()\n    if division != "all":\n        rows = rows.filter(StockEntry.division == division)\n    rows = rows.order_by(StockEntry.week_start.desc(), StockEntry.division, StockEntry.product_name).all()
     return _csv_response(
         "nasora_v2_stocks.csv",
         ["Semaine", "Division", "Laboratoire", "Grossiste", "Produit", "Quantité"],
