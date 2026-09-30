@@ -30,9 +30,11 @@ def _catalog_rows(division, month):
     require_division(division)
     start, end = _bounds(month)
     rows = {}
+
     for slug in DIVISION_SUPPLIERS.get(division, []):
         supplier = SUPPLIERS[slug]
         product_model, sale_model = supplier["product_model"], supplier["sale_model"]
+
         sales = (
             db.session.query(
                 product_model.name,
@@ -40,44 +42,76 @@ def _catalog_rows(division, month):
                 func.coalesce(func.sum(sale_model.quantity * sale_model.price), 0).label("revenue"),
             )
             .join(sale_model, sale_model.product_id == product_model.id)
-            .filter(sale_model.project == division, sale_model.date >= start, sale_model.date < end)
+            .filter(
+                sale_model.project == division,
+                sale_model.date >= start,
+                sale_model.date < end,
+            )
             .group_by(product_model.id, product_model.name)
             .all()
         )
         for name, qty, revenue in sales:
             key = (slug, name)
             rows.setdefault(key, {
-                "division": division, "laboratory": supplier["label"], "product": name,
-                "quantity": 0, "revenue": Decimal("0"), "stocks": {},
+                "division": division,
+                "laboratory": supplier["label"],
+                "product": name,
+                "quantity": 0,
+                "revenue": Decimal("0"),
+                "stocks": {},
             })
             rows[key]["quantity"] += int(qty or 0)
             rows[key]["revenue"] += Decimal(str(revenue or 0))
+
         products = product_model.query.filter_by(is_active=True).all()
         for product in products:
             key = (slug, product.name)
             rows.setdefault(key, {
-                "division": division, "laboratory": supplier["label"], "product": product.name,
-                "quantity": 0, "revenue": Decimal("0"), "stocks": {},
+                "division": division,
+                "laboratory": supplier["label"],
+                "product": product.name,
+                "quantity": 0,
+                "revenue": Decimal("0"),
+                "stocks": {},
             })
             rows[key]["reference"] = product.reference
             rows[key]["price"] = Decimal(str(product.default_price or 0))
-    week = start - timedelta(days=start.weekday())
+
+    first_week = start - timedelta(days=start.weekday())
     latest = {}
+    week = first_week
     while week < end:
-        week_end = week
-        entries = StockEntry.query.filter_by(week_start=week_end, division=division).all()
-        for e in entries:
-            latest[(e.laboratory, e.product_name, e.wholesaler)] = e.quantity
         week = week.fromordinal(week.toordinal() + 7)
+
+    entries = (
+        StockEntry.query
+        .filter(
+            StockEntry.week_start >= first_week,
+            StockEntry.week_start < end,
+            StockEntry.division == division,
+        )
+        .order_by(StockEntry.week_start.asc())
+        .all()
+    )
+    for entry in entries:
+        latest[(entry.laboratory, entry.product_name, entry.wholesaler)] = entry.quantity
+
     for row in rows.values():
-        keylab = row["laboratory"]
-        keyprod = row["product"]
-        quantities = {w: q for (lab, prod, w), q in latest.items() if lab == keylab and prod == keyprod}
+        prefix = (row["laboratory"], row["product"])
+        quantities = {
+            wholesaler: quantity
+            for (laboratory, product, wholesaler), quantity in latest.items()
+            if (laboratory, product) == prefix
+        }
         row["stocks"] = quantities
-        row["ruptures"] = sum(1 for q in quantities.values() if q <= 0)
-        row["low_stocks"] = sum(1 for q in quantities.values() if 0 < q <= 10)
+        row["ruptures"] = sum(1 for quantity in quantities.values() if quantity <= 0)
+        row["low_stocks"] = sum(1 for quantity in quantities.values() if 0 < quantity <= 10)
         row["total_stock"] = sum(quantities.values())
-    return sorted(rows.values(), key=lambda x: (-float(x["revenue"]), x["product"].lower()))
+
+    return sorted(
+        rows.values(),
+        key=lambda x: (-float(x["revenue"]), x["product"].lower()),
+    )
 
 
 @v2_products_bp.route("")
@@ -93,10 +127,17 @@ def index():
     total_quantity = sum(r["quantity"] for r in rows)
     rupture_count = sum(r["ruptures"] for r in rows)
     low_count = sum(r["low_stocks"] for r in rows)
-    return render_template("v2/products.html", rows=rows, division=division, month=month,
-                           total_revenue=total_revenue, total_quantity=total_quantity,
-                           rupture_count=rupture_count, low_count=low_count,
-                           wholesalers=("duopharm", "ubipharm", "laborex", "sodipharm"))
+    return render_template(
+        "v2/products.html",
+        rows=rows,
+        division=division,
+        month=month,
+        total_revenue=total_revenue,
+        total_quantity=total_quantity,
+        rupture_count=rupture_count,
+        low_count=low_count,
+        wholesalers=("duopharm", "ubipharm", "laborex", "sodipharm"),
+    )
 
 
 @v2_products_bp.route("/ruptures")
@@ -106,6 +147,13 @@ def ruptures():
     division = (request.args.get("division") or "nasmedic").lower()
     if division not in DIVISION_SUPPLIERS:
         division = "nasmedic"
-    rows = _catalog_rows(division, request.args.get("month") or date.today().strftime("%Y-%m"))
+    rows = _catalog_rows(
+        division,
+        request.args.get("month") or date.today().strftime("%Y-%m"),
+    )
     critical = [r for r in rows if r["ruptures"] or r["low_stocks"]]
-    return render_template("v2/product_ruptures.html", rows=critical, division=division)
+    return render_template(
+        "v2/product_ruptures.html",
+        rows=critical,
+        division=division,
+    )
