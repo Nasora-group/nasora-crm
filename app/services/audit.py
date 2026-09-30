@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timezone
 from flask import request
 from flask_login import current_user
+from sqlalchemy import insert
 from app.extensions import db
 from app.models_audit import AuditLog
 
@@ -11,7 +12,7 @@ logger = logging.getLogger("nasora.audit")
 
 
 def audit_event(action, entity, entity_id=None, details=None, actor=None):
-    """Persist a structured business audit event and keep the application log."""
+    """Persist a structured business audit event in its own transaction."""
     actor = actor or (current_user if current_user.is_authenticated else None)
     details = details or {}
     timestamp = datetime.now(timezone.utc)
@@ -31,19 +32,19 @@ def audit_event(action, entity, entity_id=None, details=None, actor=None):
     }
     logger.info("AUDIT %s", json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
     try:
-        db.session.add(AuditLog(
-            tenant_id=tenant_id,
-            actor_user_id=getattr(actor, "id", None),
-            action=str(action),
-            entity_type=str(entity),
-            entity_id=str(entity_id) if entity_id is not None else None,
-            details=payload,
-            ip_address=(request.headers.get("X-Forwarded-For", request.remote_addr) if request else None),
-            user_agent=(request.user_agent.string[:500] if request else None),
-            created_at=timestamp,
-        ))
-        db.session.flush()
+        values = {
+            "tenant_id": tenant_id,
+            "actor_user_id": getattr(actor, "id", None),
+            "action": str(action),
+            "entity_type": str(entity),
+            "entity_id": str(entity_id) if entity_id is not None else None,
+            "details": payload,
+            "ip_address": (request.headers.get("X-Forwarded-For", request.remote_addr) if request else None),
+            "user_agent": (request.user_agent.string[:500] if request else None),
+            "created_at": timestamp,
+        }
+        with db.engine.begin() as connection:
+            connection.execute(insert(AuditLog.__table__).values(**values))
     except Exception:
-        db.session.rollback()
         logger.exception("Impossible de persister l'événement d'audit")
     return payload
