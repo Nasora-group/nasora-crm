@@ -7,6 +7,7 @@ from app.extensions import db
 from app.models import AnimationSale, AnimationEvidence, User, DIVISION_SUPPLIERS, get_active_product_prices_for_division
 from app.permissions import is_admin, division_matches, require_division, normalized_division, normalized_role
 from app.utils import roles_required
+from app.services.audit import audit_event
 
 v2_animations_bp = Blueprint("v2_animations", __name__, url_prefix="/v2/animations")
 
@@ -64,6 +65,7 @@ def index():
             for product_name, quantity, unit_price in lines:
                 db.session.add(AnimationSale(animateur_id=current_user.id, pharmacy_name=pharmacy_name, animation_date=animation_date, product_name=product_name, quantity=quantity, unit_price=unit_price, project=division, evidence_id=evidence.id if evidence else None))
             db.session.commit()
+            audit_event("animation_created", "animation_sale", None, {"pharmacy": pharmacy_name, "date": animation_date.isoformat(), "division": division, "lines": len(lines), "revenue": str(sum(q * p for _, q, p in lines))})
             flash(f"Animation enregistrée : {len(lines)} produit(s), CA {sum(q * p for _, q, p in lines):,.0f} FCFA.", "success")
         except (ValueError, InvalidOperation) as exc:
             db.session.rollback(); flash(str(exc), "error")
@@ -98,7 +100,7 @@ def delete_sale(sale_id):
     try:
         db.session.delete(sale); db.session.flush()
         if evidence and not AnimationSale.query.filter_by(evidence_id=evidence.id).first(): db.session.delete(evidence)
-        db.session.commit(); flash("Ligne d'animation supprimée.", "success")
+        db.session.commit(); audit_event("animation_deleted", "animation_sale", sale_id, {"pharmacy": sale.pharmacy_name, "product": sale.product_name}); flash("Ligne d'animation supprimée.", "success")
     except Exception:
         db.session.rollback(); flash("Impossible de supprimer cette ligne d'animation.", "error")
     return redirect(url_for("v2_animations.index"))
