@@ -15,7 +15,7 @@ v2_planning_bp = Blueprint("v2_planning", __name__, url_prefix="/v2/planning")
 
 def _norm(value):
     value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", value.lower())).strip()
+    return re.sub(r"\s+"," ", re.sub(r"[^a-z0-9]+"," ", value.lower())).strip()
 
 
 def _date(value, fallback):
@@ -27,10 +27,6 @@ def _date(value, fallback):
 
 def _monday(value):
     return value - timedelta(days=value.weekday())
-
-
-def _week_days(start):
-    return [start + timedelta(days=i) for i in range(5)]
 
 
 def _planned_slots(planning):
@@ -47,47 +43,22 @@ def _planned_slots(planning):
     return rows
 
 
-def _actual_by_date(commercial_id, start, end):
-    visits = (
-        ClientVisit.query
-        .filter(
-            ClientVisit.commercial_id == commercial_id,
-            ClientVisit.date >= start,
-            ClientVisit.date <= end,
-            ClientVisit.is_duplicate.is_(False),
-        )
-        .all()
-    )
-    prospections = (
-        Prospection.query
-        .filter(
-            Prospection.commercial_id == commercial_id,
-            Prospection.date >= start,
-            Prospection.date <= end,
-        )
-        .all()
-    )
-    by_date = {}
-    for visit in visits:
-        name = visit.client.name if visit.client else ""
-        establishment = visit.client.establishment if visit.client else ""
-        by_date.setdefault(visit.date, []).append({
-            "name": name,
-            "establishment": establishment,
+def _actual_row(visit=None, prospection=None):
+    if visit is not None:
+        return {
+            "name": visit.client.name if visit.client else "",
+            "establishment": visit.client.establishment if visit.client else "",
             "structure": visit.client.structure if visit.client else "",
             "source": "Visite CRM",
             "id": visit.id,
-        })
-    for prospect in prospections:
-        name = prospect.establishment or prospect.nom_client or ""
-        by_date.setdefault(prospect.date, []).append({
-            "name": name,
-            "establishment": prospect.establishment or "",
-            "structure": prospect.structure or "",
-            "source": "Prospection",
-            "id": prospect.id,
-        })
-    return by_date
+        }
+    return {
+        "name": prospection.establishment or prospection.nom_client or "",
+        "establishment": prospection.establishment or "",
+        "structure": prospection.structure or "",
+        "source": "Prospection",
+        "id": prospection.id,
+    }
 
 
 def _match(planned, actual):
@@ -131,25 +102,73 @@ def index():
     selected_users = users
     if user_id:
         selected_users = [u for u in users if u.id == user_id]
+    selected_user_ids = [u.id for u in selected_users]
+
+    actual_end = end + timedelta(days=4)
+    planning_rows = (
+        Planning.query
+        .filter(
+            Planning.commercial_id.in_(selected_user_ids),
+            Planning.date >= start,
+            Planning.date <= end,
+        )
+        .all()
+        if selected_user_ids else []
+    )
+    planning_by_user_week = {
+        (planning.commercial_id, planning.date): planning
+        for planning in planning_rows
+    }
+
+    visits = (
+        ClientVisit.query
+        .filter(
+            ClientVisit.commercial_id.in_(selected_user_ids),
+            ClientVisit.date >= start,
+            ClientVisit.date <= actual_end,
+            ClientVisit.is_duplicate.is_(False),
+        )
+        .all()
+        if selected_user_ids else []
+    )
+    prospections = (
+        Prospection.query
+        .filter(
+            Prospection.commercial_id.in_(selected_user_ids),
+            Prospection.date >= start,
+            Prospection.date <= actual_end,
+        )
+        .all()
+        if selected_user_ids else []
+    )
+
+    actual_by_user_date = {}
+    for visit in visits:
+        actual_by_user_date.setdefault((visit.commercial_id, visit.date), []).append(
+            _actual_row(visit=visit)
+        )
+    for prospect in prospections:
+        actual_by_user_date.setdefault((prospect.commercial_id, prospect.date), []).append(
+            _actual_row(prospection=prospect)
+        )
 
     rows = []
     total_planned = total_realized = 0
 
     cursor = start
     while cursor <= end:
-        week_end = cursor + timedelta(days=4)
         for user in selected_users:
-            planning = (
-                Planning.query
-                .filter_by(commercial_id=user.id, date=cursor)
-                .first()
-            )
+            planning = planning_by_user_week.get((user.id, cursor))
             planned = _planned_slots(planning) if planning else []
-            actual = _actual_by_date(user.id, cursor, week_end)
             consumed = set()
+
             for item in planned:
-                matches = actual.get(item["date"], [])
-                matched = next((a for a in matches if a["id"] not in consumed and _match(item, a)), None)
+                matches = actual_by_user_date.get((user.id, item["date"]), [])
+                matched = next(
+                    (actual for actual in matches
+                     if actual["id"] not in consumed and _match(item, actual)),
+                    None,
+                )
                 if matched:
                     consumed.add(matched["id"])
                 item["user"] = user
@@ -158,6 +177,7 @@ def index():
                 rows.append(item)
                 total_planned += 1
                 total_realized += int(bool(matched))
+
             if not planned:
                 rows.append({
                     "date": cursor,
@@ -171,7 +191,6 @@ def index():
                 })
         cursor += timedelta(days=7)
 
-    # Rebuild weekly summaries from the planned rows.
     summaries = {}
     for item in rows:
         if item.get("empty_week"):
@@ -189,9 +208,16 @@ def index():
         summary["realized"] += int(item["realized"])
         summary["missed"] += int(not item["realized"])
 
-    summary_rows = sorted(summaries.values(), key=lambda x: (x["week"], x["user"].username), reverse=True)
+    summary_rows = sorted(
+        summaries.values(),
+        key=lambda x: (x["week"], x["user"].username),
+        reverse=True,
+    )
     for item in summary_rows:
-        item["rate"] = round((item["realized"] / item["planned"]) * 100, 1) if item["planned"] else 0
+        item["rate"] = (
+            round((item["realized"] / item["planned"]) * 100, 1)
+            if item["planned"] else 0
+        )
 
     for item in rows:
         if "date" in item:
