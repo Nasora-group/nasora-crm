@@ -74,7 +74,7 @@ def _aggregate_team(users, divisions, start, end):
         db.session.query(
             AnimationSale.animateur_id,
             func.count(AnimationSale.id),
-            func.coalesce(func.sum(AnimationSale.total_amount), 0),
+            func.coalesce(func.sum(AnimationSale.quantity * AnimationSale.unit_price), 0),
         ).filter(
             AnimationSale.animateur_id.in_(user_ids),
             AnimationSale.animation_date >= start,
