@@ -76,16 +76,17 @@ def division_matches(user, division):
     return bool(target and normalized_division(user) == target)
 
 
-def owns_record(user, record, owner_field="commercial_id"):
+def owns_record(user, record, owner_field="commercial_id", *, allow_admin=True):
     """Return True when a record belongs to the authenticated user.
 
     Admins, Visiteurs médicaux and animateurs may only access records whose
-    configured owner field matches their own user id.
+    configured owner field matches their own user id. allow_admin=False
+    can be used by sensitive routes that must also enforce ownership for admins.
     """
     if not account_is_active(user) or record is None:
         return False
     if is_admin(user):
-        return True
+        return allow_admin
     return getattr(record, owner_field, None) == getattr(user, "id", None)
 
 
@@ -122,5 +123,24 @@ def require_owner(record, owner_field="commercial_id"):
 def require_division(division, user=None):
     """Abort with 403 unless the user may access the requested division."""
     if not division_matches(user or current_user, division):
+        abort(403)
+    return True
+
+
+def require_authenticated():
+    """Abort with 403 when the account is not active."""
+    if not account_is_active():
+        abort(403)
+    return True
+
+
+def require_same_division(record, division_field="project"):
+    """Enforce division isolation using the record's own division."""
+    if is_admin(current_user):
+        return True
+    if not account_is_active(current_user):
+        abort(403)
+    record_division = getattr(record, division_field, None)
+    if not division_matches(current_user, record_division):
         abort(403)
     return True
