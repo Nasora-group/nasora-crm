@@ -74,8 +74,13 @@ def _revenue_kpi(division, start, end, user_id=None):
     return total, by_supplier
 
 
-def _planning_kpi(start, end, user_id=None):
+def _planning_kpi(start, end, division=None, user_id=None):
     query = Planning.query.filter(Planning.date >= start, Planning.date < end)
+    if division in DIVISION_SUPPLIERS:
+        query = query.join(User, Planning.commercial_id == User.id).filter(
+            User.project == division,
+            User.role.in_(("commercial", "animateur")),
+        )
     if user_id:
         query = query.filter(Planning.commercial_id == user_id)
     rows = query.all()
@@ -178,7 +183,7 @@ def pilotage():
         visit_query = visit_query.filter(ClientVisit.commercial_id == selected_user_id)
     real_visits = visit_query.count()
 
-    planning_weeks, planned_slots, named_structures = _planning_kpi(start, end, selected_user_id)
+    planning_weeks, planned_slots, named_structures = _planning_kpi(start, end, division, selected_user_id)
 
     revenue = 0.0
     revenue_by_division = {}
