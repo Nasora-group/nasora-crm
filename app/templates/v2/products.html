@@ -8,6 +8,7 @@
 <div><label>Division</label><select name="division"><option value="nasmedic" {% if division=='nasmedic' %}selected{% endif %}>NASMEDIC</option><option value="nasderm" {% if division=='nasderm' %}selected{% endif %}>NASDERM</option></select></div>
 <button class="btn btn-primary">Actualiser</button>
 <a class="btn" href="{{ url_for('v2_products.ruptures',division=division,month=month) }}">Voir ruptures</a>
+<a class="btn" href="{{ url_for('v2_products.reassorts',division=division,month=month) }}">Réassorts à effectuer</a>
 </form>
 <div class="dashboard-grid">
 <div class="card"><strong>CA produits</strong><div class="kpi-value">{{ "%.2f"|format(total_revenue) }}</div></div>
