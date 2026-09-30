@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Planning V2 | NASORA CRM{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div>
+      <h1>Planning V2</h1>
+      <p>Suivi du prévu par rapport au réalisé.</p>
+    </div>
+  </div>
+
+  <form method="get" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:20px">
+    <div>
+      <label for="date_start">Du</label>
+      <input id="date_start" type="date" name="date_start" value="{{ date_start.isoformat() }}">
+    </div>
+    <div>
+      <label for="date_end">Au</label>
+      <input id="date_end" type="date" name="date_end" value="{{ date_end.isoformat() }}">
+    </div>
+    <div>
+      <label for="division">Division</label>
+      <select id="division" name="division">
+        <option value="all" {% if division == 'all' %}selected{% endif %}>Toutes</option>
+        <option value="nasmedic" {% if division == 'nasmedic' %}selected{% endif %}>NASMEDIC</option>
+        <option value="nasderm" {% if division == 'nasderm' %}selected{% endif %}>NASDERM</option>
+      </select>
+    </div>
+    <div>
+      <label for="user_id">Visiteur / Animateur</label>
+      <select id="user_id" name="user_id">
+        <option value="">Toute l'équipe</option>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Actualiser</button>
+  </form>
+
+  <div class="dashboard-grid" style="margin-bottom:20px">
+    <div class="card"><strong>Visites planifiées</strong><div class="kpi-value">{{ total_planned }}</div></div>
+    <div class="card"><strong>Réalisées</strong><div class="kpi-value">{{ total_realized }}</div></div>
+    <div class="card"><strong>Non réalisées</strong><div class="kpi-value">{{ total_planned - total_realized }}</div></div>
+    <div class="card"><strong>Taux d'exécution</strong><div class="kpi-value">{{ completion_rate }}%</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <h2>Exécution par semaine</h2>
+    <div style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Semaine</th><th>Équipe</th><th>Prévu</th><th>Réalisé</th><th>Non réalisé</th><th>Taux</th></tr></thead>
+        <tbody>
+        {% for item in summaries %}
+          <tr>
+            <td>{{ item.week.strftime('%d/%m/%Y') }}</td>
+            <td>{{ item.user.username }}</td>
+            <td>{{ item.planned }}</td>
+            <td>{{ item.realized }}</td>
+            <td>{{ item.missed }}</td>
+            <td><strong>{{ item.rate }}%</strong></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6">Aucun planning renseigné sur la période.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Détail des créneaux planifiés</h2>
+    <div style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Utilisateur</th><th>Structure</th><th>Nom prévu</th><th>Statut</th><th>Réalisation trouvée</th></tr></thead>
+        <tbody>
+        {% for item in rows if not item.empty_week %}
+          <tr>
+            <td>{{ item.date_label }}</td>
+            <td>{{ item.user.username }}</td>
+            <td>{{ item.structure }}</td>
+            <td>{{ item.name or 'Nom non renseigné' }}</td>
+            <td>
+              {% if item.realized %}<span>Réalisé</span>{% else %}<span>Non réalisé</span>{% endif %}
+            </td>
+            <td>
+              {% if item.actual %}
+                {{ item.actual.name or item.actual.establishment }} <small>({{ item.actual.source }})</small>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
