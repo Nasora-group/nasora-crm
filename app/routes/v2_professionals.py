@@ -84,7 +84,7 @@ def index():
 
 @v2_professionals_bp.route("/<int:client_id>")
 @login_required
-@roles_required("admin", "commercial")
+@roles_required("admin", "commercial", "animateur")
 def detail(client_id):
     client = Client.query.get_or_404(client_id)
     if not _can_access(client):
