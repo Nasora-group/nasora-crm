@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Fiche 360° | {{ client.name }}{% endblock %}
+{% block content %}
+<section class="v2-page">
+  <div class="v2-header"><div><span class="v2-kicker">NASORA CRM V2</span><h1>{{ client.name }}</h1><p>{{ client.specialty or 'Professionnel' }} · {{ client.structure }}{% if client.establishment %} · {{ client.establishment }}{% endif %}</p></div><a href="{{ url_for('v2_professionals.index') }}">← Portefeuille</a></div>
+  <div class="v2-kpi-grid">
+    <article><span>Potentiel</span><strong>{{ client.potential }}</strong></article>
+    <article><span>Visites totales</span><strong>{{ visits|length }}</strong></article>
+    <article><span>Visites 90 jours</span><strong>{{ visits_90 }}</strong></article>
+    <article><span>Relances à venir</span><strong>{{ next_followups }}</strong></article>
+  </div>
+  <div class="v2-columns">
+    <section class="v2-card"><h2>Coordonnées</h2><p><b>Téléphone :</b> {{ client.phone or '-' }}</p><p><b>Email :</b> {{ client.email or '-' }}</p><p><b>Zone :</b> {{ client.zone or '-' }}</p><p><b>Adresse :</b> {{ client.address or '-' }}</p><p><b>Propriétaire :</b> {{ client.owner.username if client.owner else '-' }}</p><p><b>Dernière visite :</b> {{ client.last_visit or '-' }}</p><p><b>Prochaine visite :</b> {{ client.next_visit or '-' }}</p><p><b>Notes :</b> {{ client.notes or '-' }}</p></section>
+    <section class="v2-card"><h2>Produits suivis</h2><h3>Présentés</h3><p>{{ presented|join(', ') or 'Aucun produit enregistré.' }}</p><h3>Prescrits</h3><p>{{ prescribed|join(', ') or 'Aucun produit enregistré.' }}</p></section>
+  </div>
+  <section class="v2-card"><h2>Historique des visites</h2><table class="v2-table"><thead><tr><th>Date</th><th>Visiteur</th><th>Présentés</th><th>Prescrits</th><th>Compte-rendu</th><th>Prochaine visite</th></tr></thead><tbody>{% for visit in visits %}<tr><td>{{ visit.date }}</td><td>{{ visit.commercial.username if visit.commercial else '-' }}</td><td>{{ visit.products_presented or '-' }}</td><td>{{ visit.products_prescribed or '-' }}</td><td>{{ visit.report or '-' }}</td><td>{{ visit.next_visit or '-' }}</td></tr>{% else %}<tr><td colspan="6">Aucune visite enregistrée.</td></tr>{% endfor %}</tbody></table></section>
+</section>
+<style>
+.v2-page{padding:10px 0 40px}.v2-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}.v2-kicker{font-size:.76rem;font-weight:700;letter-spacing:.12em;opacity:.65}.v2-header h1{margin:5px 0}.v2-header p{margin:0;opacity:.72}.v2-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.v2-kpi-grid article,.v2-card{padding:18px;border:1px solid #dce9e2;border-radius:14px;background:#fff}.v2-kpi-grid span{display:block;opacity:.68;font-size:.78rem}.v2-kpi-grid strong{display:block;font-size:1.5rem;margin-top:7px}.v2-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.v2-table{width:100%;border-collapse:collapse}.v2-table th,.v2-table td{text-align:left;padding:9px;border-bottom:1px solid #edf2ef;font-size:.84rem;vertical-align:top}@media(max-width:800px){.v2-kpi-grid,.v2-columns{grid-template-columns:1fr}.v2-header{display:block}.v2-card{overflow:auto}}
+</style>
+{% endblock %}
