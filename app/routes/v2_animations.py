@@ -8,6 +8,7 @@ from app.models import AnimationSale, AnimationEvidence, User, DIVISION_SUPPLIER
 from app.permissions import is_admin, division_matches, require_division, normalized_division, normalized_role
 from app.utils import roles_required
 from app.services.audit import audit_event
+from app.services.admin_notifications import notify_admins
 
 v2_animations_bp = Blueprint("v2_animations", __name__, url_prefix="/v2/animations")
 
@@ -64,6 +65,13 @@ def index():
                 db.session.add(evidence); db.session.flush()
             for product_name, quantity, unit_price in lines:
                 db.session.add(AnimationSale(animateur_id=current_user.id, pharmacy_name=pharmacy_name, animation_date=animation_date, product_name=product_name, quantity=quantity, unit_price=unit_price, project=division, evidence_id=evidence.id if evidence else None))
+            notify_admins(
+                current_user,
+                "animation_created",
+                "Nouvelle animation enregistrée",
+                f"Une animation a été enregistrée à {pharmacy_name} ({len(lines)} ligne(s)).",
+                "v2_animations.index",
+            )
             db.session.commit()
             audit_event("animation_created", "animation_sale", None, {"pharmacy": pharmacy_name, "date": animation_date.isoformat(), "division": division, "lines": len(lines), "revenue": str(sum(q * p for _, q, p in lines))})
             flash(f"Animation enregistrée : {len(lines)} produit(s), CA {sum(q * p for _, q, p in lines):,.0f} FCFA.", "success")
