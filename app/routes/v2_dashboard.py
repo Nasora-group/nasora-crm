@@ -219,10 +219,30 @@ def pilotage():
 
     performance = []
     for user in users:
+        user_revenue, _ = _revenue_kpi(
+            user.project,
+            start,
+            end,
+            user.id,
+        ) if user.project in DIVISION_SUPPLIERS else (0.0, {})
+        user_animation = _animation_kpi(
+            user.project,
+            start,
+            end,
+            user.id,
+        ) if user.project in DIVISION_SUPPLIERS else {
+            "sales_lines": 0,
+            "quantity": 0,
+            "revenue": 0.0,
+            "pharmacies": 0,
+        }
         performance.append({
             "user": user,
             "prospections": prospection_counts.get(user.id, 0),
             "visits": int(visit_counts.get(user.id, 0)),
+            "revenue": user_revenue,
+            "animation_lines": user_animation["sales_lines"],
+            "animation_revenue": user_animation["revenue"],
         })
 
     kpis = {
