@@ -1,21 +1,23 @@
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from flask import request
 from flask_login import current_user
+from app.extensions import db
+from app.models_audit import AuditLog
 
 logger = logging.getLogger("nasora.audit")
 
 
 def audit_event(action, entity, entity_id=None, details=None, actor=None):
-    """Journalise une action métier réussie dans les logs applicatifs.
-
-    Le projet conserve volontairement l'audit comme journal applicatif:
-    aucune nouvelle table ni migration n'est nécessaire.
-    """
+    """Persist a structured business audit event and keep the application log."""
     actor = actor or (current_user if current_user.is_authenticated else None)
+    details = details or {}
+    timestamp = datetime.now(timezone.utc)
+    tenant_id = int(os.environ.get("AUDIT_TENANT_ID", "116"))
     payload = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": timestamp.isoformat(),
         "action": str(action),
         "entity": str(entity),
         "entity_id": entity_id,
@@ -25,7 +27,23 @@ def audit_event(action, entity, entity_id=None, details=None, actor=None):
         "division": getattr(actor, "project", None),
         "method": request.method if request else None,
         "path": request.path if request else None,
-        "details": details or {},
+        "details": details,
     }
     logger.info("AUDIT %s", json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    try:
+        db.session.add(AuditLog(
+            tenant_id=tenant_id,
+            actor_user_id=getattr(actor, "id", None),
+            action=str(action),
+            entity_type=str(entity),
+            entity_id=str(entity_id) if entity_id is not None else None,
+            details=payload,
+            ip_address=(request.headers.get("X-Forwarded-For", request.remote_addr) if request else None),
+            user_agent=(request.user_agent.string[:500] if request else None),
+            created_at=timestamp,
+        ))
+        db.session.flush()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Impossible de persister l'événement d'audit")
     return payload
