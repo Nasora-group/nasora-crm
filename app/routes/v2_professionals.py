@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request, abort
 from flask_login import current_user, login_required
-from sqlalchemy import func
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import User
