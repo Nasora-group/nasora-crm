@@ -11,12 +11,22 @@ from app.models_audit import AuditLog
 logger = logging.getLogger("nasora.audit")
 
 
+def get_audit_tenant_id():
+    """Return the configured audit tenant identifier for the current deployment."""
+    raw = os.environ.get("AUDIT_TENANT_ID", "116").strip()
+    try:
+        tenant_id = int(raw)
+    except (TypeError, ValueError):
+        tenant_id = 116
+    return tenant_id if tenant_id > 0 else 116
+
+
 def audit_event(action, entity, entity_id=None, details=None, actor=None):
     """Persist a structured business audit event in its own transaction."""
     actor = actor or (current_user if current_user.is_authenticated else None)
     details = details or {}
     timestamp = datetime.now(timezone.utc)
-    tenant_id = int(os.environ.get("AUDIT_TENANT_ID", "116"))
+    tenant_id = get_audit_tenant_id()
     payload = {
         "timestamp": timestamp.isoformat(),
         "action": str(action),
