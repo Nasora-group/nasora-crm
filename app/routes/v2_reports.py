@@ -154,6 +154,8 @@ def export_animations():
 def export_activity():
     start, end = _date_range()
     division = (request.args.get("division") or "all").strip().lower()
+    if division not in {"all", *DIVISION_SUPPLIERS.keys()}:
+        division = "all"
     prospection_query = Prospection.query.filter(Prospection.date.between(start, end))
     visit_query = ClientVisit.query.filter(
         ClientVisit.date.between(start, end),
