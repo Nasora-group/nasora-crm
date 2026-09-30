@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from flask import Blueprint, render_template, request
@@ -61,7 +61,7 @@ def _catalog_rows(division, month):
             })
             rows[key]["reference"] = product.reference
             rows[key]["price"] = Decimal(str(product.default_price or 0))
-    week = start
+    week = start - timedelta(days=start.weekday())
     latest = {}
     while week < end:
         week_end = week
