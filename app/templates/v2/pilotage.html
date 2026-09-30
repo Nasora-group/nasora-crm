@@ -59,10 +59,10 @@
       <h2>Équipe</h2>
       {% if performance %}
       <table class="v2-table">
-        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Prospections</th></tr></thead>
+        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Prospections</th><th>Visites</th></tr></thead>
         <tbody>
         {% for row in performance %}
-          <tr><td>{{ row.user.username }}</td><td>{{ 'Animateur(trice)' if row.user.role == 'animateur' else 'Visiteur médical' }}</td><td>{{ row.prospections }}</td></tr>
+          <tr><td>{{ row.user.username }}</td><td>{{ 'Animateur(trice)' if row.user.role == 'animateur' else 'Visiteur médical' }}</td><td>{{ row.prospections }}</td><td>{{ row.visits }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
