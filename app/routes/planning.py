@@ -209,8 +209,23 @@ def edit_planning(planning_id):
             planning.date = formulaire.date.data
             for champ, valeur in _build_creneaux_from_form().items():
                 setattr(planning, champ, valeur)
+        affected_id = target.id if target is not None else planning.id
+        affected_date = formulaire.date.data
         try:
+            notify_admins(
+                current_user,
+                "planning_updated",
+                "Planning modifié",
+                "Un planning a été modifié.",
+                "planning.admin_plannings",
+            )
             db.session.commit()
+            audit_event(
+                "planning_updated",
+                "planning",
+                affected_id,
+                {"date": affected_date.isoformat()},
+            )
         except Exception:
             db.session.rollback()
             flash("Impossible de mettre à jour le planning pour le moment.", "error")
@@ -231,9 +246,24 @@ def delete_planning(planning_id):
         flash("Accès non autorisé : ce planning ne t'appartient pas.", "error")
         return redirect(url_for("planning.visualiser"))
     if form.validate_on_submit():
+        planning_date = planning.date
+        planning_id_value = planning.id
         try:
+            notify_admins(
+                current_user,
+                "planning_deleted",
+                "Planning supprimé",
+                "Un planning a été supprimé.",
+                "planning.admin_plannings",
+            )
             db.session.delete(planning)
             db.session.commit()
+            audit_event(
+                "planning_deleted",
+                "planning",
+                planning_id_value,
+                {"date": planning_date.isoformat() if planning_date else None},
+            )
             flash("Planning supprimé.", "success")
         except Exception:
             db.session.rollback()
