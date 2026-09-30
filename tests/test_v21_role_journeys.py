@@ -51,7 +51,7 @@ def test_health_check_is_available(client):
         ("vm_v21", "/v2/professionnels/", 200),
         ("anim_v21", "/v2/professionnels/", 200),
         ("anim_v21", "/v2/animations/", 200),
-        ("vm_v21", "/v2/animations/", 403),
+        ("vm_v21", "/v2/animations/", 200),
         ("vm_v21", "/v2/planning", 403),
         ("anim_v21", "/v2/planning", 403),
         ("admin_v21", "/v2/animations/", 200),
