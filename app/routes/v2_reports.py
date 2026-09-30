@@ -72,6 +72,15 @@ def index():
     if division not in {"all", *DIVISION_SUPPLIERS.keys()}:
         division = "all"
     sales = _sales_rows(start, end, division)
+    prospection_query = Prospection.query.filter(Prospection.date.between(start, end))
+    visit_query = ClientVisit.query.filter(
+        ClientVisit.date.between(start, end),
+        ClientVisit.is_duplicate.is_(False),
+    )
+    if division != "all":
+        prospection_query = prospection_query.join(User, Prospection.commercial_id == User.id).filter(User.project == division)
+        visit_query = visit_query.join(User, ClientVisit.commercial_id == User.id).filter(User.project == division)
+
     animations = AnimationSale.query.filter(
         AnimationSale.animation_date >= start,
         AnimationSale.animation_date <= end,
@@ -86,8 +95,8 @@ def index():
         division=division,
         sales_count=len(sales),
         sales_revenue=sum((r["revenue"] for r in sales), Decimal("0.00")),
-        prospections=Prospection.query.filter(Prospection.date.between(start, end)).count(),
-        visits=ClientVisit.query.filter(ClientVisit.date.between(start, end), ClientVisit.is_duplicate.is_(False)).count(),
+        prospections=prospection_query.count(),
+        visits=visit_query.count(),
         animation_lines=len(animations),
         animation_revenue=sum((a.total_amount for a in animations), Decimal("0.00")),
         animations=animations[:20],
@@ -144,8 +153,17 @@ def export_animations():
 @roles_required("admin")
 def export_activity():
     start, end = _date_range()
-    prospections = Prospection.query.filter(Prospection.date.between(start, end)).all()
-    visits = ClientVisit.query.filter(ClientVisit.date.between(start, end), ClientVisit.is_duplicate.is_(False)).all()
+    division = (request.args.get("division") or "all").strip().lower()
+    prospection_query = Prospection.query.filter(Prospection.date.between(start, end))
+    visit_query = ClientVisit.query.filter(
+        ClientVisit.date.between(start, end),
+        ClientVisit.is_duplicate.is_(False),
+    )
+    if division in DIVISION_SUPPLIERS:
+        prospection_query = prospection_query.join(User, Prospection.commercial_id == User.id).filter(User.project == division)
+        visit_query = visit_query.join(User, ClientVisit.commercial_id == User.id).filter(User.project == division)
+    prospections = prospection_query.all()
+    visits = visit_query.all()
     users = {u.id: u.username for u in User.query.all()}
     return _csv_response(
         "nasora_v2_activite.csv",
