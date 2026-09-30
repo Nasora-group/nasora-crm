@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Réassorts V2 | NASORA CRM{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>Réassorts à effectuer</h1>
+  <p>Division : <strong>{{ division|upper }}</strong> · Mois : <strong>{{ month }}</strong></p>
+
+  <form method="get" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:15px 0">
+    <div><label>Mois</label><input type="month" name="month" value="{{ month }}"></div>
+    <div><label>Division</label>
+      <select name="division">
+        <option value="nasmedic" {% if division=='nasmedic' %}selected{% endif %}>NASMEDIC</option>
+        <option value="nasderm" {% if division=='nasderm' %}selected{% endif %}>NASDERM</option>
+      </select>
+    </div>
+    <button class="btn btn-primary">Actualiser</button>
+    <a class="btn" href="{{ url_for('v2_products.index', division=division, month=month) }}">Retour produits</a>
+  </form>
+
+  <div class="card" style="overflow:auto">
+    <h2>Produits à réapprovisionner</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Priorité</th>
+          <th>Laboratoire</th>
+          <th>Produit</th>
+          <th>Grossistes concernés</th>
+          <th>Ruptures</th>
+          <th>Stock faible</th>
+          <th>Stock total</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><strong>{{ r.priority }}</strong></td>
+          <td>{{ r.laboratory }}</td>
+          <td><strong>{{ r.product }}</strong></td>
+          <td>
+            {% for wholesaler in r.affected_wholesalers %}
+              <span>{{ wholesaler|upper }}{% if not loop.last %}, {% endif %}</span>
+            {% endfor %}
+          </td>
+          <td>{{ r.ruptures }}</td>
+          <td>{{ r.low_stocks }}</td>
+          <td>{{ r.total_stock }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">Aucun réassort à effectuer selon les stocks disponibles.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
