@@ -13,6 +13,7 @@ from app.models import (
     Prospection,
     SUPPLIERS,
     User,
+    SalesObjective,
 )
 from app.models_clients import Client, ClientVisit
 from app.models_stock import StockEntry
@@ -100,6 +101,23 @@ def _animation_kpi(division, start, end, user_id=None):
     }
 
 
+def _objective_kpi(division, start, end, revenue):
+    objectives = SalesObjective.query.filter_by(division=division).all()
+    target = 0.0
+    for objective in objectives:
+        if objective.month is None:
+            continue
+        try:
+            month_start = date(objective.year, objective.month, 1)
+            if start <= month_start < end:
+                target += float(objective.target_amount or 0)
+        except (TypeError, ValueError):
+            continue
+    return {
+        "target": target,
+        "revenue": float(revenue or 0),
+        "pct": (float(revenue or 0) / target * 100.0) if target else None,
+    }
 def _stock_kpi(division):
     if division not in DIVISION_SUPPLIERS:
         return {"ruptures": 0, "faible": 0}
@@ -245,6 +263,10 @@ def pilotage():
             "animation_revenue": user_animation["revenue"],
         })
 
+    objectives_by_division = {current_division: _objective_kpi(current_division, start, end, revenue_by_division[current_division]["amount"]) for current_division in divisions}
+    objective_target = sum(item["target"] for item in objectives_by_division.values())
+    objective_pct = (revenue / objective_target * 100.0) if objective_target else None
+
     kpis = {
         "revenue": revenue,
         "prospections": len(prospections),
@@ -262,6 +284,9 @@ def pilotage():
         "v2/pilotage.html",
         kpis=kpis,
         revenue_by_division=revenue_by_division,
+        objectives_by_division=objectives_by_division,
+        objective_target=objective_target,
+        objective_pct=objective_pct,
         performance=performance,
         users=users,
         divisions=DIVISION_SUPPLIERS.keys(),
