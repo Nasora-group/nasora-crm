@@ -36,3 +36,23 @@ def test_v21_image_validation_rejects_oversized_upload():
     data = b"\xff\xd8\xff" + b"x" * (8 * 1024 * 1024)
     with pytest.raises(ValueError, match="8 Mo"):
         _validate_image_upload(_file("animation.jpg", "image/jpeg", data), data)
+
+
+from app.services.audit import get_audit_tenant_id
+
+
+def test_v21_audit_tenant_id_defaults_to_current_single_tenant(monkeypatch):
+    monkeypatch.delenv("AUDIT_TENANT_ID", raising=False)
+    assert get_audit_tenant_id() == 116
+
+
+def test_v21_audit_tenant_id_rejects_invalid_values(monkeypatch):
+    monkeypatch.setenv("AUDIT_TENANT_ID", "not-a-number")
+    assert get_audit_tenant_id() == 116
+    monkeypatch.setenv("AUDIT_TENANT_ID", "0")
+    assert get_audit_tenant_id() == 116
+
+
+def test_v21_audit_tenant_id_accepts_positive_value(monkeypatch):
+    monkeypatch.setenv("AUDIT_TENANT_ID", "42")
+    assert get_audit_tenant_id() == 42
