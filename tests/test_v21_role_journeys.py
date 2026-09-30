@@ -32,10 +32,9 @@ def client(app):
     return app.test_client()
 
 
-def _login(app, username):
-    with app.test_request_context():
-        user = User.query.filter_by(username=username).one()
-        login_user(user)
+def _login(client, username):
+    response = client.post("/login", data={"username": username, "password": "pass"}, follow_redirects=False)
+    assert response.status_code == 302
 
 
 def test_health_check_is_available(client):
@@ -58,8 +57,8 @@ def test_health_check_is_available(client):
         ("admin_v21", "/v2/animations/", 200),
     ],
 )
-def test_v21_role_route_matrix(app, client, username, path, expected):
-    _login(app, username)
+def test_v21_role_route_matrix(client, username, path, expected):
+    _login(client, username)
     response = client.get(path)
     assert response.status_code == expected
 
