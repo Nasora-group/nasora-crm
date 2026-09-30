@@ -5,7 +5,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import or_
 
 from app.extensions import db
-from app.models import User
+from app.models import DIVISION_SUPPLIERS, User
 from app.models_clients import Client, ClientVisit
 from app.permissions import is_admin
 from app.utils import roles_required
@@ -16,22 +16,32 @@ v2_professionals_bp = Blueprint("v2_professionals", __name__, url_prefix="/v2/pr
 def _can_access(client):
     if is_admin():
         return True
-    return client.owner_id == current_user.id
+    owner = db.session.get(User, client.owner_id)
+    if not owner or owner.id != current_user.id:
+        return False
+    return (owner.project or "").strip().lower() == (current_user.project or "").strip().lower()
 
 
 @v2_professionals_bp.route("/")
 @login_required
-@roles_required("admin", "commercial")
+@roles_required("admin", "commercial", "animateur")
 def index():
     q = (request.args.get("q") or "").strip()
     zone = (request.args.get("zone") or "").strip()
     owner_id = request.args.get("owner_id", type=int)
+    division = (request.args.get("division") or "").strip().lower()
 
-    query = Client.query
+    query = Client.query.join(User, Client.owner_id == User.id)
     if not is_admin():
-        query = query.filter(Client.owner_id == current_user.id)
-    elif owner_id:
-        query = query.filter(Client.owner_id == owner_id)
+        query = query.filter(
+            Client.owner_id == current_user.id,
+            User.project == current_user.project,
+        )
+    else:
+        if owner_id:
+            query = query.filter(Client.owner_id == owner_id)
+        if division in DIVISION_SUPPLIERS:
+            query = query.filter(User.project == division)
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -46,7 +56,14 @@ def index():
         query = query.filter(Client.zone.ilike(zone))
     clients = query.order_by(Client.name.asc()).limit(200).all()
 
-    owners = User.query.filter_by(role="commercial").order_by(User.username.asc()).all() if is_admin() else []
+    owners = (
+        User.query
+        .filter(User.role.in_(("commercial", "animateur")))
+        .order_by(User.username.asc())
+        .all()
+        if is_admin()
+        else []
+    )
     zones = [
         row[0] for row in db.session.query(Client.zone)
         .filter(Client.zone.isnot(None), Client.zone != "")
@@ -60,6 +77,8 @@ def index():
         q=q,
         zone=zone,
         owner_id=owner_id,
+        division=division,
+        divisions=DIVISION_SUPPLIERS.keys(),
     )
 
 

@@ -6,7 +6,7 @@
   <form class="v2-filters" method="get">
     <label>Recherche<input name="q" value="{{ q }}" placeholder="Nom, structure, téléphone"></label>
     <label>Zone<select name="zone"><option value="">Toutes</option>{% for item in zones %}<option value="{{ item }}" {% if zone == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
-    {% if owners %}<label>Visiteur médical<select name="owner_id"><option value="">Tous</option>{% for owner in owners %}<option value="{{ owner.id }}" {% if owner_id == owner.id %}selected{% endif %}>{{ owner.username }}</option>{% endfor %}</select></label>{% endif %}
+    {% if owners %}<label>Responsable<select name="owner_id"><option value="">Tous</option>{% for owner in owners %}<option value="{{ owner.id }}" {% if owner_id == owner.id %}selected{% endif %}>{{ owner.username }}</option>{% endfor %}</select></label>{% endif %}{% if owners %}<label>Division<select name="division"><option value="">Toutes</option>{% for item in divisions %}<option value="{{ item }}" {% if division == item %}selected{% endif %}>{{ item|upper }}</option>{% endfor %}</select></label>{% endif %}
     <button type="submit">Rechercher</button>
   </form>
   <div class="v2-card">
