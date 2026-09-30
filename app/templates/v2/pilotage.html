@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Pilotage V2 | NASORA CRM{% endblock %}
+{% block content %}
+<section class="v2-page">
+  <div class="v2-header">
+    <div>
+      <span class="v2-kicker">NASORA CRM V2</span>
+      <h1>Pilotage global</h1>
+      <p>Une vue unique de l'activité terrain, du CA, des animations et des stocks.</p>
+    </div>
+    <span class="v2-status">V2 en développement</span>
+  </div>
+
+  <form class="v2-filters" method="get">
+    <label>Période début<input type="date" name="date_start" value="{{ date_start }}"></label>
+    <label>Période fin<input type="date" name="date_end" value="{{ date_end }}"></label>
+    <label>Division
+      <select name="division">
+        <option value="all" {% if selected_division == 'all' %}selected{% endif %}>Toutes</option>
+        {% for division in divisions %}
+        <option value="{{ division }}" {% if selected_division == division %}selected{% endif %}>{{ division|upper }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Utilisateur
+      <select name="user_id">
+        <option value="">Tous</option>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ user.username }} · {{ 'Animateur(trice)' if user.role == 'animateur' else 'Visiteur médical' }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Actualiser</button>
+  </form>
+
+  <div class="v2-kpi-grid">
+    <article><span>CA</span><strong>{{ "%.2f"|format(kpis.revenue) }}</strong><small>sur la période</small></article>
+    <article><span>Visites réelles</span><strong>{{ kpis.real_visits }}</strong><small>source CRM : Prospection</small></article>
+    <article><span>Prospections</span><strong>{{ kpis.prospections }}</strong><small>enregistrées</small></article>
+    <article><span>Professionnels</span><strong>{{ kpis.professionals }}</strong><small>identifiés</small></article>
+    <article><span>Planning</span><strong>{{ kpis.planned_slots }}</strong><small>créneaux renseignés</small></article>
+    <article><span>Animations</span><strong>{{ kpis.animation.sales_lines }}</strong><small>{{ kpis.animation.quantity }} produits · {{ "%.2f"|format(kpis.animation.revenue) }}</small></article>
+    <article><span>Ruptures</span><strong>{{ kpis.stock.ruptures }}</strong><small>{{ kpis.stock.faible }} stocks faibles</small></article>
+    <article><span>Relances</span><strong>{{ kpis.upcoming_followups }}</strong><small>prochains 7 jours</small></article>
+  </div>
+
+  <div class="v2-columns">
+    <section class="v2-card">
+      <h2>CA par division</h2>
+      {% for division, data in revenue_by_division.items() %}
+      <div class="v2-row"><b>{{ division|upper }}</b><strong>{{ "%.2f"|format(data.amount) }}</strong></div>
+      {% if data.suppliers %}
+      <ul>{% for slug, supplier in data.suppliers.items() %}<li>{{ supplier.label }} <span>{{ "%.2f"|format(supplier.amount) }}</span></li>{% endfor %}</ul>
+      {% endif %}
+      {% else %}<p>Aucune donnée.</p>{% endfor %}
+    </section>
+
+    <section class="v2-card">
+      <h2>Équipe</h2>
+      {% if performance %}
+      <table class="v2-table">
+        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Prospections</th></tr></thead>
+        <tbody>
+        {% for row in performance %}
+          <tr><td>{{ row.user.username }}</td><td>{{ 'Animateur(trice)' if row.user.role == 'animateur' else 'Visiteur médical' }}</td><td>{{ row.prospections }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<p>Aucun utilisateur.</p>{% endif %}
+    </section>
+  </div>
+</section>
+<style>
+.v2-page{padding:10px 0 40px}.v2-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}.v2-kicker{font-size:.76rem;font-weight:700;letter-spacing:.12em;opacity:.65}.v2-header h1{margin:5px 0}.v2-header p{margin:0;opacity:.72}.v2-status{padding:8px 12px;border:1px solid #cfe6d9;border-radius:999px;font-size:.78rem;font-weight:700}.v2-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:16px;margin-bottom:18px;border:1px solid #dce9e2;border-radius:14px;background:#fff}.v2-filters label{font-size:.78rem;font-weight:700}.v2-filters input,.v2-filters select{width:100%;margin-top:5px;padding:9px;border:1px solid #ccdcd4;border-radius:8px}.v2-filters button{align-self:end;padding:10px;border:0;border-radius:8px;font-weight:700;cursor:pointer}.v2-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.v2-kpi-grid article{padding:16px;border:1px solid #dce9e2;border-radius:14px;background:#fff}.v2-kpi-grid span,.v2-kpi-grid small{display:block;opacity:.68;font-size:.78rem}.v2-kpi-grid strong{display:block;font-size:1.55rem;margin:7px 0}.v2-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.v2-card{padding:18px;border:1px solid #dce9e2;border-radius:14px;background:#fff}.v2-card h2{font-size:1.05rem;margin:0 0 14px}.v2-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #edf2ef}.v2-card ul{list-style:none;padding:0;margin:0}.v2-card li{display:flex;justify-content:space-between;padding:7px 0;font-size:.9rem}.v2-table{width:100%;border-collapse:collapse}.v2-table th,.v2-table td{text-align:left;padding:9px;border-bottom:1px solid #edf2ef;font-size:.86rem}@media(max-width:900px){.v2-filters,.v2-kpi-grid,.v2-columns{grid-template-columns:1fr 1fr}}@media(max-width:600px){.v2-header{display:block}.v2-status{display:inline-block;margin-top:12px}.v2-filters,.v2-kpi-grid,.v2-columns{grid-template-columns:1fr}}
+</style>
+{% endblock %}
