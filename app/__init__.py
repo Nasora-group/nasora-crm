@@ -17,6 +17,8 @@ def create_app(config_object=None):
     if app.config.get("ENV") == "production" or os.environ.get("FLASK_ENV") == "production":
         if not os.environ.get("SECRET_KEY"):
             raise RuntimeError("SECRET_KEY manquant : définis la variable d'environnement SECRET_KEY avant de lancer l'application en production.")
+        if not os.environ.get("DATABASE_URL"):
+            raise RuntimeError("DATABASE_URL manquant : définis la variable d'environnement DATABASE_URL avant de lancer l'application en production.")
     _configure_logging(app)
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
     from app.models import User, AdminNotification
@@ -25,6 +27,16 @@ def create_app(config_object=None):
     def load_user(user_id):
         user = db.session.get(User, int(user_id))
         return user if user and user.is_active_account else None
+    @app.get("/health")
+    def health_check():
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SELECT 1"))
+            return {"status": "ok"}, 200
+        except Exception:
+            db.session.rollback()
+            return {"status": "error"}, 503
+
     _register_blueprints(app)
     from app.visit_objectives_readonly import install_readonly_objective_reader
     install_readonly_objective_reader()

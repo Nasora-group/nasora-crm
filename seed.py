@@ -36,8 +36,12 @@ def _generate_password():
 
 
 def create_initial_users(credentials_log):
-    admin_password = os.environ.get("SEED_ADMIN_PASSWORD") or _generate_password()
+    production = os.environ.get("FLASK_ENV", "").lower() == "production"
     if not User.query.filter_by(username="Anna Diallo").first():
+        admin_password = os.environ.get("SEED_ADMIN_PASSWORD")
+        if production and not admin_password:
+            raise RuntimeError("SEED_ADMIN_PASSWORD est requis en production pour créer le compte administrateur initial.")
+        admin_password = admin_password or _generate_password()
         db.session.add(User(
             username="Anna Diallo",
             password=generate_password_hash(admin_password, method="pbkdf2:sha256"),
@@ -72,6 +76,8 @@ def create_initial_users(credentials_log):
     for username, zone, project in commerciaux_nasmedic + commerciaux_nasderm:
         if User.query.filter_by(username=username).first():
             continue
+        if production and not default_password:
+            raise RuntimeError("SEED_DEFAULT_COMMERCIAL_PASSWORD est requis en production pour créer un nouveau compte Visiteur médical.")
         password = default_password or _generate_password()
         db.session.add(User(
             username=username,
@@ -167,11 +173,6 @@ if __name__ == "__main__":
             print(f"[seed] {len(credentials_log)} compte(s) créé(s).")
             print(f"[seed] Identifiants écrits dans : {CREDENTIALS_FILE}")
             print("[seed] Distribue-les puis SUPPRIME ce fichier du serveur.")
-            print("[seed] ---- IDENTIFIANTS (visibles ici dans les logs si tu n'as pas accès au Shell) ----")
-            for username, password in credentials_log:
-                print(f"[seed-credentials] {username} : {password}")
-            print("[seed] ---- FIN DES IDENTIFIANTS ----")
-            print("[seed] IMPORTANT : copie-les MAINTENANT, ils ne seront plus jamais réaffichés "
-                  "(les prochains déploiements ne recréent pas les comptes déjà existants).")
+            print("[seed] Les identifiants générés sont disponibles dans le fichier seed_credentials.txt.")
         else:
             print("[seed] Rien à faire : les comptes existent déjà.")
