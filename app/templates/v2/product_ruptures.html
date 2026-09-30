@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Ruptures V2 | NASORA CRM{% endblock %}
+{% block content %}
+<div class="container"><h1>Ruptures et stocks faibles V2</h1>
+<p>Division : <strong>{{ division|upper }}</strong></p>
+<div class="card" style="overflow:auto"><table class="table"><thead><tr><th>Laboratoire</th><th>Produit</th><th>Ruptures</th><th>Stock faible</th><th>Stock total</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.laboratory }}</td><td><strong>{{ r.product }}</strong></td><td>{{ r.ruptures }}</td><td>{{ r.low_stocks }}</td><td>{{ r.total_stock }}</td></tr>{% else %}<tr><td colspan="5">Aucune rupture ou stock faible détecté.</td></tr>{% endfor %}
+</tbody></table></div></div>{% endblock %}
