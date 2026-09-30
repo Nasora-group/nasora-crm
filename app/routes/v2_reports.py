@@ -10,10 +10,10 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import (
-    User, Prospection, ClientVisit, Planning, AnimationSale,
-    DIVISION_SUPPLIERS, SUPPLIERS, SalesObjective
+    User, Prospection, Planning, AnimationSale,
+    DIVISION_SUPPLIERS, SUPPLIERS
 )
-from app.models_clients import Client
+from app.models_clients import ClientVisit
 from app.models_stock import StockEntry
 from app.utils import roles_required
 
