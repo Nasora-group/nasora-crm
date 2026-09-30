@@ -1,5 +1,6 @@
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, redirect
 from flask_login import current_user
 from dotenv import load_dotenv
@@ -76,6 +77,14 @@ def create_app(config_object=None):
 def _configure_logging(app):
     level = logging.DEBUG if app.debug else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    audit_logger = logging.getLogger("nasora.audit")
+    audit_logger.setLevel(logging.INFO)
+    audit_logger.propagate = True
+    audit_path = os.path.join(app.instance_path, "audit.log")
+    if not any(getattr(handler, "baseFilename", None) == os.path.abspath(audit_path) for handler in audit_logger.handlers):
+        handler = RotatingFileHandler(audit_path, maxBytes=2 * 1024 * 1024, backupCount=3, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        audit_logger.addHandler(handler)
 
 def _register_blueprints(app):
     from app.routes.auth import auth_bp
@@ -106,8 +115,9 @@ def _register_blueprints(app):
     from app.routes.visit_targets import visit_targets_bp
     from app.routes.legal import legal_bp
     from app.routes.admin_notifications import admin_notifications_bp
+    from app.routes.audit_logs import audit_bp
     from app.routes.seo import seo_bp
-    app.register_blueprint(v2_dashboard_bp); app.register_blueprint(v2_professionals_bp); app.register_blueprint(v2_planning_bp); app.register_blueprint(v2_products_bp); app.register_blueprint(v2_animations_bp); app.register_blueprint(v2_performance_bp); app.register_blueprint(auth_bp); app.register_blueprint(admin_notifications_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
+    app.register_blueprint(v2_dashboard_bp); app.register_blueprint(v2_professionals_bp); app.register_blueprint(v2_planning_bp); app.register_blueprint(v2_products_bp); app.register_blueprint(v2_animations_bp); app.register_blueprint(v2_performance_bp); app.register_blueprint(auth_bp); app.register_blueprint(admin_notifications_bp); app.register_blueprint(audit_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
