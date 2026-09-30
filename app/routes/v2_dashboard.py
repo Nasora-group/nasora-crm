@@ -109,7 +109,11 @@ def _objective_kpi(division, start, end, revenue):
             continue
         try:
             month_start = date(objective.year, objective.month, 1)
-            if start <= month_start < end:
+            if month_start.month == 12:
+                month_end = date(objective.year + 1, 1, 1)
+            else:
+                month_end = date(objective.year, objective.month + 1, 1)
+            if month_start < end and month_end > start:
                 target += float(objective.target_amount or 0)
         except (TypeError, ValueError):
             continue
