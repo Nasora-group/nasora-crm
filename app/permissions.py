@@ -124,3 +124,22 @@ def require_division(division, user=None):
     if not division_matches(user or current_user, division):
         abort(403)
     return True
+
+
+def require_authenticated():
+    """Abort with 403 when the account is not active."""
+    if not account_is_active():
+        abort(403)
+    return True
+
+
+def require_same_division(record, division_field="project"):
+    """Enforce division isolation using the record's own division."""
+    if is_admin(current_user):
+        return True
+    if not account_is_active(current_user):
+        abort(403)
+    record_division = getattr(record, division_field, None)
+    if not division_matches(current_user, record_division):
+        abort(403)
+    return True
