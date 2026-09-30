@@ -216,7 +216,7 @@ def pilotage():
     prospection_query = Prospection.query.filter(
         Prospection.date >= start,
         Prospection.date < end,
-    ).join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
+    ).join(User, Prospection.commercial_id == User.id).filter(User.role.in_(("commercial", "animateur")))
     if division != "all":
         prospection_query = prospection_query.filter(User.project == division)
     if selected_user_id:
@@ -235,7 +235,7 @@ def pilotage():
         ClientVisit.date >= start,
         ClientVisit.date < end,
         ClientVisit.is_duplicate.is_(False),
-    ).join(User, ClientVisit.commercial_id == User.id).filter(User.role == "commercial")
+    ).join(User, ClientVisit.commercial_id == User.id).filter(User.role.in_(("commercial", "animateur")))
     if division != "all":
         visit_query = visit_query.filter(User.project == division)
     if selected_user_id:
