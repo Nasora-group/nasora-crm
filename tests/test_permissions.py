@@ -1,3 +1,4 @@
+import pytest
 from types import SimpleNamespace
 
 from app.permissions import account_is_active, division_matches, has_role, is_admin, is_commercial, owns_record
@@ -13,8 +14,8 @@ def user(user_id=1, role="commercial", project="nasmedic", active=True):
     )
 
 
-def record(owner_id):
-    return SimpleNamespace(commercial_id=owner_id)
+def record(owner_id, project="nasmedic"):
+    return SimpleNamespace(commercial_id=owner_id, project=project)
 
 
 def test_active_account_and_role_are_normalized():
@@ -69,3 +70,35 @@ def test_inactive_user_has_no_permissions():
     assert not account_is_active(u)
     assert not division_matches(u, "nasmedic")
     assert not owns_record(u, record(u.id))
+
+def test_admin_can_be_restricted_by_explicit_owner_flag():
+    admin = user(user_id=1, role="admin")
+    assert owns_record(admin, record(99), allow_admin=True)
+    assert not owns_record(admin, record(99), allow_admin=False)
+
+
+def test_require_authenticated_rejects_inactive_user(monkeypatch):
+    import app.permissions as permissions
+
+    monkeypatch.setattr(permissions, "current_user", user(active=False))
+    with pytest.raises(Exception) as exc_info:
+        permissions.require_authenticated()
+    assert getattr(exc_info.value, "code", None) == 403
+
+
+def test_require_same_division_rejects_cross_division(monkeypatch):
+    import app.permissions as permissions
+
+    field_user = user(role="commercial", project="nasmedic")
+    monkeypatch.setattr(permissions, "current_user", field_user)
+    permissions.require_same_division(record(7, project="nasmedic"))
+    with pytest.raises(Exception) as exc_info:
+        permissions.require_same_division(record(7, project="nasderm"))
+    assert getattr(exc_info.value, "code", None) == 403
+
+
+def test_require_same_division_allows_admin(monkeypatch):
+    import app.permissions as permissions
+
+    monkeypatch.setattr(permissions, "current_user", user(role="admin"))
+    assert permissions.require_same_division(record(99, project="nasderm"))
