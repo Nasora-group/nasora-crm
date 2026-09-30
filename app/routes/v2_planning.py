@@ -146,9 +146,12 @@ def index():
             )
             planned = _planned_slots(planning) if planning else []
             actual = _actual_by_date(user.id, cursor, week_end)
+            consumed = set()
             for item in planned:
                 matches = actual.get(item["date"], [])
-                matched = next((a for a in matches if _match(item, a)), None)
+                matched = next((a for a in matches if a["id"] not in consumed and _match(item, a)), None)
+                if matched:
+                    consumed.add(matched["id"])
                 item["user"] = user
                 item["realized"] = bool(matched)
                 item["actual"] = matched
