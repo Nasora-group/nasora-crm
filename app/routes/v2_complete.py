@@ -240,24 +240,44 @@ def planning_execution():
 @roles_required("admin", "commercial", "animateur")
 def opportunities():
     if request.method == "POST":
+        opportunity_id = request.form.get("opportunity_id", type=int)
         client_id = request.form.get("client_id", type=int)
         client = Client.query.get_or_404(client_id)
-        if not is_admin() and client.owner_id != current_user.id:
+        owner_id = client.owner_id or current_user.id
+        if not is_admin() and owner_id != current_user.id:
             return ("Forbidden", 403)
-        division = client.owner.project if client.owner else current_user.project
-        item = V2Opportunity(
-            client_id=client.id, owner_id=current_user.id if not is_admin() else (client.owner_id or current_user.id),
-            division=division, product_name=request.form.get("product_name") or None,
-            stage=request.form.get("stage") or "prospect",
-            interest_level=request.form.get("interest_level") or None,
-            potential_prescription=request.form.get("potential_prescription", 0, type=int) or 0,
-            obtained_prescription=request.form.get("obtained_prescription", 0, type=int) or 0,
-            next_followup=(date.fromisoformat(request.form["next_followup"]) if request.form.get("next_followup") else None),
-            notes=request.form.get("notes") or None,
-        )
-        db.session.add(item)
+        owner = User.query.get(owner_id)
+        division = owner.project if owner else current_user.project
+        stage = (request.form.get("stage") or "prospect").strip()
+        stages = {"prospect", "produit_presente", "interet", "prescription_potentielle", "prescription_obtenue", "suivi"}
+        if stage not in stages:
+            flash("Étape du pipeline invalide.", "danger")
+            return redirect(url_for("v2_complete.opportunities"))
+        potential = request.form.get("potential_prescription", 0, type=int) or 0
+        obtained = request.form.get("obtained_prescription", 0, type=int) or 0
+        if potential < 0 or obtained < 0:
+            flash("Les prescriptions doivent être positives.", "danger")
+            return redirect(url_for("v2_complete.opportunities"))
+        if stage == "prescription_obtenue" and obtained < 1:
+            obtained = max(potential, 1)
+        if opportunity_id:
+            item = V2Opportunity.query.get_or_404(opportunity_id)
+            if not is_admin() and item.owner_id != current_user.id:
+                return ("Forbidden", 403)
+            item.client_id = client.id
+            item.division = division
+        else:
+            item = V2Opportunity(client_id=client.id, owner_id=owner_id, division=division)
+            db.session.add(item)
+        item.product_name = (request.form.get("product_name") or "").strip() or None
+        item.stage = stage
+        item.interest_level = (request.form.get("interest_level") or "").strip() or None
+        item.potential_prescription = potential
+        item.obtained_prescription = obtained
+        item.next_followup = date.fromisoformat(request.form["next_followup"]) if request.form.get("next_followup") else None
+        item.notes = (request.form.get("notes") or "").strip() or None
         db.session.commit()
-        flash("Opportunité enregistrée.", "success")
+        flash("Opportunité mise à jour." if opportunity_id else "Opportunité enregistrée.", "success")
         return redirect(url_for("v2_complete.opportunities"))
     query = V2Opportunity.query.join(Client, V2Opportunity.client_id == Client.id)
     if not is_admin():
@@ -266,8 +286,6 @@ def opportunities():
     clients = Client.query.filter(Client.owner_id == current_user.id).order_by(Client.name).all() if not is_admin() else Client.query.order_by(Client.name).limit(500).all()
     return render_template("v2/opportunities.html", rows=rows, clients=clients,
         stages=("prospect", "produit_presente", "interet", "prescription_potentielle", "prescription_obtenue", "suivi"))
-
-
 @v2_complete_bp.route("/visites-geolocalisees")
 @login_required
 @roles_required("admin", "commercial", "animateur")
