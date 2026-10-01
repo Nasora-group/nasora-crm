@@ -28,7 +28,11 @@ def favicon():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("admin.dashboard") if current_user.role == "admin" else (url_for("v2_management.management") if current_user.role in {"direction","manager","superviseur"} else url_for("dashboard.index")))
+        if current_user.role == "admin":
+            return redirect(url_for("admin.dashboard"))
+        if current_user.role in {"direction", "manager", "superviseur"}:
+            return redirect(url_for("v2_management.management"))
+        return redirect(url_for("dashboard.index"))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -50,8 +54,11 @@ def login():
             session.permanent = True
             audit("login", target=username)
             logger.info("Connexion réussie pour %s", username)
-            if user.role in {"admin","direction","manager","superviseur"}:
-                return redirect(url_for("v2_complete.management"))
+
+            if user.role == "admin":
+                return redirect(url_for("admin.dashboard"))
+            if user.role in {"direction", "manager", "superviseur"}:
+                return redirect(url_for("v2_management.management"))
             return redirect(url_for("dashboard.index"))
 
         record_failure(username)
