@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+  <h1>Cockpit management V2.8</h1>
+  <p class="text-muted">Période : {{ month }} · Périmètre : {{ scope.level }}{% if scope.division %} · {{ scope.division|upper }}{% endif %}{% if scope.zone %} · {{ scope.zone }}{% endif %}</p>
+  <div class="row g-3 mb-4">
+    {% for label,value in [
+      ("Équipe",kpis.team),("Prospections",kpis.prospections),("Visites",kpis.visits),
+      ("Planning prévu",kpis.planned),("Planning réalisé",kpis.realized),
+      ("Taux d'exécution",kpis.execution_rate|string+"%"),("Animations",kpis.animations)
+    ] %}
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><small>{{ label }}</small><h3>{{ value }}</h3></div></div></div>
+    {% endfor %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Division</th><th>Zone</th><th>Prospections</th><th>Visites</th><th>Planning</th><th>Exécution</th></tr></thead>
+      <tbody>
+      {% for row in users %}
+        <tr>
+          <td>{{ row.user.username }}</td>
+          <td>{% if row.user.role == "commercial" %}Visiteur médical{% elif row.user.role == "animateur" %}Animateur(trice){% else %}{{ row.user.role|capitalize }}{% endif %}</td>
+          <td>{{ row.user.project|upper }}</td>
+          <td>{{ row.user.zone or "Non affectée" }}</td>
+          <td>{{ row.prospections }}</td>
+          <td>{{ row.visits }}</td>
+          <td>{{ row.realized }}/{{ row.planned }}</td>
+          <td>{{ row.execution_rate }}%</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">Aucun utilisateur terrain dans votre périmètre.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
