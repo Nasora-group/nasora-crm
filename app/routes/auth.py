@@ -28,7 +28,7 @@ def favicon():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("v2_complete.management") if current_user.role in {"admin","direction","manager","superviseur"} else url_for("dashboard.index"))
+        return redirect(url_for("v2_management.management") if current_user.role in {"admin","direction","manager","superviseur"} else url_for("dashboard.index"))
 
     form = LoginForm()
     if form.validate_on_submit():
