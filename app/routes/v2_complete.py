@@ -440,6 +440,7 @@ def product_performance():
 def multi_objectives():
     year = request.args.get("year", date.today().year, type=int)
     if request.method == "POST":
+        year = request.form.get("year", year, type=int)
         division = (request.form.get("division") or "").strip().lower()
         metric = (request.form.get("metric") or "").strip().lower()
         month_raw = (request.form.get("month") or "").strip()
