@@ -92,6 +92,9 @@ def _sync_client_fields(prospection, client, establishment=None):
             specialty=prospection.specialite.strip() or None,
             structure=prospection.structure.strip(),
             establishment=establishment,
+            zone=(prospection.zone or "").strip() or None,
+            region=(prospection.region or "").strip() or None,
+            address=(prospection.address or "").strip() or None,
             phone=phone if valid_phone else None,
             potential=3,
             owner_id=prospection.commercial_id,
@@ -105,6 +108,12 @@ def _sync_client_fields(prospection, client, establishment=None):
         client.structure = prospection.structure.strip() or client.structure
         if establishment:
             client.establishment = establishment
+        if prospection.zone:
+            client.zone = prospection.zone.strip()
+        if prospection.region:
+            client.region = prospection.region.strip()
+        if prospection.address:
+            client.address = prospection.address.strip()
         if valid_phone:
             client.phone = phone
         if client.owner_id is None:
