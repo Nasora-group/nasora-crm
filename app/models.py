@@ -3,7 +3,7 @@ from decimal import Decimal
 from flask_login import UserMixin
 from app.extensions import db
 
-DIVISIONS=("nasderm","nasmedic"); ROLES=("admin","direction","manager","superviseur","commercial","animateur"); WHOLESALERS=("duopharm","ubipharm","laborex","sodipharm")
+DIVISIONS=("nasderm","nasmedic"); ROLES=("admin","commercial","animateur"); WHOLESALERS=("duopharm","ubipharm","laborex","sodipharm")
 STRUCTURES=[("HOPITAL","HOPITAL"),("POSTE DE SANTE","POSTE DE SANTE"),("CENTRE DE SANTE","CENTRE DE SANTE"),("CLINIQUE","CLINIQUE"),("SAPEUR POMPIER","SAPEUR POMPIER"),("GENDARMERIE","GENDARMERIE"),("PHARMACIES","PHARMACIES"),("ENTREPRISE","ENTREPRISE"),("CABINET","CABINET"),("PLATEAU MEDICAL","PLATEAU MEDICAL")]
 STRUCTURE_SLUGS={value:value.replace(" ","_") for value,_ in STRUCTURES}; STRUCTURE_BY_SLUG={slug:value for value,slug in STRUCTURE_SLUGS.items()}; STRUCTURE_COLORS={"HOPITAL":"#4a6741","POSTE DE SANTE":"#8faf6d","CENTRE DE SANTE":"#2b6cb0","CLINIQUE":"#8e5fd1","SAPEUR POMPIER":"#c0392b","GENDARMERIE":"#5b6b5e","PHARMACIES":"#c98a2c","ENTREPRISE":"#3b82f6","CABINET":"#7c3aed","PLATEAU MEDICAL":"#0f766e"}
 JOURS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]; JOURS_LABELS={"lundi":"Lundi","mardi":"Mardi","mercredi":"Mercredi","jeudi":"Jeudi","vendredi":"Vendredi","samedi":"Samedi","dimanche":"Dimanche"}
