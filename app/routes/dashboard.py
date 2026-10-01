@@ -206,11 +206,14 @@ def _planning_context_for_date(visit_date):
     entries = [{"structure": structure, "name": name} for structure, name in decode_planning_slot(getattr(planning, day))]
     return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
 
-def _validate_location(zone, region):
+def _validate_location(zone, region, address=None, required=True):
     zone = (zone or "").strip()
     region = (region or "").strip()
+    address = (address or "").strip()
+    if required and (not zone or not region or not address):
+        return "La région, la zone et l'adresse précise sont obligatoires."
     if not zone or not region:
-        return "La région et la zone sont obligatoires."
+        return None
     if region == "DAKAR" and zone == "HORS DAKAR":
         return "Pour la région de Dakar, sélectionne une zone de Dakar."
     if region != "DAKAR" and zone != "HORS DAKAR":
@@ -245,7 +248,7 @@ def index():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form, form.date.data)
         planning_context = _planning_context_for_date(form.date.data)
-        location_error = _validate_location(form.zone.data, form.region.data)
+        location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=True)
         if location_error:
             flash(location_error, "error")
             return _render_dashboard(form, form.date.data)
@@ -358,7 +361,7 @@ def edit_prospection(prospection_id):
         form.address.data = prospection.address or (client.address if client else "") or ""
     if form.validate_on_submit():
         planning_context = _planning_context_for_date(form.date.data)
-        location_error = _validate_location(form.zone.data, form.region.data)
+        location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=False)
         if location_error:
             flash(location_error, "error")
             return render_template("edit_prospection.html", form=form, prospection=prospection, planning_context=planning_context)
