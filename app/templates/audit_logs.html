@@ -3,24 +3,23 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>Journal d'audit V2.1</h1>
-    <p>Traçabilité persistante des actions métier enregistrées dans PostgreSQL.</p>
+    <h1>Journal d'audit V2</h1>
+    <p>Traçabilité des actions métier réussies. Le journal est conservé dans les logs applicatifs, sans nouvelle table.</p>
   </div>
 </div>
 <div class="card">
   {% if records %}
   <div class="table-responsive">
     <table class="data-table">
-      <thead><tr><th>Date</th><th>Utilisateur</th><th>Rôle</th><th>Division</th><th>Action</th><th>Objet</th><th>Détails</th></tr></thead>
+      <thead><tr><th>Date</th><th>Utilisateur</th><th>Rôle</th><th>Action</th><th>Objet</th><th>Détails</th></tr></thead>
       <tbody>
       {% for row in records %}
         <tr>
-          <td>{{ row.created_at }}</td>
-          <td>{{ row.actor_user_id or 'Système' }}</td>
-          <td>{{ row.details.get('role', '-') if row.details else '-' }}</td>
-          <td>{{ row.details.get('division', '-') if row.details else '-' }}</td>
+          <td>{{ row.timestamp }}</td>
+          <td>{{ row.actor or 'Système' }}</td>
+          <td>{{ row.role or '-' }}</td>
           <td><strong>{{ row.action }}</strong></td>
-          <td>{{ row.entity_type or '-' }}{% if row.entity_id %} #{{ row.entity_id }}{% endif %}</td>
+          <td>{{ row.entity }}{% if row.entity_id %} #{{ row.entity_id }}{% endif %}</td>
           <td><code>{{ row.details | tojson }}</code></td>
         </tr>
       {% endfor %}
@@ -28,7 +27,7 @@
     </table>
   </div>
   {% else %}
-  <div class="empty-state">Aucun événement d'audit persistant n'est encore disponible.</div>
+  <div class="empty-state">Aucun événement d'audit local n'est encore disponible. Sur Render, les logs applicatifs restent la source principale du journal.</div>
   {% endif %}
 </div>
 {% endblock %}

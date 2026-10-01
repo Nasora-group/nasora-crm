@@ -27,7 +27,7 @@
   <div class="button-row">
     <a class="btn btn-primary" href="{{ url_for('v2_reports.export_sales', date_start=date_start, date_end=date_end, division=division) }}">Ventes CSV</a>
     <a class="btn btn-primary" href="{{ url_for('v2_reports.export_animations', date_start=date_start, date_end=date_end, division=division) }}">Animations CSV</a>
-    <a class="btn btn-primary" href="{{ url_for('v2_reports.export_activity', date_start=date_start, date_end=date_end, division=division) }}">Activité terrain CSV</a>
+    <a class="btn btn-primary" href="{{ url_for('v2_reports.export_activity', date_start=date_start, date_end=date_end) }}">Activité terrain CSV</a>
     <a class="btn btn-primary" href="{{ url_for('v2_reports.export_stocks', date_start=date_start, date_end=date_end) }}">Stocks CSV</a>
   </div>
 </div>

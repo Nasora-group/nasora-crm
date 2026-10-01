@@ -6,8 +6,7 @@ basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 def _normalize_db_url(url: str) -> str:
     """Render/Railway/Heroku fournissent parfois 'postgres://' alors que
-    SQLAlchemy 1.4+ exige 'postgresql://'.
-    """
+    SQLAlchemy 1.4+ exige 'postgresql://'."""
     if url and url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql://", 1)
     return url
@@ -27,12 +26,7 @@ class BaseConfig:
         "pool_pre_ping": True,
         "pool_recycle": 300,
     }
-
-    # SimpleCache reste le défaut sans infrastructure supplémentaire.
-    # Pour une montée à plusieurs instances Render, CACHE_REDIS_URL permet
-    # d'utiliser un cache partagé sans modifier le code métier.
-    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "").strip() or None
-    CACHE_TYPE = "RedisCache" if CACHE_REDIS_URL else "SimpleCache"
+    CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     WTF_CSRF_ENABLED = True
 
@@ -61,8 +55,6 @@ class ProductionConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
-    CACHE_REDIS_URL = None
-    CACHE_TYPE = "SimpleCache"
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "testing-key"
 

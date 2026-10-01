@@ -4,7 +4,6 @@ Flask-Login==0.6.3
 Flask-Migrate==4.0.7
 Flask-WTF==1.2.1
 Flask-Caching==2.3.0
-redis>=5.0,<7
 WTForms==3.1.2
 Werkzeug==3.0.3
 SQLAlchemy==2.0.35
@@ -16,4 +15,3 @@ XlsxWriter==3.2.0
 reportlab==4.2.5
 email-validator==2.2.0
 pytest==8.3.5
-python-docx==1.1.2

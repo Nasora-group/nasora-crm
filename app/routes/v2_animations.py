@@ -2,7 +2,6 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, send_file
-from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import AnimationSale, AnimationEvidence, User, DIVISION_SUPPLIERS, get_active_product_prices_for_division
@@ -22,24 +21,6 @@ def _parse_positive_int(value):
 def _parse_date(value):
     try: return date.fromisoformat(value)
     except (TypeError, ValueError): raise ValueError("La date de l'animation est invalide.")
-
-def _validate_image_upload(upload, data):
-    """Validate the real file signature instead of trusting browser MIME data."""
-    filename = secure_filename(upload.filename or "")
-    if not filename:
-        raise ValueError("Le nom du justificatif photo est invalide.")
-    if len(data) > 8 * 1024 * 1024:
-        raise ValueError("Le justificatif photo ne doit pas dépasser 8 Mo.")
-    if data.startswith(b"\xff\xd8\xff"):
-        detected = "image/jpeg"
-    elif data.startswith(b"\x89PNG\r\n\x1a\n"):
-        detected = "image/png"
-    elif len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        detected = "image/webp"
-    else:
-        raise ValueError("Le justificatif doit être une image JPEG, PNG ou WebP.")
-    return filename, detected
-
 
 def _visible_animateurs():
     query = User.query.filter_by(role="animateur", is_active_account=True).order_by(User.username)
@@ -79,8 +60,8 @@ def index():
             if upload and upload.filename:
                 data = upload.read()
                 if not data: raise ValueError("Le justificatif photo est vide.")
-                filename, detected_mime = _validate_image_upload(upload, data)
-                evidence = AnimationEvidence(animateur_id=current_user.id, pharmacy_name=pharmacy_name, animation_date=animation_date, project=division, filename=filename[:255], mime_type=detected_mime, file_data=data, file_size=len(data))
+                if len(data) > 8 * 1024 * 1024: raise ValueError("Le justificatif photo ne doit pas dépasser 8 Mo.")
+                evidence = AnimationEvidence(animateur_id=current_user.id, pharmacy_name=pharmacy_name, animation_date=animation_date, project=division, filename=upload.filename[:255], mime_type=(upload.mimetype or "application/octet-stream")[:100], file_data=data, file_size=len(data))
                 db.session.add(evidence); db.session.flush()
             for product_name, quantity, unit_price in lines:
                 db.session.add(AnimationSale(animateur_id=current_user.id, pharmacy_name=pharmacy_name, animation_date=animation_date, product_name=product_name, quantity=quantity, unit_price=unit_price, project=division, evidence_id=evidence.id if evidence else None))

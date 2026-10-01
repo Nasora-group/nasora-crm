@@ -15,10 +15,6 @@ from flask_login import current_user
 ADMIN_ROLE = "admin"
 COMMERCIAL_ROLE = "commercial"  # valeur technique historique = Visiteur médical
 ANIMATEUR_ROLE = "animateur"
-DIRECTION_ROLE = "direction"
-MANAGER_ROLE = "manager"
-SUPERVISEUR_ROLE = "superviseur"
-MANAGEMENT_ROLES = {DIRECTION_ROLE, MANAGER_ROLE, SUPERVISEUR_ROLE}
 
 
 def normalized_role(user=None):
@@ -35,31 +31,6 @@ def normalized_division(user=None):
 
 def is_admin(user=None):
     return normalized_role(user) == ADMIN_ROLE
-
-
-def is_manager(user=None):
-    return normalized_role(user) == MANAGER_ROLE
-
-
-def is_superviseur(user=None):
-    return normalized_role(user) == SUPERVISEUR_ROLE
-
-
-def can_manage_field_team(user=None):
-    return is_admin(user) or is_manager(user) or is_superviseur(user)
-
-
-def management_scope(user=None):
-    """Return the management scope enforced by the authenticated role."""
-    user = user or current_user
-    role = normalized_role(user)
-    if role in {ADMIN_ROLE, DIRECTION_ROLE}:
-        return {"level": "global", "division": None, "zone": None}
-    if role == MANAGER_ROLE:
-        return {"level": "division", "division": normalized_division(user), "zone": None}
-    if role == SUPERVISEUR_ROLE:
-        return {"level": "zone", "division": normalized_division(user), "zone": (getattr(user, "zone", "") or "").strip() or None}
-    return {"level": "self", "division": normalized_division(user), "zone": (getattr(user, "zone", "") or "").strip() or None}
 
 
 def is_commercial(user=None):

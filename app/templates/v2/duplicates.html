@@ -1,1 +1,0 @@
-{% extends "base.html" %}{% block content %}<div class="container-fluid"><h1>Base NASORA : doublons potentiels</h1>{% for r in rows %}<div class="card mb-2"><div class="card-body"><strong>{{r.name}}</strong> · {{r.phone or 'sans téléphone'}} · {{r.count}} fiches</div></div>{% else %}<p>Aucun doublon exact nom+téléphone détecté.</p>{% endfor %}</div>{% endblock %}
