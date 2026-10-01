@@ -34,7 +34,7 @@ def normalized_division(user=None):
 
 
 def is_admin(user=None):
-    return normalized_role(user) in {ADMIN_ROLE, DIRECTION_ROLE}
+    return normalized_role(user) == ADMIN_ROLE
 
 
 def is_manager(user=None):
