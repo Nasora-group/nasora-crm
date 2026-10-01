@@ -434,13 +434,61 @@ def product_performance():
     return render_template("v2/product_performance_complete.html", rows=rows)
 
 
-@v2_complete_bp.route("/objectifs-multi")
+@v2_complete_bp.route("/objectifs-multi", methods=["GET", "POST"])
 @login_required
 @roles_required("admin")
 def multi_objectives():
     year = request.args.get("year", date.today().year, type=int)
-    rows = V2Objective.query.filter_by(year=year).order_by(V2Objective.division, V2Objective.month, V2Objective.metric).all()
-    return render_template("v2/objectives_multi.html", rows=rows, year=year, users=User.query.filter(User.role.in_(("commercial","animateur"))).order_by(User.username).all())
+    if request.method == "POST":
+        division = (request.form.get("division") or "").strip().lower()
+        metric = (request.form.get("metric") or "").strip().lower()
+        month_raw = (request.form.get("month") or "").strip()
+        user_id = request.form.get("user_id", type=int)
+        target_raw = request.form.get("target_value", type=float)
+        if division not in DIVISION_SUPPLIERS:
+            flash("Division invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if metric not in {"ca", "visites", "prospections", "prescriptions", "animations"}:
+            flash("Indicateur invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        month = int(month_raw) if month_raw else None
+        if month is not None and not 1 <= month <= 12:
+            flash("Mois invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if target_raw is None or target_raw < 0:
+            flash("Objectif invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        user = User.query.get(user_id) if user_id else None
+        if user and user.role not in ("commercial", "animateur"):
+            flash("Utilisateur invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if user and user.project != division:
+            flash("La division de l'utilisateur ne correspond pas à l'objectif.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        existing = V2Objective.query.filter_by(
+            user_id=user.id if user else None,
+            division=division, year=year, month=month, metric=metric
+        ).first()
+        if existing:
+            existing.target_value = target_raw
+        else:
+            db.session.add(V2Objective(
+                user_id=user.id if user else None,
+                division=division, year=year, month=month, metric=metric,
+                target_value=target_raw
+            ))
+        db.session.commit()
+        flash("Objectif enregistré.", "success")
+        return redirect(url_for("v2_complete.multi_objectives", year=year))
+
+    rows = V2Objective.query.filter_by(year=year).order_by(
+        V2Objective.division, V2Objective.month, V2Objective.metric
+    ).all()
+    users = User.query.filter(
+        User.role.in_(("commercial", "animateur")),
+        User.is_active_account.is_(True)
+    ).order_by(User.project, User.username).all()
+    return render_template("v2/objectives_multi.html", rows=rows, year=year, users=users)
 
 
 def _report_rows(start, end, division):
