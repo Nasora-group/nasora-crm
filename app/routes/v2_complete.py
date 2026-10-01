@@ -278,7 +278,8 @@ def geo_visits():
     if not is_admin():
         query = query.filter(ClientVisit.commercial_id == current_user.id)
     rows = query.order_by(ClientVisit.date.desc()).limit(500).all()
-    return render_template("v2/geo_visits.html", rows=rows)
+    geos = {g.visit_id: g for g in V2VisitGeo.query.filter(V2VisitGeo.visit_id.in_([r.id for r in rows])).all()} if rows else {}
+    return render_template("v2/geo_visits.html", rows=rows, geos=geos)
 
 
 @v2_complete_bp.route("/visites/<int:visit_id>/geolocalisation", methods=["POST"])
