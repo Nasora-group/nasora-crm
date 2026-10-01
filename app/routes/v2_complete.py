@@ -240,24 +240,44 @@ def planning_execution():
 @roles_required("admin", "commercial", "animateur")
 def opportunities():
     if request.method == "POST":
+        opportunity_id = request.form.get("opportunity_id", type=int)
         client_id = request.form.get("client_id", type=int)
         client = Client.query.get_or_404(client_id)
-        if not is_admin() and client.owner_id != current_user.id:
+        owner_id = client.owner_id or current_user.id
+        if not is_admin() and owner_id != current_user.id:
             return ("Forbidden", 403)
-        division = client.owner.project if client.owner else current_user.project
-        item = V2Opportunity(
-            client_id=client.id, owner_id=current_user.id if not is_admin() else (client.owner_id or current_user.id),
-            division=division, product_name=request.form.get("product_name") or None,
-            stage=request.form.get("stage") or "prospect",
-            interest_level=request.form.get("interest_level") or None,
-            potential_prescription=request.form.get("potential_prescription", 0, type=int) or 0,
-            obtained_prescription=request.form.get("obtained_prescription", 0, type=int) or 0,
-            next_followup=(date.fromisoformat(request.form["next_followup"]) if request.form.get("next_followup") else None),
-            notes=request.form.get("notes") or None,
-        )
-        db.session.add(item)
+        owner = User.query.get(owner_id)
+        division = owner.project if owner else current_user.project
+        stage = (request.form.get("stage") or "prospect").strip()
+        stages = {"prospect", "produit_presente", "interet", "prescription_potentielle", "prescription_obtenue", "suivi"}
+        if stage not in stages:
+            flash("Étape du pipeline invalide.", "danger")
+            return redirect(url_for("v2_complete.opportunities"))
+        potential = request.form.get("potential_prescription", 0, type=int) or 0
+        obtained = request.form.get("obtained_prescription", 0, type=int) or 0
+        if potential < 0 or obtained < 0:
+            flash("Les prescriptions doivent être positives.", "danger")
+            return redirect(url_for("v2_complete.opportunities"))
+        if stage == "prescription_obtenue" and obtained < 1:
+            obtained = max(potential, 1)
+        if opportunity_id:
+            item = V2Opportunity.query.get_or_404(opportunity_id)
+            if not is_admin() and item.owner_id != current_user.id:
+                return ("Forbidden", 403)
+            item.client_id = client.id
+            item.division = division
+        else:
+            item = V2Opportunity(client_id=client.id, owner_id=owner_id, division=division)
+            db.session.add(item)
+        item.product_name = (request.form.get("product_name") or "").strip() or None
+        item.stage = stage
+        item.interest_level = (request.form.get("interest_level") or "").strip() or None
+        item.potential_prescription = potential
+        item.obtained_prescription = obtained
+        item.next_followup = date.fromisoformat(request.form["next_followup"]) if request.form.get("next_followup") else None
+        item.notes = (request.form.get("notes") or "").strip() or None
         db.session.commit()
-        flash("Opportunité enregistrée.", "success")
+        flash("Opportunité mise à jour." if opportunity_id else "Opportunité enregistrée.", "success")
         return redirect(url_for("v2_complete.opportunities"))
     query = V2Opportunity.query.join(Client, V2Opportunity.client_id == Client.id)
     if not is_admin():
@@ -266,8 +286,6 @@ def opportunities():
     clients = Client.query.filter(Client.owner_id == current_user.id).order_by(Client.name).all() if not is_admin() else Client.query.order_by(Client.name).limit(500).all()
     return render_template("v2/opportunities.html", rows=rows, clients=clients,
         stages=("prospect", "produit_presente", "interet", "prescription_potentielle", "prescription_obtenue", "suivi"))
-
-
 @v2_complete_bp.route("/visites-geolocalisees")
 @login_required
 @roles_required("admin", "commercial", "animateur")
@@ -434,13 +452,62 @@ def product_performance():
     return render_template("v2/product_performance_complete.html", rows=rows)
 
 
-@v2_complete_bp.route("/objectifs-multi")
+@v2_complete_bp.route("/objectifs-multi", methods=["GET", "POST"])
 @login_required
 @roles_required("admin")
 def multi_objectives():
     year = request.args.get("year", date.today().year, type=int)
-    rows = V2Objective.query.filter_by(year=year).order_by(V2Objective.division, V2Objective.month, V2Objective.metric).all()
-    return render_template("v2/objectives_multi.html", rows=rows, year=year, users=User.query.filter(User.role.in_(("commercial","animateur"))).order_by(User.username).all())
+    if request.method == "POST":
+        year = request.form.get("year", year, type=int)
+        division = (request.form.get("division") or "").strip().lower()
+        metric = (request.form.get("metric") or "").strip().lower()
+        month_raw = (request.form.get("month") or "").strip()
+        user_id = request.form.get("user_id", type=int)
+        target_raw = request.form.get("target_value", type=float)
+        if division not in DIVISION_SUPPLIERS:
+            flash("Division invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if metric not in {"ca", "visites", "prospections", "prescriptions", "animations"}:
+            flash("Indicateur invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        month = int(month_raw) if month_raw else None
+        if month is not None and not 1 <= month <= 12:
+            flash("Mois invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if target_raw is None or target_raw < 0:
+            flash("Objectif invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        user = User.query.get(user_id) if user_id else None
+        if user and user.role not in ("commercial", "animateur"):
+            flash("Utilisateur invalide.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        if user and user.project != division:
+            flash("La division de l'utilisateur ne correspond pas à l'objectif.", "danger")
+            return redirect(url_for("v2_complete.multi_objectives", year=year))
+        existing = V2Objective.query.filter_by(
+            user_id=user.id if user else None,
+            division=division, year=year, month=month, metric=metric
+        ).first()
+        if existing:
+            existing.target_value = target_raw
+        else:
+            db.session.add(V2Objective(
+                user_id=user.id if user else None,
+                division=division, year=year, month=month, metric=metric,
+                target_value=target_raw
+            ))
+        db.session.commit()
+        flash("Objectif enregistré.", "success")
+        return redirect(url_for("v2_complete.multi_objectives", year=year))
+
+    rows = V2Objective.query.filter_by(year=year).order_by(
+        V2Objective.division, V2Objective.month, V2Objective.metric
+    ).all()
+    users = User.query.filter(
+        User.role.in_(("commercial", "animateur")),
+        User.is_active_account.is_(True)
+    ).order_by(User.project, User.username).all()
+    return render_template("v2/objectives_multi.html", rows=rows, year=year, users=users)
 
 
 def _report_rows(start, end, division):
