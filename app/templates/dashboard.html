@@ -39,7 +39,7 @@
 {% endif %}
 </select>{% for error in form.structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 
-<div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input", placeholder="Ex. Hôpital Principal, Pharmacie X, Clinique Y") }}{% if planning_context and planning_context.planning %}readonly{% endif %}<small class="form-help">Nom exact de l'établissement prévu au planning.</small>{% for error in form.nom_structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
+<div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input", placeholder="Ex. Hôpital Principal, Pharmacie X, Clinique Y") }}<small class="form-help">Nom exact de l'établissement prévu au planning.</small>{% for error in form.nom_structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 
 <div class="location-grid">
   <div class="form-group">{{ form.region.label(class="form-label") }}{{ form.region(class="form-input", id="prospection-region") }}<small class="form-help">Les 14 régions administratives du Sénégal.</small>{% for error in form.region.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
