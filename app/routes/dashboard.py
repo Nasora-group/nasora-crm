@@ -2,7 +2,7 @@ import logging
 import re
 import unicodedata
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
@@ -10,11 +10,12 @@ from sqlalchemy import bindparam, func, text
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, User, get_active_products_for_division, STRUCTURES
+from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 from app.visit_metrics import professional_key
+from app.utils import decode_planning_slot
 from app.services.admin_notifications import notify_admins
 from app.services.audit import audit_event
 
@@ -183,10 +184,36 @@ def _delete_linked_records_for_prospection(prospection):
         db.session.delete(visit)
 
 
-def _render_dashboard(form):
+def _planning_context_for_date(visit_date):
+    """Retourne le planning exact du jour et ses établissements planifiés."""
+    if not visit_date or visit_date.weekday() >= 5:
+        return {"planning": None, "day": None, "day_label": None, "entries": []}
+    monday = visit_date - timedelta(days=visit_date.weekday())
+    planning = Planning.query.filter_by(commercial_id=current_user.id, date=monday).first()
+    if planning is None:
+        return {"planning": None, "day": None, "day_label": None, "entries": []}
+    day = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")[visit_date.weekday()]
+    labels = {"lundi":"Lundi", "mardi":"Mardi", "mercredi":"Mercredi", "jeudi":"Jeudi", "vendredi":"Vendredi"}
+    entries = [{"structure": structure, "name": name} for structure, name in decode_planning_slot(getattr(planning, day))]
+    return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
+
+def _validate_location(zone, region):
+    zone = (zone or "").strip()
+    region = (region or "").strip()
+    if not zone or not region:
+        return "La région et la zone sont obligatoires."
+    if region == "DAKAR" and zone == "HORS DAKAR":
+        return "Pour la région de Dakar, sélectionne une zone de Dakar."
+    if region != "DAKAR" and zone != "HORS DAKAR":
+        return "Pour une autre région du Sénégal, la zone doit être HORS DAKAR."
+    return None
+
+def _render_dashboard(form, selected_date=None):
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
-    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
+    visit_date = selected_date or form.date.data or date.today()
+    planning_context = _planning_context_for_date(visit_date)
+    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis, planning_context=planning_context)
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
@@ -196,12 +223,32 @@ def index():
     form = ProspectionForm()
     _set_structure_choices(form)
     _set_product_choices(form, current_user.project)
+    if not form.is_submitted():
+        requested_date = request.args.get("date", "").strip()
+        try:
+            form.date.data = date.fromisoformat(requested_date) if requested_date else date.today()
+        except ValueError:
+            form.date.data = date.today()
     if form.is_submitted():
         _set_structure_choices(form)
         _set_product_choices(form, current_user.project)
         if not form.validate():
             flash("Veuillez corriger les champs indiqués.", "error")
-            return _render_dashboard(form)
+            return _render_dashboard(form, form.date.data)
+        planning_context = _planning_context_for_date(form.date.data)
+        location_error = _validate_location(form.zone.data, form.region.data)
+        if location_error:
+            flash(location_error, "error")
+            return _render_dashboard(form, form.date.data)
+        if planning_context["planning"] is not None:
+            exact_match = any(
+                _normalize_text(entry["structure"]) == _normalize_text(form.structure.data)
+                and _normalize_text(entry["name"]) == _normalize_text(form.nom_structure.data)
+                for entry in planning_context["entries"]
+            )
+            if not exact_match:
+                flash("Cette structure n'est pas prévue dans le planning de cette journée. Sélectionne une structure planifiée.", "error")
+                return _render_dashboard(form, form.date.data)
         try:
             prospection = Prospection(
                 commercial_id=current_user.id,
@@ -210,6 +257,11 @@ def index():
                 specialite=form.specialite.data.strip(),
                 structure=form.structure.data.strip(),
                 telephone=form.telephone.data.strip(),
+                zone=form.zone.data.strip(),
+                region=form.region.data.strip(),
+                address=form.address.data.strip(),
+                planning_id=planning_context["planning"].id if planning_context["planning"] else None,
+                planning_day=planning_context["day"],
                 profils_prospect=(form.profils_prospect.data or "").strip(),
                 produits_presentes=", ".join(form.produits_presentes.data or []),
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
@@ -240,8 +292,8 @@ def index():
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
             flash("Impossible d'enregistrer la prospection. Aucun changement n'a été appliqué.", "error")
-            return _render_dashboard(form)
-    return _render_dashboard(form)
+            return _render_dashboard(form, form.date.data)
+    return _render_dashboard(form, form.date.data)
 
 
 @dashboard_bp.route("/dashboard/prospections", methods=["GET"])
