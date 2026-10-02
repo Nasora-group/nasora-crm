@@ -25,14 +25,6 @@
         <div class="form-group">{{ form.date.label(class="form-label") }}{{ form.date(class="form-input") }}</div>
         <div class="form-group">{{ form.structure.label(class="form-label") }}{{ form.structure(class="form-input") }}</div>
         <div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input", placeholder="Ex. Hôpital Principal, Pharmacie X, Clinique Y") }}</div>
-{% if planning_context and planning_context.planning %}
-<div class="planning-edit-panel"><strong>Planning du {{ planning_context.day_label }}</strong><span>Structure attendue : {% for entry in planning_context.entries %}{{ entry.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span></div>
-{% endif %}
-<div class="location-grid">
-  <div class="form-group">{{ form.region.label(class="form-label") }}{{ form.region(class="form-input", id="prospection-region") }}</div>
-  <div class="form-group">{{ form.zone.label(class="form-label") }}{{ form.zone(class="form-input", id="prospection-zone") }}</div>
-</div>
-<div class="form-group">{{ form.address.label(class="form-label") }}{{ form.address(class="form-input", placeholder="Adresse précise") }}</div>
         <div class="form-group">{{ form.nom_client.label(class="form-label") }}{{ form.nom_client(class="form-input") }}</div>
         <div class="form-group">{{ form.specialite.label(class="form-label") }}{{ form.specialite(class="form-input") }}</div>
         <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel") }}</div>
@@ -48,8 +40,8 @@
     </form>
 </div>
 
-<style>.planning-edit-panel{padding:12px;margin-bottom:14px;border-radius:10px;background:#eef7f1;border:1px solid rgba(34,139,94,.2)}.planning-edit-panel span{display:block;margin-top:4px;font-size:.85rem}.location-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.location-grid{grid-template-columns:1fr}}.prospection-comments{width:100%;min-height:220px;line-height:1.55;padding:14px;resize:vertical;box-sizing:border-box}.prospection-comments-group{margin-top:4px}.form-help{display:block;margin-top:6px;font-size:.78rem;opacity:.7}</style>
+<style>.prospection-comments{width:100%;min-height:220px;line-height:1.55;padding:14px;resize:vertical;box-sizing:border-box}.prospection-comments-group{margin-top:4px}.form-help{display:block;margin-top:6px;font-size:.78rem;opacity:.7}</style>
 <script>
-$(document).ready(function() { $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' }); const region=document.getElementById('prospection-region'), zone=document.getElementById('prospection-zone'); function syncZone(){if(region&&zone&&region.value!=='DAKAR'){zone.value='HORS DAKAR';zone.disabled=true;}else if(zone){zone.disabled=false;}} if(region){region.addEventListener('change',syncZone);syncZone();} });
+$(document).ready(function() { $('.select2-products').select2({ placeholder: 'Choisir un ou plusieurs produits', width: '100%' }); });
 </script>
 {% endblock %}
