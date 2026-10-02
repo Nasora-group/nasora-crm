@@ -360,13 +360,15 @@ def edit_prospection(prospection_id):
         form.zone.data = prospection.zone or (client.zone if client else "") or "HORS DAKAR"
         form.region.data = prospection.region or (client.region if client else "") or "DAKAR"
         form.address.data = prospection.address or (client.address if client else "") or ""
+        form.hors_planning.data = prospection.planning_id is None
     if form.validate_on_submit():
         planning_context = _planning_context_for_date(form.date.data)
         location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=False)
         if location_error:
             flash(location_error, "error")
             return render_template("edit_prospection.html", form=form, prospection=prospection, planning_context=planning_context)
-        if planning_context["planning"] is not None:
+        is_hors_planning = bool(form.hors_planning.data)
+        if planning_context["planning"] is not None and not is_hors_planning:
             exact_match = any(
                 _normalize_text(entry["structure"]) == _normalize_text(form.structure.data)
                 and _normalize_text(entry["name"]) == _normalize_text(form.nom_structure.data)
@@ -388,8 +390,8 @@ def edit_prospection(prospection_id):
             prospection.zone = form.zone.data.strip()
             prospection.region = form.region.data.strip()
             prospection.address = form.address.data.strip()
-            prospection.planning_id = planning_context["planning"].id if planning_context["planning"] else None
-            prospection.planning_day = planning_context["day"]
+            prospection.planning_id = None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)
+            prospection.planning_day = None if is_hors_planning else planning_context["day"]
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
