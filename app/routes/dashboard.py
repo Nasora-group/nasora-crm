@@ -2,7 +2,7 @@ import logging
 import re
 import unicodedata
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
@@ -10,11 +10,12 @@ from sqlalchemy import bindparam, func, text
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, User, get_active_products_for_division, STRUCTURES
+from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
 from app.visit_metrics import professional_key
+from app.utils import decode_planning_slot
 from app.services.admin_notifications import notify_admins
 from app.services.audit import audit_event
 
@@ -91,6 +92,9 @@ def _sync_client_fields(prospection, client, establishment=None):
             specialty=prospection.specialite.strip() or None,
             structure=prospection.structure.strip(),
             establishment=establishment,
+            zone=(prospection.zone or "").strip() or None,
+            region=(prospection.region or "").strip() or None,
+            address=(prospection.address or "").strip() or None,
             phone=phone if valid_phone else None,
             potential=3,
             owner_id=prospection.commercial_id,
@@ -104,6 +108,12 @@ def _sync_client_fields(prospection, client, establishment=None):
         client.structure = prospection.structure.strip() or client.structure
         if establishment:
             client.establishment = establishment
+        if prospection.zone:
+            client.zone = prospection.zone.strip()
+        if prospection.region:
+            client.region = prospection.region.strip()
+        if prospection.address:
+            client.address = prospection.address.strip()
         if valid_phone:
             client.phone = phone
         if client.owner_id is None:
@@ -183,10 +193,39 @@ def _delete_linked_records_for_prospection(prospection):
         db.session.delete(visit)
 
 
-def _render_dashboard(form):
+def _planning_context_for_date(visit_date):
+    """Retourne le planning exact du jour et ses établissements planifiés."""
+    if not visit_date or visit_date.weekday() >= 5:
+        return {"planning": None, "day": None, "day_label": None, "entries": []}
+    monday = visit_date - timedelta(days=visit_date.weekday())
+    planning = Planning.query.filter_by(commercial_id=current_user.id, date=monday).first()
+    if planning is None:
+        return {"planning": None, "day": None, "day_label": None, "entries": []}
+    day = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")[visit_date.weekday()]
+    labels = {"lundi":"Lundi", "mardi":"Mardi", "mercredi":"Mercredi", "jeudi":"Jeudi", "vendredi":"Vendredi"}
+    entries = [{"structure": structure, "name": name} for structure, name in decode_planning_slot(getattr(planning, day))]
+    return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
+
+def _validate_location(zone, region, address=None, required=True):
+    zone = (zone or "").strip()
+    region = (region or "").strip()
+    address = (address or "").strip()
+    if required and (not zone or not region or not address):
+        return "La région, la zone et l'adresse précise sont obligatoires."
+    if not zone or not region:
+        return None
+    if region == "DAKAR" and zone == "HORS DAKAR":
+        return "Pour la région de Dakar, sélectionne une zone de Dakar."
+    if region != "DAKAR" and zone != "HORS DAKAR":
+        return "Pour une autre région du Sénégal, la zone doit être HORS DAKAR."
+    return None
+
+def _render_dashboard(form, selected_date=None):
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
-    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis)
+    visit_date = selected_date or form.date.data or date.today()
+    planning_context = _planning_context_for_date(visit_date)
+    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis, planning_context=planning_context)
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
@@ -196,12 +235,33 @@ def index():
     form = ProspectionForm()
     _set_structure_choices(form)
     _set_product_choices(form, current_user.project)
+    if not form.is_submitted():
+        requested_date = request.args.get("date", "").strip()
+        try:
+            form.date.data = date.fromisoformat(requested_date) if requested_date else date.today()
+        except ValueError:
+            form.date.data = date.today()
     if form.is_submitted():
         _set_structure_choices(form)
         _set_product_choices(form, current_user.project)
         if not form.validate():
             flash("Veuillez corriger les champs indiqués.", "error")
-            return _render_dashboard(form)
+            return _render_dashboard(form, form.date.data)
+        planning_context = _planning_context_for_date(form.date.data)
+        location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=True)
+        if location_error:
+            flash(location_error, "error")
+            return _render_dashboard(form, form.date.data)
+        is_hors_planning = bool(form.hors_planning.data)
+        if planning_context["planning"] is not None and not is_hors_planning:
+            exact_match = any(
+                _normalize_text(entry["structure"]) == _normalize_text(form.structure.data)
+                and _normalize_text(entry["name"]) == _normalize_text(form.nom_structure.data)
+                for entry in planning_context["entries"]
+            )
+            if not exact_match:
+                flash("Cette structure n'est pas prévue dans le planning de cette journée. Sélectionne une structure planifiée ou active « Prospection hors planning ».", "error")
+                return _render_dashboard(form, form.date.data)
         try:
             prospection = Prospection(
                 commercial_id=current_user.id,
@@ -210,6 +270,11 @@ def index():
                 specialite=form.specialite.data.strip(),
                 structure=form.structure.data.strip(),
                 telephone=form.telephone.data.strip(),
+                zone=form.zone.data.strip(),
+                region=form.region.data.strip(),
+                address=form.address.data.strip(),
+                planning_id=(None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)),
+                planning_day=(None if is_hors_planning else planning_context["day"]),
                 profils_prospect=(form.profils_prospect.data or "").strip(),
                 produits_presentes=", ".join(form.produits_presentes.data or []),
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
@@ -240,8 +305,8 @@ def index():
             db.session.rollback()
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
             flash("Impossible d'enregistrer la prospection. Aucun changement n'a été appliqué.", "error")
-            return _render_dashboard(form)
-    return _render_dashboard(form)
+            return _render_dashboard(form, form.date.data)
+    return _render_dashboard(form, form.date.data)
 
 
 @dashboard_bp.route("/dashboard/prospections", methods=["GET"])
@@ -292,7 +357,26 @@ def edit_prospection(prospection_id):
         form.produits_prescrits.data = existing_prescrits
         client = _find_client_for_prospection(prospection)
         form.nom_structure.data = (prospection.establishment or (client.establishment if client else "")) or ""
+        form.zone.data = prospection.zone or (client.zone if client else "") or "HORS DAKAR"
+        form.region.data = prospection.region or (client.region if client else "") or "DAKAR"
+        form.address.data = prospection.address or (client.address if client else "") or ""
+        form.hors_planning.data = prospection.planning_id is None
     if form.validate_on_submit():
+        planning_context = _planning_context_for_date(form.date.data)
+        location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=False)
+        if location_error:
+            flash(location_error, "error")
+            return render_template("edit_prospection.html", form=form, prospection=prospection, planning_context=planning_context)
+        is_hors_planning = bool(form.hors_planning.data)
+        if planning_context["planning"] is not None and not is_hors_planning:
+            exact_match = any(
+                _normalize_text(entry["structure"]) == _normalize_text(form.structure.data)
+                and _normalize_text(entry["name"]) == _normalize_text(form.nom_structure.data)
+                for entry in planning_context["entries"]
+            )
+            if not exact_match:
+                flash("Cette structure n'est pas prévue dans le planning de cette journée.", "error")
+                return render_template("edit_prospection.html", form=form, prospection=prospection, planning_context=planning_context)
         try:
             linked_visit = ClientVisit.query.filter_by(prospection_id=prospection.id, is_duplicate=False).first()
             previous_client = linked_visit.client if linked_visit is not None else _find_client_for_prospection(prospection)
@@ -303,6 +387,11 @@ def edit_prospection(prospection_id):
             prospection.structure = form.structure.data.strip()
             prospection.establishment = form.nom_structure.data.strip()
             prospection.telephone = form.telephone.data.strip()
+            prospection.zone = form.zone.data.strip()
+            prospection.region = form.region.data.strip()
+            prospection.address = form.address.data.strip()
+            prospection.planning_id = None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)
+            prospection.planning_day = None if is_hors_planning else planning_context["day"]
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
@@ -315,7 +404,7 @@ def edit_prospection(prospection_id):
             db.session.rollback()
             logger.exception("Erreur lors de la modification de la prospection #%s", prospection_id)
             flash("Erreur lors de la mise à jour.", "error")
-    return render_template("edit_prospection.html", form=form, prospection=prospection)
+    return render_template("edit_prospection.html", form=form, prospection=prospection, planning_context=_planning_context_for_date(prospection.date))
 
 
 @dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/supprimer", methods=["POST"])
