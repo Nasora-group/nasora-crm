@@ -44,11 +44,12 @@
   <div class="table-responsive prospection-table-wrap">
     <table class="data-table responsive-table prospection-table" id="prospection-table" aria-label="Liste détaillée des prospections">
       <colgroup>
-        <col class="col-date"><col class="col-professionnel"><col class="col-specialite"><col class="col-structure"><col class="col-etablissement"><col class="col-region"><col class="col-zone"><col class="col-address"><col class="col-telephone"><col class="col-commentaires"><col class="col-produits"><col class="col-prescrits"><col class="col-actions">
+        <col class="col-date"><col class="col-origine"><col class="col-professionnel"><col class="col-specialite"><col class="col-structure"><col class="col-etablissement"><col class="col-region"><col class="col-zone"><col class="col-address"><col class="col-telephone"><col class="col-commentaires"><col class="col-produits"><col class="col-prescrits"><col class="col-actions">
       </colgroup>
       <thead>
         <tr>
           <th>Date</th>
+          <th>Origine</th>
           <th>Professionnel</th>
           <th>Spécialité</th>
           <th>Structure</th>
@@ -65,8 +66,9 @@
       </thead>
       <tbody>
       {% for p in prospections %}
-        <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.profils_prospect, p.produits_presentes, p.produits_prescrits]|join(' ')|lower }}">
+        <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.profils_prospect, p.produits_presentes, p.produits_prescrits, p.region, p.zone, p.address]|join(' ')|lower }}">
           <td class="date-cell"><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
+          <td>{% if p.planning_id %}<strong>PLANIFIÉ</strong>{% else %}<strong>HORS PLANNING</strong>{% endif %}</td>
           <td class="primary-cell">{{ p.nom_client or '—' }}</td>
           <td>{{ p.specialite or '—' }}</td>
           <td>{{ p.structure or '—' }}</td>
@@ -116,7 +118,7 @@
 .prospection-table th{font-size:11px;line-height:1.25;white-space:normal}
 .prospection-table td{font-size:12px;line-height:1.4}
 .prospection-table tbody tr:hover{background:rgba(22,163,74,.025)}
-.prospection-table .col-date{width:90px}.prospection-table .col-professionnel{width:115px}.prospection-table .col-specialite{width:105px}.prospection-table .col-structure{width:95px}.prospection-table .col-etablissement{width:125px}.prospection-table .col-region{width:105px}.prospection-table .col-zone{width:125px}.prospection-table .col-address{width:190px}.prospection-table .col-telephone{width:105px}.prospection-table .col-commentaires{width:210px}.prospection-table .col-produits{width:170px}.prospection-table .col-prescrits{width:150px}.prospection-table .col-actions{width:145px}
+.prospection-table .col-date{width:90px}.prospection-table .col-origine{width:115px}.prospection-table .col-professionnel{width:115px}.prospection-table .col-specialite{width:105px}.prospection-table .col-structure{width:95px}.prospection-table .col-etablissement{width:125px}.prospection-table .col-region{width:105px}.prospection-table .col-zone{width:125px}.prospection-table .col-address{width:190px}.prospection-table .col-telephone{width:105px}.prospection-table .col-commentaires{width:210px}.prospection-table .col-produits{width:170px}.prospection-table .col-prescrits{width:150px}.prospection-table .col-actions{width:145px}
 .prospection-table .primary-cell{font-weight:600}
 .prospection-table .date-cell{white-space:nowrap}
 .prospection-table .nowrap{white-space:nowrap}
