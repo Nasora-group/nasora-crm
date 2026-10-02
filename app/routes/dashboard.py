@@ -252,14 +252,15 @@ def index():
         if location_error:
             flash(location_error, "error")
             return _render_dashboard(form, form.date.data)
-        if planning_context["planning"] is not None:
+        is_hors_planning = bool(form.hors_planning.data)
+        if planning_context["planning"] is not None and not is_hors_planning:
             exact_match = any(
                 _normalize_text(entry["structure"]) == _normalize_text(form.structure.data)
                 and _normalize_text(entry["name"]) == _normalize_text(form.nom_structure.data)
                 for entry in planning_context["entries"]
             )
             if not exact_match:
-                flash("Cette structure n'est pas prévue dans le planning de cette journée. Sélectionne une structure planifiée.", "error")
+                flash("Cette structure n'est pas prévue dans le planning de cette journée. Sélectionne une structure planifiée ou active « Prospection hors planning ».", "error")
                 return _render_dashboard(form, form.date.data)
         try:
             prospection = Prospection(
@@ -272,8 +273,8 @@ def index():
                 zone=form.zone.data.strip(),
                 region=form.region.data.strip(),
                 address=form.address.data.strip(),
-                planning_id=planning_context["planning"].id if planning_context["planning"] else None,
-                planning_day=planning_context["day"],
+                planning_id=(None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)),
+                planning_day=(None if is_hors_planning else planning_context["day"]),
                 profils_prospect=(form.profils_prospect.data or "").strip(),
                 produits_presentes=", ".join(form.produits_presentes.data or []),
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
