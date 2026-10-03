@@ -35,7 +35,7 @@ body{background:linear-gradient(135deg,var(--ns-page) 0%,#fff 100%)!important;co
   background:var(--ns-green-900);color:#fff;
 }
 .nasora-brand{display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:230px}
-.nasora-brand-logo{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;display:block;flex:0 0 40px}
+.nasora-brand-logo{width:40px!important;height:40px!important;max-width:40px!important;max-height:40px!important;object-fit:contain;border-radius:8px;background:#fff;display:block;flex:0 0 40px;overflow:hidden}
 .nasora-brand-leaf{display:none}
 .nasora-brand-name{font-size:28px;font-weight:800;letter-spacing:-.03em}
 .nasora-brand-crm{font-size:20px;font-weight:700;color:var(--ns-green-500)}
@@ -81,7 +81,7 @@ body{background:linear-gradient(135deg,var(--ns-page) 0%,#fff 100%)!important;co
 .ns-logout{margin:0;padding:0}
 .ns-logout button{padding:0 12px}
 .ns-sidebar-brand{margin-top:auto;padding:24px 10px 8px;display:flex;flex-direction:column;align-items:flex-start;color:var(--ns-green-900)}
-.ns-sidebar-logo{width:58px;height:58px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid #E3ECE7;display:block;margin:0 0 12px 8px}
+.ns-sidebar-logo{width:58px!important;height:58px!important;max-width:58px!important;max-height:58px!important;object-fit:contain;border-radius:10px;background:#fff;border:1px solid #E3ECE7;display:block;margin:0 0 12px 8px;overflow:hidden}
 .ns-leaf-decoration{display:none}
 .ns-sidebar-brand strong{font-size:24px;line-height:1;font-weight:800}
 .ns-sidebar-brand small{margin-top:8px;font-size:14px;color:var(--ns-green-900)}
@@ -176,7 +176,7 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
   #main-content.container{padding-left:20px!important}
 }
 @media(max-width:760px){
-  .nasora-topbar{height:72px;padding:0 10px;gap:9px}.nasora-brand{min-width:auto}.nasora-brand-logo{width:34px;height:34px;flex-basis:34px}.nasora-brand-name{font-size:21px}.nasora-brand-crm{font-size:16px}
+  .nasora-topbar{height:72px;padding:0 10px;gap:9px}.nasora-brand{min-width:auto}.nasora-brand-logo{width:34px!important;height:34px!important;max-width:34px!important;max-height:34px!important;flex-basis:34px}.nasora-brand-name{font-size:21px}.nasora-brand-crm{font-size:16px}
   .nasora-top-search{flex:1;width:auto;min-width:0}.nasora-top-search input{font-size:12px!important}.nasora-user-copy,.nasora-user-divider,.nasora-chevron{display:none}.nasora-avatar{width:38px;height:38px}
   .v31-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .commercial-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
