@@ -128,3 +128,27 @@ body{background:var(--v3-bg);color:var(--v3-text);}
 .history-table{width:100%;}
 @media(max-width:900px){.crm-action-row,.commercial-actions{grid-template-columns:repeat(2,minmax(0,1fr));}.prospection-filter-grid{grid-template-columns:1fr 1fr;}.prospection-filter-grid label:first-child{grid-column:1/-1;}}
 @media(max-width:560px){.crm-action-row,.commercial-actions{grid-template-columns:1fr;}.crm-list-header{align-items:flex-start;flex-direction:column;}.prospection-filter-grid{grid-template-columns:1fr;}.prospection-filter-grid label:first-child{grid-column:auto;}}
+
+
+/* V3.0 — ventes, CA, animations et administration */
+.sales-hero,.users-hero,.products-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;padding:20px 22px;background:#fff;border:1px solid var(--v3-border);border-radius:var(--v3-radius);box-shadow:var(--v3-shadow);}
+.sales-hero h1,.users-hero h1,.products-hero h1{margin:3px 0 5px;font-size:1.5rem;line-height:1.25;}
+.sales-hero-copy,.users-hero-copy,.products-hero-copy{min-width:0;}
+.sales-hero-actions,.sales-filter-actions,.users-filter-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.sales-filter-card,.sales-table-card,.users-table-card,.products-card,.revenue-chart-card,.revenue-history-card{background:#fff;border:1px solid var(--v3-border);border-radius:var(--v3-radius);box-shadow:var(--v3-shadow);}
+.sales-filter-card,.sales-table-card,.users-table-card,.products-card{padding:16px;}
+.sales-kpis,.revenue-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;}
+.sales-kpi,.revenue-kpi{min-width:0;padding:16px;background:#fff;border:1px solid var(--v3-border);border-radius:var(--v3-radius);box-shadow:var(--v3-shadow);}
+.sales-kpi-label,.revenue-kpi-label{display:block;color:var(--v3-muted);font-size:.72rem;font-weight:700;}
+.sales-kpi-value,.revenue-kpi-value{display:block;margin-top:5px;font-size:1.25rem;font-weight:800;overflow-wrap:anywhere;}
+.revenue-chart-card,.revenue-history-card{padding:18px;margin-top:16px;}
+.sales-table-wrap,.users-table-wrap,.products-table-wrap,.revenue-table-wrap{overflow-x:auto;}
+.sales-table,.users-table,.products-table{width:100%;border-collapse:collapse;}
+.sales-table th,.users-table th,.products-table th{background:#f4f7f4;color:#4d5e54;font-size:.7rem;text-transform:uppercase;letter-spacing:.035em;}
+.sales-table th,.sales-table td,.users-table th,.users-table td,.products-table th,.products-table td{padding:10px 11px;vertical-align:middle;}
+.users-filters{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr)) auto;gap:12px;align-items:end;margin-bottom:16px;padding:16px;background:#fff;border:1px solid var(--v3-border);border-radius:var(--v3-radius);box-shadow:var(--v3-shadow);}
+.users-filter-status{color:var(--v3-muted);font-size:.78rem;}
+.card{border-color:var(--v3-border)!important;border-radius:var(--v3-radius)!important;box-shadow:var(--v3-shadow)!important;}
+.pharmacy-sales-table{width:100%;overflow-x:auto;}
+@media(max-width:900px){.sales-kpis,.revenue-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.users-filters{grid-template-columns:1fr 1fr;}.users-filter-actions{grid-column:1/-1;}.sales-hero,.users-hero,.products-hero{align-items:flex-start;flex-direction:column;}}
+@media(max-width:520px){.sales-kpis,.revenue-kpi-grid,.users-filters{grid-template-columns:1fr;}.users-filter-actions{grid-column:auto;}.sales-hero,.users-hero,.products-hero{padding:16px;}.sales-hero h1,.users-hero h1,.products-hero h1{font-size:1.3rem;}}
