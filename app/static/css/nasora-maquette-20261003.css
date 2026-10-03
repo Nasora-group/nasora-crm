@@ -281,3 +281,24 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
   .nasora-user-copy small{font-size:9px}
   .nasora-chevron{font-size:13px}
 }
+
+/* Admin header: navigation immediately after compact search */
+@media(min-width:1201px){
+  .nasora-topbar{gap:2px;padding:0 7px}
+  .nasora-brand{min-width:82px;margin-right:0}
+  .nasora-brand-name{font-size:18px}
+  .nasora-brand-crm{font-size:13px}
+  .nasora-top-search{width:150px;min-width:150px;margin-right:0;height:30px;padding:0 5px;gap:3px}
+  .nasora-top-search span{font-size:14px}
+  .nasora-top-search input{font-size:10px!important}
+  .nasora-topnav{flex:1;gap:0;margin-left:0;min-width:0}
+  .nasora-topnav a{gap:2px;padding:5px 3px;font-size:9px;letter-spacing:-.03em}
+  .nasora-topnav a span:first-child{font-size:12px}
+  .nasora-userbar{gap:3px;margin-left:1px}
+  .nasora-notification{font-size:16px}
+  .nasora-user-divider{height:26px;margin:0}
+  .nasora-avatar{width:30px;height:30px;font-size:15px}
+  .nasora-user-copy strong{font-size:10px}
+  .nasora-user-copy small{font-size:8px}
+  .nasora-chevron{font-size:12px}
+}
