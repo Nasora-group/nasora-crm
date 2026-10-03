@@ -227,10 +227,16 @@ def _planning_context_for_date(visit_date):
         "dimanche": "Dimanche",
     }
     day = days[visit_date.weekday()]
-    entries = [
-        {"structure": structure, "name": name}
-        for structure, name in decode_planning_slot(getattr(planning, day))
-    ]
+    entries = []
+    for structure, name in decode_planning_slot(getattr(planning, day)):
+        # Un même champ du planning peut contenir plusieurs établissements
+        # séparés par des virgules. Chaque établissement devient une ligne
+        # distincte lors de la saisie d'une prospection.
+        names = [item.strip() for item in (name or "").split(",") if item.strip()]
+        if not names:
+            names = [""]
+        for establishment_name in names:
+            entries.append({"structure": structure, "name": establishment_name})
     return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
 
 def _validate_location(zone, region, address=None, required=True):
