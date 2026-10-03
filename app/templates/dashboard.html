@@ -25,8 +25,8 @@
 </div>
 {% else %}
 <div class="planning-day-panel planning-day-panel-warning">
-  <strong>Aucun planning trouvé pour cette journée.</strong>
-  <span>La saisie reste possible, mais elle ne sera pas rattachée à un planning.</span>
+  <strong>Aucun programme prévu pour le {{ form.date.data.strftime('%d/%m/%Y') }}.</strong>
+  <span>Tu peux saisir directement une nouvelle prospection pour cette date.</span>
 </div>
 {% endif %}
 
@@ -39,6 +39,7 @@
 {% endif %}
 </select>{% for error in form.structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 
+{% if planning_context and planning_context.planning %}
 <div class="planning-choice" id="planning-choice">
   <div class="planning-choice-header">
     <strong>Origine de la prospection</strong>
@@ -50,6 +51,7 @@
   </label>
   <small class="form-help">Une prospection hors planning reste comptabilisée dans la journée, mais n'est pas rattachée à une structure du planning.</small>
 </div>
+{% endif %}
 
 <div class="form-group">{{ form.nom_structure.label(class="form-label") }}{{ form.nom_structure(class="form-input", placeholder="Ex. Hôpital Principal, Pharmacie X, Clinique Y") }}<small class="form-help" id="structure-help">Nom exact de l’établissement prévu au planning.</small>{% for error in form.nom_structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}{% for error in form.nom_structure.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 
