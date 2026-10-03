@@ -7,7 +7,7 @@
     <div>
       <span class="crm-overline">TABLEAU DE BORD</span>
       <h2>Bonjour {{ current_user.username.split()[0] }}</h2>
-      <p>Suivi de votre activité du {{ form.date.data.strftime('%d/%m/%Y') }}.</p>
+      <p>Suivi de votre activité du {{ form.date.data.strftime('%d/%m/%Y') }}.</p>{% if not dashboard_activity.tracking_active %}<small class="v31-data-boundary">Suivi planning → réalisé actif depuis le 03/10/2026. Le taux de réalisation n'est pas calculé pour les dates antérieures.</small>{% endif %}
     </div>
     <a href="#nouvelle-prospection" class="btn btn-secondary v31-hors-planning-link">+ Nouvelle prospection hors planning</a>
   </div>
@@ -36,7 +36,7 @@
     <article class="v31-kpi-card v31-kpi-rate">
       <span class="v31-kpi-label">Taux de réalisation</span>
       <strong>{% if dashboard_activity.realization_rate is not none %}{{ dashboard_activity.realization_rate }} %{% else %}—{% endif %}</strong>
-      <small>{% if dashboard_activity.planned_total %}réalisé / planifié{% else %}Aucun établissement planifié{% endif %}</small>
+      <small>{% if dashboard_activity.tracking_active and dashboard_activity.planned_total %}réalisé / planifié{% elif not dashboard_activity.tracking_active %}Suivi non disponible pour cette date{% else %}Aucun établissement planifié{% endif %}</small>
     </article>
   </div>
 
@@ -153,6 +153,8 @@ if(dateInput){
   });
 }
 const structure=document.getElementById('structure'), establishment=document.getElementById('nom_structure'), region=document.getElementById('prospection-region'), zone=document.getElementById('prospection-zone'), horsPlanning=document.getElementById('prospection-hors-planning'), modeLabel=document.getElementById('planning-mode-label'), structureHelp=document.getElementById('structure-help');
+const horsPlanningLink=document.querySelector('.v31-hors-planning-link');
+if(horsPlanningLink){horsPlanningLink.addEventListener('click',function(){if(horsPlanning){horsPlanning.checked=true;syncPlanningMode();}});}
 document.querySelectorAll('.planned-structure-card').forEach(function(card){card.addEventListener('click',function(){if(horsPlanning) horsPlanning.checked=false; structure.value=card.dataset.structure; establishment.value=card.dataset.establishment; document.querySelectorAll('.planned-structure-card').forEach(x=>x.classList.remove('is-selected')); card.classList.add('is-selected'); syncPlanningMode();});}); function syncPlanningMode(){const extra=!!(horsPlanning&&horsPlanning.checked); if(modeLabel) modeLabel.textContent=extra?'Prospection hors planning':'Prospection prévue au planning'; if(structureHelp) structureHelp.textContent=extra?'Saisir le nom réel de la structure visitée. Elle peut être différente du planning.':'Nom exact de l’établissement prévu au planning.'; document.querySelectorAll('.planned-structure-card').forEach(function(card){card.style.opacity=extra?'0.55':'1';});} if(horsPlanning){horsPlanning.addEventListener('change',function(){if(horsPlanning.checked) document.querySelectorAll('.planned-structure-card').forEach(x=>x.classList.remove('is-selected')); syncPlanningMode();}); syncPlanningMode();}
 function syncZone(){if(region&&zone&&region.value!=='DAKAR'){zone.value='HORS DAKAR';zone.disabled=true;}else if(zone){zone.disabled=false;}}
 if(region){region.addEventListener('change',syncZone);syncZone();}
