@@ -352,6 +352,10 @@ def client_detail(client_id):
             "visit_id": None,
         })
     history_rows.sort(key=lambda row: (row["date"], row["visit_id"] or 0), reverse=True)
+    last_prospection_date = max((p.date for p in unlinked_legacy_history), default=None)
+    linked_prospection_dates = [v.date for v in visits if v.prospection_id is not None]
+    if linked_prospection_dates:
+        last_prospection_date = max([last_prospection_date] + linked_prospection_dates) if last_prospection_date else max(linked_prospection_dates)
 
     return render_template(
         "client_detail.html",
