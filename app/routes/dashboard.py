@@ -1,12 +1,15 @@
+import csv
 import logging
 import re
 import unicodedata
+from io import BytesIO, StringIO
 from collections import Counter
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, Response, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import bindparam, func, text
+import pandas as pd
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
@@ -564,6 +567,79 @@ def _visit_targets_for_commercials(commercials):
     return targets
 
 
+@dashboard_bp.route("/admin/dashboard-direction/export.csv", methods=["GET"])
+@login_required
+@roles_required("admin")
+def direction_export_csv():
+    """Exporte le reporting Direction par visiteur avec les mêmes filtres."""
+    rows = _direction_reporting_rows()
+    output = StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["Visiteur médical", "Prospections", "Professionnels visités", "Structures", "Zones couvertes", "Régions couvertes"])
+    for row in rows:
+        writer.writerow([row["name"], row["prospections"], row["professionals"], row["structures"], row["zones"], row["regions"]])
+    return Response("\ufeff" + output.getvalue(), mimetype="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=reporting_direction.csv"})
+
+
+@dashboard_bp.route("/admin/dashboard-direction/export.xlsx", methods=["GET"])
+@login_required
+@roles_required("admin")
+def direction_export_excel():
+    """Exporte le reporting Direction par visiteur en Excel."""
+    rows = _direction_reporting_rows()
+    df = pd.DataFrame(rows, columns=["name", "prospections", "professionals", "structures", "zones", "regions"])
+    df = df.rename(columns={
+        "name": "Visiteur médical", "prospections": "Prospections", "professionals": "Professionnels visités",
+        "structures": "Structures", "zones": "Zones couvertes", "regions": "Régions couvertes"
+    })
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Reporting Direction")
+        ws = writer.sheets["Reporting Direction"]
+        ws.freeze_panes(1, 0)
+        ws.autofilter(0, 0, max(len(df), 1), max(len(df.columns) - 1, 0))
+        for i, column in enumerate(df.columns):
+            ws.set_column(i, i, min(max(16, len(column) + 2), 32))
+    output.seek(0)
+    return send_file(output, download_name="reporting_direction.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def _direction_reporting_rows():
+    date_start_raw = (request.args.get("date_start") or "").strip()
+    date_end_raw = (request.args.get("date_end") or "").strip()
+    commercial_raw = (request.args.get("commercial_id") or "").strip()
+    zone = (request.args.get("zone") or "").strip()
+    region = (request.args.get("region") or "").strip()
+    specialite = (request.args.get("specialite") or "").strip()
+    def parse(value):
+        try:
+            return date.fromisoformat(value) if value else None
+        except ValueError:
+            return None
+    start = parse(date_start_raw); end = parse(date_end_raw)
+    cid = int(commercial_raw) if commercial_raw.isdigit() else None
+    query = Prospection.query.join(User, Prospection.commercial_id == User.id).filter(User.role == "commercial")
+    if start: query = query.filter(Prospection.date >= start)
+    if end: query = query.filter(Prospection.date <= end)
+    if cid: query = query.filter(Prospection.commercial_id == cid)
+    if zone: query = query.filter(Prospection.zone == zone)
+    if region: query = query.filter(Prospection.region == region)
+    if specialite: query = query.filter(Prospection.specialite == specialite)
+    rows = query.with_entities(Prospection.date, Prospection.nom_client, Prospection.establishment, Prospection.structure, Prospection.commercial_id, Prospection.zone, Prospection.region, User.username).all()
+    commercials = User.query.filter_by(role="commercial").order_by(User.username).all()
+    result=[]
+    for c in commercials:
+        own=[r for r in rows if r.commercial_id==c.id]
+        pros={professional_key(r) for r in own if professional_key(r)}
+        structures={_normalize_text(r.establishment or r.nom_client or r.structure) for r in own if _normalize_text(r.establishment or r.nom_client or r.structure)}
+        zones={(r.zone or "").strip() for r in own if (r.zone or "").strip()}
+        regions={(r.region or "").strip() for r in own if (r.region or "").strip()}
+        result.append({"name":c.username,"prospections":len(own),"professionals":len(pros),"structures":len(structures),"zones":len(zones),"regions":len(regions)})
+    if cid:
+        result=[r for r in result if any(c.id==cid and c.username==r["name"] for c in commercials)]
+    return result
+
+
 @dashboard_bp.route("/admin/dashboard-direction", methods=["GET"])
 @login_required
 @roles_required("admin")
@@ -713,6 +789,49 @@ def direction():
         {"label": "Régions couvertes", "value": len({k for k in regions_counter if k != "Non renseignée"})},
     ]
 
+    # V3.5 : tableau de pilotage par visiteur médical + alertes.
+    visitor_rows = []
+    for commercial in commercials:
+        own_rows = [row for row in metric_rows if row.commercial_id == commercial.id]
+        own_professionals = {professional_key(row) for row in own_rows if professional_key(row)}
+        own_structures = {_normalize_text(row.establishment or row.nom_client) for row in own_rows if _normalize_text(row.establishment or row.nom_client)}
+        own_zones = {(row.zone or "").strip() for row in own_rows if (row.zone or "").strip()}
+        own_regions = {(row.region or "").strip() for row in own_rows if (row.region or "").strip()}
+        visitor_rows.append({
+            "commercial_id": commercial.id,
+            "name": commercial.username,
+            "prospections": len(own_rows),
+            "professionals": len(own_professionals),
+            "structures": len(own_structures),
+            "zones": len(own_zones),
+            "regions": len(own_regions),
+        })
+
+    alert_query = query.with_entities(
+        Prospection.id,
+        Prospection.date,
+        Prospection.commercial_id,
+        Prospection.nom_client,
+        Prospection.establishment,
+        Prospection.zone,
+        Prospection.region,
+        Prospection.planning_id,
+        Prospection.a_revoir,
+        Prospection.date_relance,
+    ).all()
+    hors_planning_count = sum(1 for row in alert_query if row.planning_id is None)
+    missing_geo_count = sum(1 for row in alert_query if not (row.zone or "").strip() or not (row.region or "").strip())
+    overdue_relances = sum(1 for row in alert_query if row.a_revoir and row.date_relance and row.date_relance < date.today())
+    active_ids = {c.id for c in commercials if c.is_active_account}
+    activity_ids = {row.commercial_id for row in metric_rows}
+    inactive_visitors = [c.username for c in commercials if c.id in active_ids and c.id not in activity_ids]
+    alerts = [
+        {"type": "danger", "label": "Relances en retard", "value": overdue_relances, "detail": "Prospections avec une date de relance dépassée."},
+        {"type": "warning", "label": "Prospections hors planning", "value": hors_planning_count, "detail": "Prospections réalisées sans rattachement à une ligne de planning."},
+        {"type": "warning", "label": "Géographie incomplète", "value": missing_geo_count, "detail": "Prospections sans zone ou région renseignée."},
+        {"type": "info", "label": "Visiteurs sans activité", "value": len(inactive_visitors), "detail": ", ".join(inactive_visitors[:8]) if inactive_visitors else "Tous les visiteurs actifs ont au moins une prospection dans la période."},
+    ]
+
     return render_template(
         "dashboard_direction.html",
         kpis=kpis,
@@ -720,6 +839,8 @@ def direction():
         objectifs=objectifs,
         commercials=commercials,
         commerciaux=commercials,
+        visitor_rows=visitor_rows,
+        alerts=alerts,
         zones=zones,
         specialites=specialites,
         filters={
