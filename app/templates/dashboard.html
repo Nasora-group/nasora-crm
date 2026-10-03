@@ -57,7 +57,7 @@
               <strong>{{ row.name or 'Établissement non renseigné' }}</strong>
               <small>{{ row.structure }}</small>
             </div>
-            <span class="v31-status {% if row.status == 'Réalisé' %}v31-status-done{% else %}v31-status-todo{% endif %}">{{ row.status }}</span>
+            <span class="v31-status {% if row.status == 'Réalisé' %}v31-status-done{% elif row.status == 'Non suivi' %}v31-status-untracked{% else %}v31-status-todo{% endif %}">{{ row.status }}</span>
           </div>
         {% endfor %}
       </div>
