@@ -12,6 +12,7 @@ class Client(db.Model):
     phone = db.Column(db.String(30), nullable=True)
     email = db.Column(db.String(150), nullable=True)
     zone = db.Column(db.String(100), nullable=True, index=True)
+    region = db.Column(db.String(100), nullable=True, index=True)
     address = db.Column(db.String(255), nullable=True)
     potential = db.Column(db.Integer, nullable=False, default=3)
     notes = db.Column(db.Text, nullable=True)
