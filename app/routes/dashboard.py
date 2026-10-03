@@ -574,6 +574,7 @@ def direction():
     commercial_raw = (request.args.get("commercial_id") or "").strip()
     zone = (request.args.get("zone") or "").strip()
     specialite = (request.args.get("specialite") or "").strip()
+    region = (request.args.get("region") or "").strip()
 
     def parse_date(value):
         try:
@@ -593,7 +594,9 @@ def direction():
     if commercial_id:
         query = query.filter(Prospection.commercial_id == commercial_id)
     if zone:
-        query = query.filter(User.zone == zone)
+        query = query.filter(Prospection.zone == zone)
+    if region:
+        query = query.filter(Prospection.region == region)
     if specialite:
         query = query.filter(Prospection.specialite == specialite)
 
@@ -608,7 +611,8 @@ def direction():
         Prospection.establishment,
         Prospection.specialite,
         Prospection.commercial_id,
-        User.zone,
+        Prospection.zone,
+        Prospection.region,
         User.username,
     ).all()
 
@@ -627,10 +631,8 @@ def direction():
         (row.specialite or "Non renseignée").strip() or "Non renseignée"
         for row in metric_rows
     )
-    zones_counter = Counter(
-        (row.zone or "Non renseignée").strip() or "Non renseignée"
-        for row in metric_rows
-    )
+    zones_counter = Counter((row.zone or "Non renseignée").strip() or "Non renseignée" for row in metric_rows)
+    regions_counter = Counter((row.region or "Non renseignée").strip() or "Non renseignée" for row in metric_rows)
     commercial_counter = Counter(row.commercial_id for row in metric_rows)
     evolution_counter = Counter(row.date.isoformat() for row in metric_rows if row.date)
 
@@ -639,13 +641,8 @@ def direction():
         .order_by(User.username)
         .all()
     )
-    zones = [
-        z
-        for (z,) in User.query.filter(
-            User.role == "commercial",
-            User.zone.isnot(None),
-        ).with_entities(User.zone).distinct().order_by(User.zone).all()
-    ]
+    zones = [z for (z,) in Prospection.query.with_entities(Prospection.zone).distinct().order_by(Prospection.zone).all() if z]
+    regions = [r for (r,) in Prospection.query.with_entities(Prospection.region).distinct().order_by(Prospection.region).all() if r]
     specialites = [
         s
         for (s,) in Prospection.query.with_entities(Prospection.specialite)
@@ -690,10 +687,8 @@ def direction():
             "labels": list(specialites_counter.keys()),
             "values": list(specialites_counter.values()),
         },
-        "zones": {
-            "labels": list(zones_counter.keys()),
-            "values": list(zones_counter.values()),
-        },
+        "zones": {"labels": list(zones_counter.keys()), "values": list(zones_counter.values())},
+        "regions": {"labels": list(regions_counter.keys()), "values": list(regions_counter.values())},
         "commercials": {
             "labels": [
                 next(
@@ -714,6 +709,8 @@ def direction():
         {"label": "Prospections", "value": total_prospections},
         {"label": "Professionnels", "value": len(professionals)},
         {"label": "Structures", "value": len(structures)},
+        {"label": "Zones couvertes", "value": len({k for k in zones_counter if k != "Non renseignée"})},
+        {"label": "Régions couvertes", "value": len({k for k in regions_counter if k != "Non renseignée"})},
     ]
 
     return render_template(
@@ -730,6 +727,7 @@ def direction():
             "date_end": date_end_raw,
             "commercial_id": commercial_raw,
             "zone": zone,
+            "region": region,
             "specialite": specialite,
         },
     )
