@@ -194,29 +194,45 @@ def _delete_linked_records_for_prospection(prospection):
 
 
 def _planning_context_for_date(visit_date):
-    """Retourne le planning exact du jour et ses établissements planifiés."""
-    if not visit_date or visit_date.weekday() >= 5:
+    """Retourne le programme correspondant strictement à la date sélectionnée."""
+    if not visit_date:
         return {"planning": None, "day": None, "day_label": None, "entries": []}
+
+    # La date saisie est la seule référence pour déterminer le programme.
+    # La date du jour n'intervient que lorsque aucune date n'a été saisie.
     monday = visit_date - timedelta(days=visit_date.weekday())
-    friday = monday + timedelta(days=4)
-    # Le champ Planning.date correspond normalement au lundi de la semaine.
-    # On recherche toutefois dans toute la semaine pour rester compatible avec
-    # les plannings qui auraient été enregistrés avec une autre date.
+    sunday = monday + timedelta(days=6)
+
+    # Un planning est hebdomadaire. On récupère donc le planning de la semaine
+    # contenant la date sélectionnée, y compris pour les dates passées.
     planning = (
         Planning.query
         .filter(
             Planning.commercial_id == current_user.id,
             Planning.date >= monday,
-            Planning.date <= friday,
+            Planning.date <= sunday,
         )
         .order_by(Planning.date.desc(), Planning.id.desc())
         .first()
     )
     if planning is None:
         return {"planning": None, "day": None, "day_label": None, "entries": []}
-    day = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")[visit_date.weekday()]
-    labels = {"lundi":"Lundi", "mardi":"Mardi", "mercredi":"Mercredi", "jeudi":"Jeudi", "vendredi":"Vendredi"}
-    entries = [{"structure": structure, "name": name} for structure, name in decode_planning_slot(getattr(planning, day))]
+
+    days = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+    labels = {
+        "lundi": "Lundi",
+        "mardi": "Mardi",
+        "mercredi": "Mercredi",
+        "jeudi": "Jeudi",
+        "vendredi": "Vendredi",
+        "samedi": "Samedi",
+        "dimanche": "Dimanche",
+    }
+    day = days[visit_date.weekday()]
+    entries = [
+        {"structure": structure, "name": name}
+        for structure, name in decode_planning_slot(getattr(planning, day))
+    ]
     return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
 
 def _validate_location(zone, region, address=None, required=True):
