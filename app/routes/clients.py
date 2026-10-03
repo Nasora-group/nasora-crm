@@ -325,7 +325,45 @@ def client_detail(client_id):
     unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
     prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_prescrits or "").strip())
-    return render_template("client_detail.html", client=client, history=unlinked_legacy_history, visits=visits, presented_count=presented_count, prescribed_count=prescribed_count, display_last_visit=display_last_visit, display_next_visit=display_next_visit)
+
+    history_rows = []
+    for visit in visits:
+        history_rows.append({
+            "date": visit.date,
+            "type": "Visite CRM / Prospection" if visit.prospection_id else "Visite CRM",
+            "commercial": visit.commercial.username if visit.commercial else "—",
+            "products_presented": visit.products_presented,
+            "products_prescribed": visit.products_prescribed,
+            "report": visit.report,
+            "next_visit": visit.next_visit,
+            "editable": visit.prospection_id is None,
+            "visit_id": visit.id,
+        })
+    for prospect in unlinked_legacy_history:
+        history_rows.append({
+            "date": prospect.date,
+            "type": "Prospection",
+            "commercial": prospect.commercial.username if prospect.commercial else "—",
+            "products_presented": prospect.produits_presentes,
+            "products_prescribed": prospect.produits_prescrits,
+            "report": prospect.profils_prospect,
+            "next_visit": None,
+            "editable": False,
+            "visit_id": None,
+        })
+    history_rows.sort(key=lambda row: (row["date"], row["visit_id"] or 0), reverse=True)
+
+    return render_template(
+        "client_detail.html",
+        client=client,
+        history=unlinked_legacy_history,
+        visits=visits,
+        history_rows=history_rows,
+        presented_count=presented_count,
+        prescribed_count=prescribed_count,
+        display_last_visit=display_last_visit,
+        display_next_visit=display_next_visit,
+    )
 
 
 @clients_bp.route("/admin/clients/<int:client_id>/visits/new", methods=["GET", "POST"])
