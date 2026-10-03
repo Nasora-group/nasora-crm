@@ -198,7 +198,20 @@ def _planning_context_for_date(visit_date):
     if not visit_date or visit_date.weekday() >= 5:
         return {"planning": None, "day": None, "day_label": None, "entries": []}
     monday = visit_date - timedelta(days=visit_date.weekday())
-    planning = Planning.query.filter_by(commercial_id=current_user.id, date=monday).first()
+    friday = monday + timedelta(days=4)
+    # Le champ Planning.date correspond normalement au lundi de la semaine.
+    # On recherche toutefois dans toute la semaine pour rester compatible avec
+    # les plannings qui auraient été enregistrés avec une autre date.
+    planning = (
+        Planning.query
+        .filter(
+            Planning.commercial_id == current_user.id,
+            Planning.date >= monday,
+            Planning.date <= friday,
+        )
+        .order_by(Planning.date.desc(), Planning.id.desc())
+        .first()
+    )
     if planning is None:
         return {"planning": None, "day": None, "day_label": None, "entries": []}
     day = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")[visit_date.weekday()]
