@@ -263,22 +263,23 @@ def global_search():
         normalized = _normalize_text(q)
         terms = [term for term in normalized.split() if term]
         query = _commercial_client_query() if is_commercial() else Client.query
-        if terms:
-            conditions = []
-            for term in terms:
-                like = f"%{term}%"
-                conditions.append(or_(
-                    func.lower(Client.name).like(like),
-                    func.lower(Client.establishment).like(like),
-                    func.lower(Client.structure).like(like),
-                    func.lower(Client.specialty).like(like),
-                    func.lower(Client.phone).like(like),
-                    func.lower(Client.region).like(like),
-                    func.lower(Client.zone).like(like),
-                    func.lower(Client.address).like(like),
-                ))
-            query = query.filter(*conditions)
-        matches = query.order_by(Client.name.asc()).limit(30).all()
+        visible_clients = query.order_by(Client.name.asc()).all()
+        matches = []
+        for client in visible_clients:
+            searchable = _normalize_text(" ".join([
+                client.name or "",
+                client.establishment or "",
+                client.structure or "",
+                client.specialty or "",
+                client.phone or "",
+                client.region or "",
+                client.zone or "",
+                client.address or "",
+            ]))
+            if all(term in searchable for term in terms):
+                matches.append(client)
+                if len(matches) >= 30:
+                    break
         results["professionnels"] = matches[:10]
         seen_establishments = set()
         seen_structures = set()
