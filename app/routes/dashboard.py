@@ -253,12 +253,81 @@ def _validate_location(zone, region, address=None, required=True):
         return "Pour une autre région du Sénégal, la zone doit être HORS DAKAR."
     return None
 
+def _dashboard_activity_for_date(visit_date, planning_context):
+    """Calcule les indicateurs V3.1 sans modifier les données existantes."""
+    rows = Prospection.query.filter_by(
+        commercial_id=current_user.id,
+        date=visit_date,
+    ).all()
+
+    planned_keys = {
+        (_normalize_text(entry["structure"]), _normalize_text(entry["name"]))
+        for entry in planning_context.get("entries", [])
+        if entry.get("name")
+    }
+    realized_keys = set()
+    hors_planning = 0
+    professional_ids = set()
+    professional_names = set()
+
+    for row in rows:
+        if row.planning_id is None:
+            hors_planning += 1
+        else:
+            key = (
+                _normalize_text(row.structure),
+                _normalize_text(row.establishment or ""),
+            )
+            if key in planned_keys:
+                realized_keys.add(key)
+
+        if row.client_id:
+            professional_ids.add(row.client_id)
+        else:
+            fallback = _normalize_text(row.nom_client)
+            if fallback:
+                professional_names.add(fallback)
+
+    planned_total = len(planned_keys)
+    realized_total = len(realized_keys)
+    realization_rate = round((realized_total / planned_total) * 100, 1) if planned_total else None
+
+    status_by_key = {
+        key: ("Réalisé" if key in realized_keys else "À faire")
+        for key in planned_keys
+    }
+    planning_rows = []
+    for entry in planning_context.get("entries", []):
+        key = (_normalize_text(entry["structure"]), _normalize_text(entry["name"]))
+        planning_rows.append({
+            "structure": entry["structure"],
+            "name": entry["name"],
+            "status": status_by_key.get(key, "À faire"),
+        })
+
+    return {
+        "planned_total": planned_total,
+        "realized_total": realized_total,
+        "hors_planning": hors_planning,
+        "professionals_visited": len(professional_ids) + len(professional_names),
+        "realization_rate": realization_rate,
+        "planning_rows": planning_rows,
+    }
+
+
 def _render_dashboard(form, selected_date=None):
     labels, totals, _ = _monthly_revenue_for_division(current_user.project)
     sales_kpis = _objectives_kpis(current_user.project, labels, totals)
     visit_date = selected_date or form.date.data or date.today()
     planning_context = _planning_context_for_date(visit_date)
-    return render_template("dashboard.html", form=form, sales_kpis=sales_kpis, planning_context=planning_context)
+    dashboard_activity = _dashboard_activity_for_date(visit_date, planning_context)
+    return render_template(
+        "dashboard.html",
+        form=form,
+        sales_kpis=sales_kpis,
+        planning_context=planning_context,
+        dashboard_activity=dashboard_activity,
+    )
 
 
 @dashboard_bp.route("/dashboard", methods=["GET", "POST"])
