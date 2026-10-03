@@ -290,7 +290,8 @@ def _dashboard_activity_for_date(visit_date, planning_context):
 
     planned_total = len(planned_keys)
     realized_total = len(realized_keys)
-    realization_rate = round((realized_total / planned_total) * 100, 1) if planned_total else None
+    tracking_active = visit_date >= date(2026, 10, 3)
+    realization_rate = round((realized_total / planned_total) * 100, 1) if planned_total and tracking_active else None
 
     status_by_key = {
         key: ("Réalisé" if key in realized_keys else "À faire")
@@ -311,6 +312,7 @@ def _dashboard_activity_for_date(visit_date, planning_context):
         "hors_planning": hors_planning,
         "professionals_visited": len(professional_ids) + len(professional_names),
         "realization_rate": realization_rate,
+        "tracking_active": tracking_active,
         "planning_rows": planning_rows,
     }
 
