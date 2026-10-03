@@ -9,7 +9,7 @@ les données existantes.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "20261003_evaluation_tenant_nullable"
+revision = "20261003_eval_tenant"
 down_revision = "20261003_prospection_relances"
 branch_labels = None
 depends_on = None
@@ -25,9 +25,6 @@ def upgrade():
 
 
 def downgrade():
-    # Les lignes existantes peuvent contenir NULL après l'upgrade.
-    # Le downgrade est donc volontairement bloqué plutôt que de risquer
-    # une perte ou une modification silencieuse de données.
     bind = op.get_bind()
     null_count = bind.execute(
         sa.text("SELECT COUNT(*) FROM evaluation WHERE tenant_id IS NULL")
