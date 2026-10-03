@@ -152,4 +152,17 @@ if(nav){const currentPath=window.location.pathname;const links=nav.querySelector
 const banner=document.getElementById('cookie-banner');const key='nasora_cookie_consent';const saved=localStorage.getItem(key);function loadAnalytics(){if(!window.NASORA_GA_ID||document.getElementById('nasora-ga-script'))return;const s=document.createElement('script');s.id='nasora-ga-script';s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(window.NASORA_GA_ID);document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config',window.NASORA_GA_ID,{anonymize_ip:true});}function hide(){if(banner)banner.classList.remove('is-visible')}if(!saved&&banner)banner.classList.add('is-visible');if(saved==='accepted')loadAnalytics();const accept=document.getElementById('cookie-accept'),reject=document.getElementById('cookie-reject');if(accept)accept.addEventListener('click',function(){localStorage.setItem(key,'accepted');loadAnalytics();hide()});if(reject)reject.addEventListener('click',function(){localStorage.setItem(key,'rejected');hide()});
 });
 </script>
-</body></html>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const current=window.location.pathname;
+  document.querySelectorAll('.nasora-topnav a,.nasora-sidebar-menu a').forEach(function(link){
+    try{
+      const path=new URL(link.href,window.location.origin).pathname;
+      if(path===current){link.classList.add('is-active');}
+      else if(link.classList.contains('is-active') && path!==current){link.classList.remove('is-active');}
+    }catch(e){}
+  });
+  const toggle=document.querySelector('.nasora-mobile-toggle'), sidebar=document.getElementById('nasora-sidebar');
+  if(toggle&&sidebar){toggle.addEventListener('click',function(){const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});}
+});
+</script></body></html>
