@@ -839,6 +839,8 @@ def direction():
         objectifs=objectifs,
         commercials=commercials,
         commerciaux=commercials,
+        visitor_rows=visitor_rows,
+        alerts=alerts,
         zones=zones,
         specialites=specialites,
         filters={
