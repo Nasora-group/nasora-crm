@@ -35,7 +35,7 @@
     </article>
     <article class="v31-kpi-card v31-kpi-rate">
       <span class="v31-kpi-label">Taux de réalisation</span>
-      <strong>{% if dashboard_activity.realization_rate is not none %}{{ dashboard_activity.realization_rate|format_number }} %{% else %}—{% endif %}</strong>
+      <strong>{% if dashboard_activity.realization_rate is not none %}{{ dashboard_activity.realization_rate }} %{% else %}—{% endif %}</strong>
       <small>{% if dashboard_activity.planned_total %}réalisé / planifié{% else %}Aucun établissement planifié{% endif %}</small>
     </article>
   </div>
