@@ -39,6 +39,7 @@
       <div><span class="label">Adresse</span><span class="value">{{ client.address or '—' }}</span></div>
       <div><span class="label">Dernière visite</span><span class="value">{{ display_last_visit.strftime('%d/%m/%Y') if display_last_visit else 'Aucune' }}</span></div>
       <div><span class="label">Prochaine visite</span><span class="value">{{ display_next_visit.strftime('%d/%m/%Y') if display_next_visit else 'À planifier' }}</span></div>
+      <div><span class="label">Suivi relance</span><span class="value">{{ relance_status or 'Aucune relance' }}{% if relance_prospection and relance_prospection.date_relance %} · {{ relance_prospection.date_relance.strftime('%d/%m/%Y') }}{% endif %}</span></div>
     </div>
   </div>
 
@@ -49,7 +50,7 @@
     </div>
     <div class="table-wrap">
       <table class="history-table">
-        <thead><tr><th>Date</th><th>Type</th><th>Commercial</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte-rendu / profil</th><th>Prochaine visite</th><th>Action</th></tr></thead>
+        <thead><tr><th>Date</th><th>Type</th><th>Commercial</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte-rendu / profil</th><th>Relance</th><th>Prochaine visite</th><th>Action</th></tr></thead>
         <tbody>
           {% for row in history_rows %}
           <tr>
@@ -59,12 +60,13 @@
             <td>{{ row.products_presented or '—' }}</td>
             <td>{{ row.products_prescribed or '—' }}</td>
             <td>{{ row.report or '—' }}</td>
+            <td>{% if row.relance_status %}<span class="type-badge">{{ row.relance_status }}{% if row.date_relance %} · {{ row.date_relance.strftime('%d/%m/%Y') }}{% endif %}</span>{% else %}—{% endif %}</td>
             <td>{{ row.next_visit.strftime('%d/%m/%Y') if row.next_visit else '—' }}</td>
             <td>{% if row.editable %}<a class="btn btn-outline" href="{{ url_for('clients.edit_visit', client_id=client.id, visit_id=row.visit_id) }}">Modifier</a>{% else %}<span>Liée</span>{% endif %}</td>
           </tr>
           {% endfor %}
           {% if not history_rows %}
-          <tr><td colspan="8" class="empty">Aucune saisie enregistrée pour ce professionnel.</td></tr>
+          <tr><td colspan="9" class="empty">Aucune saisie enregistrée pour ce professionnel.</td></tr>
           {% endif %}
         </tbody>
       </table>
