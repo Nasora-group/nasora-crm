@@ -104,3 +104,27 @@ body{background:var(--v3-bg);color:var(--v3-text);}
   .kpi-grid{grid-template-columns:1fr;}
   .container{padding-inline:10px;}
 }
+
+
+/* V3.0 — composants transversaux des écrans métier */
+.crm-action-row,.commercial-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0 24px;}
+.action-card{display:flex;align-items:center;gap:11px;min-height:62px;padding:12px 14px;background:#fff;border:1px solid var(--v3-border);border-radius:11px;box-shadow:var(--v3-shadow);text-decoration:none;color:var(--v3-text);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;}
+.action-card:hover{transform:translateY(-1px);border-color:#b9d0bf;box-shadow:0 7px 20px rgba(24,39,30,.09);}
+.action-card>span{font-size:1.2rem;line-height:1;}
+.action-card strong,.action-card small{display:block;}
+.action-card strong{font-size:.86rem;}
+.action-card small{margin-top:2px;color:var(--v3-muted);font-size:.72rem;}
+.action-card-highlight{background:var(--v3-green-soft);border-color:#c9ddce;}
+.crm-surface{background:#fff;border:1px solid var(--v3-border);padding:18px;}
+.crm-list-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;}
+.crm-list-header h2{margin:3px 0 0;font-size:1rem;}
+.prospection-filters{margin-bottom:16px;}
+.prospection-filter-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(140px,1fr)) auto;gap:12px;align-items:end;}
+.prospection-filter-grid label>span{display:block;margin-bottom:5px;font-size:.72rem;font-weight:700;color:var(--v3-muted);}
+.prospection-filter-grid .form-control{width:100%;box-sizing:border-box;min-height:40px;border:1px solid #d7e1d9;border-radius:9px;padding:8px 10px;}
+.client-detail-page{max-width:1440px!important;}
+.client-card{background:#fff!important;border:1px solid var(--v3-border)!important;border-radius:var(--v3-radius)!important;box-shadow:var(--v3-shadow)!important;}
+.client-actions{gap:7px!important;}
+.history-table{width:100%;}
+@media(max-width:900px){.crm-action-row,.commercial-actions{grid-template-columns:repeat(2,minmax(0,1fr));}.prospection-filter-grid{grid-template-columns:1fr 1fr;}.prospection-filter-grid label:first-child{grid-column:1/-1;}}
+@media(max-width:560px){.crm-action-row,.commercial-actions{grid-template-columns:1fr;}.crm-list-header{align-items:flex-start;flex-direction:column;}.prospection-filter-grid{grid-template-columns:1fr;}.prospection-filter-grid label:first-child{grid-column:auto;}}
