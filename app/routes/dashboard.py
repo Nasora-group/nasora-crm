@@ -294,7 +294,9 @@ def _dashboard_activity_for_date(visit_date, planning_context):
     realization_rate = round((realized_total / planned_total) * 100, 1) if planned_total and tracking_active else None
 
     status_by_key = {
-        key: ("Réalisé" if key in realized_keys else "À faire")
+        key: (
+            "Réalisé" if key in realized_keys else "À faire"
+        ) if tracking_active else "Non suivi"
         for key in planned_keys
     }
     planning_rows = []
