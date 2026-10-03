@@ -231,3 +231,6 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
 @media(max-width:1200px){.ns-dashboard-grid{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr)}.ns-quick-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.ns-dashboard-grid{grid-template-columns:1fr}.ns-dashboard-right{order:2}.ns-key-grid{grid-template-columns:repeat(2,1fr);row-gap:10px}.ns-key-grid>div:nth-child(2){border-right:0}.ns-key-grid>div:nth-child(3),.ns-key-grid>div:nth-child(4){border-top:1px solid #DCE8E1;padding-top:10px}}
 @media(max-width:640px){.ns-quick-grid{grid-template-columns:1fr 1fr}.ns-key-grid{grid-template-columns:1fr}.ns-key-grid>div{border-right:0!important;border-bottom:1px solid #DCE8E1;padding:8px 0!important}.ns-key-grid>div:last-child{border-bottom:0}.ns-activity-row{grid-template-columns:36px 1fr}.ns-activity-row>.v31-status{grid-column:2;justify-self:start}.ns-side-title{align-items:flex-start}.ns-side-title h3{font-size:16px}}
+
+.ns-inline-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#E5322D;color:#fff;font-size:9px;font-weight:800}
+@media(min-width:1201px){.nasora-topnav{gap:2px}.nasora-topnav a{padding:9px 9px;font-size:12px}.nasora-topnav a span:first-child{font-size:17px}}
