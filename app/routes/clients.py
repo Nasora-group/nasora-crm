@@ -253,6 +253,56 @@ def edit_client(client_id):
     return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
 
 
+@clients_bp.route("/admin/clients/recherche")
+@login_required
+@roles_required("admin", "commercial")
+def global_search():
+    q = (request.args.get("q") or "").strip()
+    results = {"professionnels": [], "etablissements": [], "structures": []}
+    if q:
+        normalized = _normalize_text(q)
+        terms = [term for term in normalized.split() if term]
+        query = _commercial_client_query() if is_commercial() else Client.query
+        visible_clients = query.order_by(Client.name.asc()).all()
+        matches = []
+        for client in visible_clients:
+            searchable = _normalize_text(" ".join([
+                client.name or "",
+                client.establishment or "",
+                client.structure or "",
+                client.specialty or "",
+                client.phone or "",
+                client.region or "",
+                client.zone or "",
+                client.address or "",
+            ]))
+            if all(term in searchable for term in terms):
+                matches.append(client)
+                if len(matches) >= 30:
+                    break
+        results["professionnels"] = matches[:10]
+        seen_establishments = set()
+        seen_structures = set()
+        for client in matches:
+            establishment = (client.establishment or "").strip()
+            structure = (client.structure or "").strip()
+            if establishment:
+                key = _normalize_text(establishment)
+                if key not in seen_establishments:
+                    seen_establishments.add(key)
+                    results["etablissements"].append(client)
+            if structure:
+                key = _normalize_text(structure)
+                if key not in seen_structures:
+                    seen_structures.add(key)
+                    results["structures"].append(client)
+            if len(results["etablissements"]) >= 8 and len(results["structures"]) >= 8:
+                break
+        results["etablissements"] = results["etablissements"][:8]
+        results["structures"] = results["structures"][:8]
+    return render_template("global_search.html", q=q, results=results)
+
+
 @clients_bp.route("/admin/clients/<int:client_id>")
 @login_required
 @roles_required("admin", "commercial")
@@ -276,7 +326,50 @@ def client_detail(client_id):
     unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
     prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_prescrits or "").strip())
-    return render_template("client_detail.html", client=client, history=unlinked_legacy_history, visits=visits, presented_count=presented_count, prescribed_count=prescribed_count, display_last_visit=display_last_visit, display_next_visit=display_next_visit)
+
+    history_rows = []
+    for visit in visits:
+        history_rows.append({
+            "date": visit.date,
+            "type": "Visite CRM / Prospection" if visit.prospection_id else "Visite CRM",
+            "commercial": visit.commercial.username if visit.commercial else "—",
+            "products_presented": visit.products_presented,
+            "products_prescribed": visit.products_prescribed,
+            "report": visit.report,
+            "next_visit": visit.next_visit,
+            "editable": visit.prospection_id is None,
+            "visit_id": visit.id,
+        })
+    for prospect in unlinked_legacy_history:
+        history_rows.append({
+            "date": prospect.date,
+            "type": "Prospection",
+            "commercial": prospect.commercial.username if prospect.commercial else "—",
+            "products_presented": prospect.produits_presentes,
+            "products_prescribed": prospect.produits_prescrits,
+            "report": prospect.profils_prospect,
+            "next_visit": None,
+            "editable": False,
+            "visit_id": None,
+        })
+    history_rows.sort(key=lambda row: (row["date"], row["visit_id"] or 0), reverse=True)
+    last_prospection_date = max((p.date for p in unlinked_legacy_history), default=None)
+    linked_prospection_dates = [v.date for v in visits if v.prospection_id is not None]
+    if linked_prospection_dates:
+        last_prospection_date = max([last_prospection_date] + linked_prospection_dates) if last_prospection_date else max(linked_prospection_dates)
+
+    return render_template(
+        "client_detail.html",
+        client=client,
+        history=unlinked_legacy_history,
+        visits=visits,
+        history_rows=history_rows,
+        presented_count=presented_count,
+        prescribed_count=prescribed_count,
+        display_last_visit=display_last_visit,
+        display_next_visit=display_next_visit,
+        last_prospection_date=last_prospection_date,
+    )
 
 
 @clients_bp.route("/admin/clients/<int:client_id>/visits/new", methods=["GET", "POST"])

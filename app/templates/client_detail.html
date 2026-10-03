@@ -20,12 +20,21 @@
     </div>
   </div>
 
+  <div class="crm-v32-kpi-grid">
+    <div class="crm-v32-kpi"><span class="crm-v32-kpi-label">Visites enregistrées</span><span class="crm-v32-kpi-value">{{ visits|length + history|length }}</span></div>
+    <div class="crm-v32-kpi"><span class="crm-v32-kpi-label">Produits présentés</span><span class="crm-v32-kpi-value">{{ presented_count }}</span></div>
+    <div class="crm-v32-kpi"><span class="crm-v32-kpi-label">Produits prescrits</span><span class="crm-v32-kpi-value">{{ prescribed_count }}</span></div>
+    <div class="crm-v32-kpi"><span class="crm-v32-kpi-label">Dernière prospection</span><span class="crm-v32-kpi-value">{{ last_prospection_date.strftime('%d/%m/%Y') if last_prospection_date else 'Aucune' }}</span></div>
+  </div>
+
   <div class="client-card">
     <div class="client-info">
+      <div><span class="label">Spécialité</span><span class="value">{{ client.specialty or '—' }}</span></div>
       <div><span class="label">Structure</span><span class="value">{{ client.structure }}</span></div>
       <div><span class="label">Établissement</span><span class="value">{{ client.establishment or '—' }}</span></div>
       <div><span class="label">Commercial</span><span class="value">{{ client.owner.username if client.owner else 'Non attribué' }}</span></div>
       <div><span class="label">Téléphone</span><span class="value">{{ client.phone or '—' }}</span></div>
+      <div><span class="label">Région</span><span class="value">{{ client.region or '—' }}</span></div>
       <div><span class="label">Zone</span><span class="value">{{ client.zone or '—' }}</span></div>
       <div><span class="label">Adresse</span><span class="value">{{ client.address or '—' }}</span></div>
       <div><span class="label">Dernière visite</span><span class="value">{{ display_last_visit.strftime('%d/%m/%Y') if display_last_visit else 'Aucune' }}</span></div>
@@ -42,32 +51,20 @@
       <table class="history-table">
         <thead><tr><th>Date</th><th>Type</th><th>Commercial</th><th>Produits présentés</th><th>Produits prescrits</th><th>Compte-rendu / profil</th><th>Prochaine visite</th><th>Action</th></tr></thead>
         <tbody>
-          {% for visit in visits %}
+          {% for row in history_rows %}
           <tr>
-            <td><strong>{{ visit.date.strftime('%d/%m/%Y') }}</strong></td>
-            <td><span class="type-badge">Visite CRM{% if visit.prospection_id %} / Prospection{% endif %}</span></td>
-            <td>{{ visit.commercial.username if visit.commercial else '—' }}</td>
-            <td>{{ visit.products_presented or '—' }}</td>
-            <td>{{ visit.products_prescribed or '—' }}</td>
-            <td>{{ visit.report or '—' }}</td>
-            <td>{{ visit.next_visit.strftime('%d/%m/%Y') if visit.next_visit else '—' }}</td>
-            <td>{% if not visit.prospection_id %}<a class="btn btn-outline" href="{{ url_for('clients.edit_visit', client_id=client.id, visit_id=visit.id) }}">Modifier</a>{% else %}<span>Liée</span>{% endif %}</td>
+            <td><strong>{{ row.date.strftime('%d/%m/%Y') }}</strong></td>
+            <td><span class="type-badge">{{ row.type }}</span></td>
+            <td>{{ row.commercial }}</td>
+            <td>{{ row.products_presented or '—' }}</td>
+            <td>{{ row.products_prescribed or '—' }}</td>
+            <td>{{ row.report or '—' }}</td>
+            <td>{{ row.next_visit.strftime('%d/%m/%Y') if row.next_visit else '—' }}</td>
+            <td>{% if row.editable %}<a class="btn btn-outline" href="{{ url_for('clients.edit_visit', client_id=client.id, visit_id=row.visit_id) }}">Modifier</a>{% else %}<span>Liée</span>{% endif %}</td>
           </tr>
           {% endfor %}
-          {% for prospect in history %}
-          <tr>
-            <td><strong>{{ prospect.date.strftime('%d/%m/%Y') }}</strong></td>
-            <td><span class="type-badge">Prospection</span></td>
-            <td>{{ prospect.commercial.username if prospect.commercial else '—' }}</td>
-            <td>{{ prospect.produits_presentes or '—' }}</td>
-            <td>{{ prospect.produits_prescrits or '—' }}</td>
-            <td>{{ prospect.profils_prospect or '—' }}</td>
-            <td>—</td>
-            <td>—</td>
-          </tr>
-          {% endfor %}
-          {% if not visits and not history %}
-          <tr><td colspan="8" class="empty">Aucune saisie enregistrée pour cette pharmacie.</td></tr>
+          {% if not history_rows %}
+          <tr><td colspan="8" class="empty">Aucune saisie enregistrée pour ce professionnel.</td></tr>
           {% endif %}
         </tbody>
       </table>
