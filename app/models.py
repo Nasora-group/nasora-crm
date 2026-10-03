@@ -19,7 +19,7 @@ class Prospection(db.Model):
     establishment=db.Column(db.String(200),nullable=True,index=True)
     client_id=db.Column(db.Integer,db.ForeignKey("crm_client.id",name="fk_prospection_client"),nullable=True,index=True)
     planning_id=db.Column(db.Integer,db.ForeignKey("planning.id",name="fk_prospection_planning"),nullable=True,index=True)
-    planning_day=db.Column(db.String(20),nullable=True)
+    planning_day=db.Column(db.String(20),nullable=True); a_revoir=db.Column(db.Boolean,nullable=False,default=False,index=True); date_relance=db.Column(db.Date,nullable=True,index=True); motif_relance=db.Column(db.Text,nullable=True)
     commercial=db.relationship("User",backref=db.backref("prospections",lazy="dynamic"))
     client=db.relationship("Client",foreign_keys=[client_id])
     planning=db.relationship("Planning",foreign_keys=[planning_id])
