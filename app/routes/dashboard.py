@@ -200,17 +200,15 @@ def _planning_context_for_date(visit_date):
 
     # La date saisie est la seule référence pour déterminer le programme.
     # La date du jour n'intervient que lorsque aucune date n'a été saisie.
-    monday = visit_date - timedelta(days=visit_date.weekday())
-    sunday = monday + timedelta(days=6)
-
-    # Un planning est hebdomadaire. On récupère donc le planning de la semaine
-    # contenant la date sélectionnée, y compris pour les dates passées.
+    # Le planning couvre la semaine contenant la date sélectionnée.
+    # La recherche ne dépend jamais de la date actuelle du système.
+    week_start = visit_date - timedelta(days=6)
     planning = (
         Planning.query
         .filter(
             Planning.commercial_id == current_user.id,
-            Planning.date >= monday,
-            Planning.date <= sunday,
+            Planning.date <= visit_date,
+            Planning.date >= week_start,
         )
         .order_by(Planning.date.desc(), Planning.id.desc())
         .first()
@@ -264,12 +262,18 @@ def index():
     form = ProspectionForm()
     _set_structure_choices(form)
     _set_product_choices(form, current_user.project)
+
+    # La date sélectionnée dans l'écran est la seule référence du programme.
+    # Les dates passées et futures sont acceptées.
+    selected_date = None
     if not form.is_submitted():
         requested_date = request.args.get("date", "").strip()
         try:
-            form.date.data = date.fromisoformat(requested_date) if requested_date else date.today()
+            selected_date = date.fromisoformat(requested_date) if requested_date else date.today()
         except ValueError:
-            form.date.data = date.today()
+            selected_date = date.today()
+        form.date.data = selected_date
+
     if form.is_submitted():
         _set_structure_choices(form)
         _set_product_choices(form, current_user.project)
@@ -335,7 +339,7 @@ def index():
             logger.exception("Erreur lors de l'enregistrement d'une prospection")
             flash("Impossible d'enregistrer la prospection. Aucun changement n'a été appliqué.", "error")
             return _render_dashboard(form, form.date.data)
-    return _render_dashboard(form, form.date.data)
+    return _render_dashboard(form, selected_date or form.date.data)
 
 
 @dashboard_bp.route("/dashboard/prospections", methods=["GET"])
