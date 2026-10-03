@@ -302,3 +302,27 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
   .nasora-user-copy small{font-size:8px}
   .nasora-chevron{font-size:12px}
 }
+
+
+/* Admin header definitive compact layout */
+@media(min-width:1201px){
+  .nasora-topbar{display:grid!important;grid-template-columns:72px 120px minmax(0,1fr) 105px;gap:3px!important;padding:0 5px!important;overflow:hidden!important}
+  .nasora-brand{min-width:0!important;width:72px!important;flex:none!important;gap:3px!important}
+  .nasora-brand-name{font-size:17px!important;letter-spacing:-.04em!important}
+  .nasora-brand-crm{font-size:11px!important}
+  .nasora-top-search{width:120px!important;min-width:120px!important;height:28px!important;padding:0 4px!important;gap:2px!important;margin:0!important}
+  .nasora-top-search span{font-size:13px!important}
+  .nasora-top-search input{font-size:9px!important;min-width:0!important}
+  .nasora-topnav{width:100%!important;min-width:0!important;display:flex!important;gap:0!important;margin:0!important;overflow:hidden!important}
+  .nasora-topnav a{flex:1 1 0!important;min-width:0!important;justify-content:center!important;gap:1px!important;padding:4px 2px!important;font-size:8px!important;letter-spacing:-.03em!important;overflow:hidden!important}
+  .nasora-topnav a span:first-child{font-size:10px!important;flex:0 0 auto!important}
+  .nasora-topnav a span:last-child{min-width:0!important;overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important}
+  .nasora-userbar{width:105px!important;min-width:105px!important;margin:0!important;gap:2px!important;overflow:hidden!important}
+  .nasora-notification{font-size:14px!important}
+  .nasora-user-divider{height:24px!important;margin:0!important}
+  .nasora-avatar{width:27px!important;height:27px!important;font-size:14px!important;flex:0 0 27px!important}
+  .nasora-user-copy{min-width:0!important;gap:0!important}
+  .nasora-user-copy strong{font-size:9px!important}
+  .nasora-user-copy small{font-size:7px!important}
+  .nasora-chevron{font-size:11px!important}
+}
