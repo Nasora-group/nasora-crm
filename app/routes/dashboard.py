@@ -200,17 +200,17 @@ def _planning_context_for_date(visit_date):
 
     # La date saisie est la seule référence pour déterminer le programme.
     # La date du jour n'intervient que lorsque aucune date n'a été saisie.
-    # Le planning couvre la semaine contenant la date sélectionnée.
-    # La recherche ne dépend jamais de la date actuelle du système.
-    week_start = visit_date - timedelta(days=6)
+    # Un planning est enregistré avec le lundi comme date de référence.
+    # Pour une date sélectionnée, on retrouve donc exactement le planning
+    # de la semaine concernée, sans jamais utiliser la date du jour.
+    monday = visit_date - timedelta(days=visit_date.weekday())
     planning = (
         Planning.query
         .filter(
             Planning.commercial_id == current_user.id,
-            Planning.date <= visit_date,
-            Planning.date >= week_start,
+            Planning.date == monday,
         )
-        .order_by(Planning.date.desc(), Planning.id.desc())
+        .order_by(Planning.id.desc())
         .first()
     )
     if planning is None:
