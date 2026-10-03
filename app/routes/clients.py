@@ -253,6 +253,55 @@ def edit_client(client_id):
     return render_template("client_form.html", **_client_form_context(client, include_commerciaux=False))
 
 
+@clients_bp.route("/admin/clients/recherche")
+@login_required
+@roles_required("admin", "commercial")
+def global_search():
+    q = (request.args.get("q") or "").strip()
+    results = {"professionnels": [], "etablissements": [], "structures": []}
+    if q:
+        normalized = _normalize_text(q)
+        terms = [term for term in normalized.split() if term]
+        query = _commercial_client_query() if is_commercial() else Client.query
+        if terms:
+            conditions = []
+            for term in terms:
+                like = f"%{term}%"
+                conditions.append(or_(
+                    func.lower(Client.name).like(like),
+                    func.lower(Client.establishment).like(like),
+                    func.lower(Client.structure).like(like),
+                    func.lower(Client.specialty).like(like),
+                    func.lower(Client.phone).like(like),
+                    func.lower(Client.region).like(like),
+                    func.lower(Client.zone).like(like),
+                    func.lower(Client.address).like(like),
+                ))
+            query = query.filter(*conditions)
+        matches = query.order_by(Client.name.asc()).limit(30).all()
+        results["professionnels"] = matches[:10]
+        seen_establishments = set()
+        seen_structures = set()
+        for client in matches:
+            establishment = (client.establishment or "").strip()
+            structure = (client.structure or "").strip()
+            if establishment:
+                key = _normalize_text(establishment)
+                if key not in seen_establishments:
+                    seen_establishments.add(key)
+                    results["etablissements"].append(client)
+            if structure:
+                key = _normalize_text(structure)
+                if key not in seen_structures:
+                    seen_structures.add(key)
+                    results["structures"].append(client)
+            if len(results["etablissements"]) >= 8 and len(results["structures"]) >= 8:
+                break
+        results["etablissements"] = results["etablissements"][:8]
+        results["structures"] = results["structures"][:8]
+    return render_template("global_search.html", q=q, results=results)
+
+
 @clients_bp.route("/admin/clients/<int:client_id>")
 @login_required
 @roles_required("admin", "commercial")
