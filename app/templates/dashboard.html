@@ -5,7 +5,7 @@
   <div class="v31-dashboard-heading">
     <div>
       <h2>Bonjour {{ current_user.username.split()[0] }}</h2>
-      <p>Voici un aperçu de votre activité du {{ form.date.data.strftime('%d %B %Y') }}.</p>
+      <p>Voici un aperçu de votre activité du {{ '%02d'|format(form.date.data.day) }} {{ ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][form.date.data.month-1] }} {{ form.date.data.year }}.</p>
       {% if not dashboard_activity.tracking_active %}<small class="v31-data-boundary">Suivi planning → réalisé actif depuis le 03/10/2026.</small>{% endif %}
     </div>
     <a href="#nouvelle-prospection" class="btn v31-hors-planning-link">+ Nouvelle prospection hors planning</a>
