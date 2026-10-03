@@ -33,6 +33,7 @@
   <div class="form-group">{{ form.zone.label(class="form-label") }}{{ form.zone(class="form-input", id="prospection-zone") }}</div>
 </div>
 <div class="form-group">{{ form.address.label(class="form-label") }}{{ form.address(class="form-input", placeholder="Adresse précise") }}</div>
+<div class="planning-choice"><div class="planning-choice-header"><strong>Suivi et relance</strong><span>À revoir / relancer</span></div><label class="planning-choice-toggle">{{ form.a_revoir(class="planning-choice-checkbox") }}<span>Marquer cette prospection « À revoir »</span></label><div class="location-grid" style="margin-top:12px;"><div class="form-group">{{ form.date_relance.label(class="form-label") }}{{ form.date_relance(class="form-input") }}</div><div class="form-group">{{ form.motif_relance.label(class="form-label") }}{{ form.motif_relance(class="form-input", rows="3") }}</div></div></div>
         <div class="form-group">{{ form.nom_client.label(class="form-label") }}{{ form.nom_client(class="form-input") }}</div>
         <div class="form-group">{{ form.specialite.label(class="form-label") }}{{ form.specialite(class="form-input") }}</div>
         <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel") }}</div>

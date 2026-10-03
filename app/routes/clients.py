@@ -23,6 +23,17 @@ def _normalize_phone(value):
     return re.sub(r"\D", "", value or "")
 
 
+
+def _relance_status(prospection, reference_date=None):
+    if not prospection or not prospection.a_revoir:
+        return None
+    reference_date = reference_date or date.today()
+    if not prospection.date_relance or prospection.date_relance > reference_date:
+        return "À revoir"
+    if prospection.date_relance == reference_date:
+        return "Relance aujourd'hui"
+    return "Relance en retard"
+
 def _legacy_matches(client, visit):
     client_phone = _normalize_phone(client.phone)
     visit_phone = _normalize_phone(visit.telephone)
@@ -324,6 +335,10 @@ def client_detail(client_id):
         display_next_visit = latest_crm_next
     linked_prospection_ids = {v.prospection_id for v in visits if v.prospection_id is not None}
     unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
+    linked_prospections = [v.prospection for v in visits if v.prospection_id and v.prospection is not None]
+    all_prospections = linked_prospections + unlinked_legacy_history
+    latest_prospection = max(all_prospections, key=lambda p: (p.date, p.id), default=None)
+    relance_status = _relance_status(latest_prospection)
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
     prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_prescrits or "").strip())
 
@@ -339,6 +354,8 @@ def client_detail(client_id):
             "next_visit": visit.next_visit,
             "editable": visit.prospection_id is None,
             "visit_id": visit.id,
+            "relance_status": _relance_status(visit.prospection),
+            "date_relance": visit.prospection.date_relance if visit.prospection else None,
         })
     for prospect in unlinked_legacy_history:
         history_rows.append({
@@ -351,6 +368,8 @@ def client_detail(client_id):
             "next_visit": None,
             "editable": False,
             "visit_id": None,
+            "relance_status": _relance_status(prospect),
+            "date_relance": prospect.date_relance,
         })
     history_rows.sort(key=lambda row: (row["date"], row["visit_id"] or 0), reverse=True)
     last_prospection_date = max((p.date for p in unlinked_legacy_history), default=None)
@@ -369,6 +388,8 @@ def client_detail(client_id):
         display_last_visit=display_last_visit,
         display_next_visit=display_next_visit,
         last_prospection_date=last_prospection_date,
+        relance_status=relance_status,
+        relance_prospection=latest_prospection,
     )
 
 

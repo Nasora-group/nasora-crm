@@ -299,6 +299,7 @@ def _dashboard_activity_for_date(visit_date, planning_context):
         ) if tracking_active else "Non suivi"
         for key in planned_keys
     }
+    relance_rows = [row for row in rows if row.a_revoir and (row.date_relance is None or row.date_relance <= visit_date)]
     planning_rows = []
     for entry in planning_context.get("entries", []):
         key = (_normalize_text(entry["structure"]), _normalize_text(entry["name"]))
@@ -316,6 +317,7 @@ def _dashboard_activity_for_date(visit_date, planning_context):
         "realization_rate": realization_rate,
         "tracking_active": tracking_active,
         "planning_rows": planning_rows,
+        "relances_a_traiter": len(relance_rows),
     }
 
 
@@ -391,6 +393,9 @@ def index():
                 produits_presentes=", ".join(form.produits_presentes.data or []),
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
                 establishment=form.nom_structure.data.strip(),
+                a_revoir=bool(form.a_revoir.data),
+                date_relance=form.date_relance.data if form.a_revoir.data else None,
+                motif_relance=(form.motif_relance.data or "").strip() or None,
             )
             db.session.add(prospection)
             # La route reste responsable de la transaction complète:
@@ -504,6 +509,9 @@ def edit_prospection(prospection_id):
             prospection.address = form.address.data.strip()
             prospection.planning_id = None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)
             prospection.planning_day = None if is_hors_planning else planning_context["day"]
+            prospection.a_revoir = bool(form.a_revoir.data)
+            prospection.date_relance = form.date_relance.data if form.a_revoir.data else None
+            prospection.motif_relance = (form.motif_relance.data or "").strip() or None
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
