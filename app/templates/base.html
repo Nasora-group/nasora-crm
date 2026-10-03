@@ -65,6 +65,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-phone-responsive.css', v='20260910-3') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-ui-v4.css', v='20261003-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-visual-unification.css', v='20261003-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-maquette-20261003.css', v='20261003-1') }}">
 <style>
 .cookie-banner{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:9999;display:none;max-width:900px;margin:auto;padding:1rem 1.15rem;border:1px solid #d9e5df;border-radius:14px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);color:#17352a}.cookie-banner.is-visible{display:block}.cookie-banner p{margin:0 0 .75rem;line-height:1.5}.cookie-actions{display:flex;gap:.6rem;flex-wrap:wrap}.cookie-actions button{border:0;border-radius:8px;padding:.65rem 1rem;font-weight:700;cursor:pointer}.cookie-accept{background:#0b7a4b;color:#fff}.cookie-reject{background:#eef3f0;color:#17352a}.cookie-link{color:#0b7a4b;font-weight:700}
 </style>
@@ -80,26 +81,59 @@
 </head>
 <body>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
-<header class="site-header"><div class="header-inner"><a href="{{ url_for('auth.home') }}" class="brand"><img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nasora Health &amp; Skincare" class="brand-logo" width="160" height="60" fetchpriority="high" decoding="async"><div class="brand-text"><span class="brand-name">NASORA HEALTH &amp; SKINCARE</span><span class="brand-tagline">Plateforme de gestion commerciale</span></div></a>{% if current_user.is_authenticated %}<div class="header-user"><span class="header-user-role">{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</span><span class="header-user-name">{{ current_user.username }}</span></div><button class="mobile-nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-navigation">☰</button>{% endif %}</div></header>
-<nav id="main-navigation" class="site-nav" aria-label="Navigation principale"><div class="nav-inner">
-<a class="nav-home" href="{{ url_for('auth.home') }}"><span class="nav-icon">⌂</span><span>Accueil</span></a>
+<div class="nasora-app-shell">
+<header class="nasora-topbar">
+  <div class="nasora-brand">
+    <span class="nasora-brand-leaf" aria-hidden="true">◒</span>
+    <span class="nasora-brand-name">NASORA</span><span class="nasora-brand-crm">CRM</span>
+  </div>
+  {% if current_user.is_authenticated %}
+  <form class="nasora-top-search" method="get" action="{{ url_for('clients.global_search') }}">
+    <label class="sr-only" for="nasora-top-search-input">Recherche globale</label>
+    <span aria-hidden="true">⌕</span>
+    <input id="nasora-top-search-input" name="q" type="search" placeholder="Rechercher un professionnel, une structure..." autocomplete="off">
+  </form>
+  <nav class="nasora-topnav" aria-label="Navigation rapide">
+    <a class="is-active" href="{{ url_for('auth.home') }}"><span>⌂</span><span>Tableau de bord</span></a>
+    <a href="{{ url_for('planning.visualiser') }}"><span>▣</span><span>Planning</span></a>
+    <a href="{{ url_for('dashboard.index') }}"><span>⊕</span><span>Prospection</span></a>
+    <a href="{{ url_for('clients.list_clients') }}"><span>♙</span><span>Professionnels</span></a>
+    {% if current_user.role == 'admin' %}<a href="{{ url_for('dashboard.direction') }}"><span>▥</span><span>Rapports</span></a>{% else %}<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span>▥</span><span>Rapports</span></a>{% endif %}
+  </nav>
+  <div class="nasora-userbar">
+    <span class="nasora-notification" aria-label="Notifications">♧{% if current_user.role == 'admin' and admin_unread_notifications %}<b>{{ admin_unread_notifications }}</b>{% elif dashboard_activity is defined and dashboard_activity.relances_a_traiter %}<b>{{ dashboard_activity.relances_a_traiter }}</b>{% endif %}</span>
+    <span class="nasora-user-divider"></span>
+    <span class="nasora-avatar" aria-hidden="true">♙</span>
+    <span class="nasora-user-copy"><strong>{{ current_user.username.split()[0] }}</strong><small>{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</small></span>
+    <span class="nasora-chevron">⌄</span>
+  </div>
+  <button class="nasora-mobile-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nasora-sidebar">☰</button>
+  {% endif %}
+</header>
 {% if current_user.is_authenticated %}
-{% if current_user.role == 'admin' %}
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">▥</span><span>Pilotage</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('admin.dashboard') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a><a href="{{ url_for('manager_cockpit.index') }}"><span class="nav-icon">◉</span><span>Cockpit Manager</span></a><a href="{{ url_for('dashboard.direction') }}"><span class="nav-icon">◈</span><span>Activité terrain</span></a><a href="{{ url_for('prospections_export.export_prospections') }}"><span class="nav-icon">▤</span><span>Extraction prospections</span></a><a href="{{ url_for('planning.admin_plannings') }}"><span class="nav-icon">▦</span><span>Plannings</span></a></div></div>
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">◇</span><span>Gestion CRM</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Base NASORA</span></a><a href="{{ url_for('products.list_products', slug=first_active_supplier_slug) }}"><span class="nav-icon">◇</span><span>Fiches produits</span></a><a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Saisie / Stocks</span></a><a href="{{ url_for('animation_sales.my_history') }}"><span class="nav-icon">🛍</span><span>Ventes animations</span></a></div></div>
-<a class="nav-notification-link" href="{{ url_for('admin_notifications.index') }}"><span class="nav-icon">🔔</span><span>Notifications</span>{% if admin_unread_notifications %}<span class="nav-notification-badge">{{ admin_unread_notifications }}</span>{% endif %}</a>
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">★</span><span>Management</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('users.list_users') }}"><span class="nav-icon">♟</span><span>Utilisateurs</span></a><a href="{{ url_for('evaluations.list_commercials') }}"><span class="nav-icon">★</span><span>Évaluations</span></a><a href="{{ url_for('evaluations.classement') }}"><span class="nav-icon">♛</span><span>Classement</span></a></div></div>
-{% else %}
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">▥</span><span>Mon activité</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('dashboard.index') }}"><span class="nav-icon">▥</span><span>Tableau de bord</span></a><a href="{{ url_for('planning.visualiser') }}"><span class="nav-icon">▦</span><span>Mon planning</span></a><a href="{{ url_for('dashboard.prospections') }}"><span class="nav-icon">▤</span><span>Mes prospections</span></a></div></div>
-{% if current_user.role == 'animateur' %}
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">🛍</span><span>Animations</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('animation_sales.new_animation_sale') }}"><span class="nav-icon">＋</span><span>Renseigner une vente</span></a><a href="{{ url_for('animation_sales.my_history') }}"><span class="nav-icon">▤</span><span>Historique des ventes</span></a></div></div>
-{% else %}
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">◇</span><span>CRM</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu"><a href="{{ url_for('clients.list_clients') }}"><span class="nav-icon">♙</span><span>Ma base</span></a><a href="{{ url_for('stock.available') }}"><span class="nav-icon">▣</span><span>Stocks disponibles</span></a><a href="{{ url_for('animation_sales.my_history') }}"><span class="nav-icon">🛍</span><span>Ventes animations</span></a></div></div>
+<aside id="nasora-sidebar" class="nasora-sidebar" aria-label="Navigation secondaire">
+  <div class="nasora-sidebar-menu">
+    <a class="is-active" href="{{ url_for('auth.home') }}"><span class="ns-icon">⌂</span><span>Tableau de bord</span></a>
+    <a href="{{ url_for('planning.visualiser') }}"><span class="ns-icon">▣</span><span>Planning</span></a>
+    <a href="{{ url_for('dashboard.index') }}"><span class="ns-icon">⊕</span><span>Prospection</span></a>
+    <a href="{{ url_for('clients.list_clients') }}"><span class="ns-icon">♙</span><span>Professionnels</span></a>
+    <a href="{{ url_for('dashboard.index') }}#nouvelle-prospection"><span class="ns-icon">↻</span><span>À revoir / Relances</span>{% if dashboard_activity is defined and dashboard_activity.relances_a_traiter %}<b class="ns-badge">{{ dashboard_activity.relances_a_traiter }}</b>{% endif %}</a>
+    <a href="{{ url_for('dashboard.index') }}#nouvelle-prospection"><span class="ns-icon">◇</span><span>Hors planning</span></a>
+    <a href="{{ url_for('clients.global_search') }}"><span class="ns-icon">⌕</span><span>Recherche</span></a>
+    {% if current_user.role == 'admin' %}<a href="{{ url_for('dashboard.direction') }}"><span class="ns-icon">▥</span><span>Rapports</span></a>{% else %}<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="ns-icon">▥</span><span>Rapports</span></a>{% endif %}
+  </div>
+  <div class="ns-sidebar-divider"></div>
+  <div class="nasora-sidebar-menu ns-account">
+    <a href="{{ url_for('auth.home') }}"><span class="ns-icon">♙</span><span>Mon compte</span></a>
+    <form class="ns-logout" method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit"><span class="ns-icon">↪</span><span>Déconnexion</span></button></form>
+  </div>
+  <div class="ns-sidebar-brand">
+    <span class="ns-leaf-decoration">◒</span>
+    <strong>NASORA</strong>
+    <small>Plus proches de la santé</small>
+  </div>
+</aside>
 {% endif %}
-<div class="nav-dropdown"><button type="button" class="nav-dropdown-trigger" aria-expanded="false"><span class="nav-icon">★</span><span>Performance</span><span class="nav-chevron">▾</span></button><div class="nav-dropdown-menu">{% if current_user.project|lower == 'nasmedic' %}<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% else %}<a href="{{ url_for('revenue.monthly_revenue_nasderm') }}"><span class="nav-icon">◷</span><span>Visualisation du CA</span></a>{% endif %}<a href="{{ url_for('commercial_evaluations.my_evaluations') }}"><span class="nav-icon">★</span><span>Mes évaluations</span></a></div></div>
-{% endif %}
-<form class="nav-global-search" method="get" action="{{ url_for('clients.global_search') }}"><label class="sr-only" for="nav-global-search-input">Recherche globale</label><input id="nav-global-search-input" name="q" type="search" placeholder="Rechercher..." autocomplete="off"><button type="submit" aria-label="Rechercher">⌕</button></form><span class="nav-spacer"></span><form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" aria-label="Se déconnecter"><span class="nav-icon">↪</span><span>Déconnexion</span></button></form>
-{% else %}<a href="{{ url_for('auth.login') }}"><span>Connexion</span></a>{% endif %}</div></nav>
 <main id="main-content" class="container">
 {% with messages=get_flashed_messages(with_categories=true) %}
 {% if messages %}<div class="flash-messages" role="status" aria-live="polite">{% for category,message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
