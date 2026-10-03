@@ -236,3 +236,27 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
 
 .ns-inline-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#E5322D;color:#fff;font-size:9px;font-weight:800}
 @media(min-width:1201px){.nasora-topnav{gap:2px}.nasora-topnav a{padding:9px 9px;font-size:12px}.nasora-topnav a span:first-child{font-size:17px}}
+
+/* Header compact admin desktop */
+
+/* Header compact admin desktop */
+@media(min-width:1201px){
+  .nasora-topbar{gap:8px;padding:0 16px}
+  .nasora-brand{min-width:108px}
+  .nasora-brand-name{font-size:22px}
+  .nasora-brand-crm{font-size:16px}
+  .nasora-top-search{width:220px;min-width:220px;height:34px;padding:0 8px;gap:6px;border-radius:8px}
+  .nasora-top-search span{font-size:17px}
+  .nasora-top-search input{font-size:12px!important}
+  .nasora-topnav{gap:0;overflow:visible}
+  .nasora-topnav a{gap:4px;padding:7px 6px;font-size:11px;letter-spacing:-.01em}
+  .nasora-topnav a span:first-child{font-size:15px}
+  .nasora-userbar{gap:6px;margin-left:4px}
+  .nasora-notification{font-size:19px}
+  .nasora-user-divider{height:32px;margin:0 2px}
+  .nasora-avatar{width:36px;height:36px;font-size:18px}
+  .nasora-user-copy{gap:1px}
+  .nasora-user-copy strong{font-size:12px}
+  .nasora-user-copy small{font-size:10px}
+  .nasora-chevron{font-size:15px}
+}
