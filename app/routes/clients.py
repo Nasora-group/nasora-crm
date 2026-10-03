@@ -367,6 +367,7 @@ def client_detail(client_id):
         prescribed_count=prescribed_count,
         display_last_visit=display_last_visit,
         display_next_visit=display_next_visit,
+        last_prospection_date=last_prospection_date,
     )
 
 
