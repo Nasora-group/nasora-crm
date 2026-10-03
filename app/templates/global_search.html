@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Recherche globale — NASORA CRM{% endblock %}
+{% block content %}
+<div class="crm-search-page">
+  <section class="crm-search-hero">
+    <div>
+      <span class="crm-eyebrow">Recherche globale</span>
+      <h1>Rechercher dans NASORA CRM</h1>
+      <p>Professionnels, établissements et structures. La recherche est limitée aux données auxquelles vous avez accès.</p>
+    </div>
+  </section>
+
+  <form class="crm-search-form" method="get" action="{{ url_for('clients.global_search') }}">
+    <label for="global-search-input">Recherche</label>
+    <div class="crm-search-input-row">
+      <input id="global-search-input" class="form-input" type="search" name="q" value="{{ q }}" placeholder="Nom, pharmacie, structure, téléphone, spécialité..." autocomplete="off">
+      <button class="btn" type="submit">Rechercher</button>
+    </div>
+  </form>
+
+  {% if q %}
+    <div class="crm-search-result-summary">
+      Résultats pour <strong>« {{ q }} »</strong>
+    </div>
+
+    <div class="crm-search-grid">
+      <section class="crm-search-card">
+        <div class="crm-search-card-head"><h2>Professionnels</h2><span>{{ results.professionnels|length }}</span></div>
+        {% if results.professionnels %}
+          <div class="crm-search-list">
+          {% for client in results.professionnels %}
+            <a class="crm-search-item" href="{{ url_for('clients.client_detail', client_id=client.id) }}">
+              <strong>{{ client.name }}</strong>
+              <span>{{ client.specialty or 'Spécialité non renseignée' }} · {{ client.structure }}</span>
+              <small>{{ client.establishment or 'Établissement non renseigné' }}{% if client.region %} · {{ client.region }}{% endif %}</small>
+            </a>
+          {% endfor %}
+          </div>
+        {% else %}<p class="crm-search-empty">Aucun professionnel trouvé.</p>{% endif %}
+      </section>
+
+      <section class="crm-search-card">
+        <div class="crm-search-card-head"><h2>Établissements</h2><span>{{ results.etablissements|length }}</span></div>
+        {% if results.etablissements %}
+          <div class="crm-search-list">
+          {% for client in results.etablissements %}
+            <a class="crm-search-item" href="{{ url_for('clients.client_detail', client_id=client.id) }}">
+              <strong>{{ client.establishment }}</strong>
+              <span>{{ client.structure }} · {{ client.name }}</span>
+              <small>{{ client.address or 'Adresse non renseignée' }}</small>
+            </a>
+          {% endfor %}
+          </div>
+        {% else %}<p class="crm-search-empty">Aucun établissement trouvé.</p>{% endif %}
+      </section>
+
+      <section class="crm-search-card">
+        <div class="crm-search-card-head"><h2>Structures</h2><span>{{ results.structures|length }}</span></div>
+        {% if results.structures %}
+          <div class="crm-search-list">
+          {% for client in results.structures %}
+            <a class="crm-search-item" href="{{ url_for('clients.client_detail', client_id=client.id) }}">
+              <strong>{{ client.structure }}</strong>
+              <span>{{ client.establishment or 'Établissement non renseigné' }}</span>
+              <small>{{ client.name }}</small>
+            </a>
+          {% endfor %}
+          </div>
+        {% else %}<p class="crm-search-empty">Aucune structure trouvée.</p>{% endif %}
+      </section>
+    </div>
+  {% else %}
+    <div class="crm-search-empty crm-search-empty-large">Saisissez un nom, une pharmacie, une structure ou un numéro de téléphone.</div>
+  {% endif %}
+</div>
+{% endblock %}
