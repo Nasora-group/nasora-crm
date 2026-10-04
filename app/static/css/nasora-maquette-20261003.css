@@ -433,3 +433,35 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
   .nasora-header-logout-label{display:none!important}
   .nasora-header-logout button{width:36px!important;min-width:36px!important;padding:0!important}
 }
+
+
+/* FINAL DESKTOP LOGOUT VISIBILITY FIX 2026-10-04 */
+@media(min-width:1201px){
+  .nasora-userbar{
+    flex:0 0 150px!important;
+    width:150px!important;
+    min-width:150px!important;
+    overflow:visible!important;
+    gap:3px!important;
+  }
+  .nasora-header-logout{
+    display:flex!important;
+    flex:0 0 30px!important;
+    width:30px!important;
+    min-width:30px!important;
+    margin-left:3px!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  .nasora-header-logout button{
+    display:inline-flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:30px!important;
+    min-width:30px!important;
+    height:30px!important;
+    padding:0!important;
+    position:relative!important;
+    z-index:1300!important;
+  }
+}
