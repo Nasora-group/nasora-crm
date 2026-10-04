@@ -105,6 +105,10 @@
     <span class="nasora-avatar" aria-hidden="true">♙</span>
     <span class="nasora-user-copy"><strong>{{ current_user.username.split()[0] }}</strong><small>{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</small></span>
     <span class="nasora-chevron">⌄</span>
+    <form class="nasora-header-logout" method="post" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" aria-label="Déconnexion" title="Déconnexion"><span aria-hidden="true">↪</span><span class="nasora-header-logout-label">Déconnexion</span></button>
+    </form>
   </div>
   <button class="nasora-mobile-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nasora-sidebar">☰</button>
   {% endif %}
