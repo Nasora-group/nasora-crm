@@ -67,7 +67,7 @@
       <tbody>
       {% for p in prospections %}
         <tr data-date="{{ p.date.isoformat() if p.date else '' }}" data-search="{{ [p.nom_client, p.specialite, p.structure, establishments_by_prospection.get(p.id), p.telephone, p.profils_prospect, p.produits_presentes, p.produits_prescrits, p.region, p.zone, p.address]|join(' ')|lower }}">
-          <td class="date-cell"><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong></td>
+          <td class="date-cell"><strong>{{ p.date.strftime('%d/%m/%Y') if p.date else '—' }}</strong><div class="prospection-mobile-actions"><a class="btn btn-sm" href="{{ url_for('dashboard.edit_prospection', prospection_id=p.id) }}">Modifier</a><form method="POST" action="{{ url_for('dashboard.delete_prospection', prospection_id=p.id) }}" onsubmit="return confirm('Supprimer cette prospection ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-danger">Supprimer</button></form></div></td>
           <td>{% if p.planning_id %}<strong>PLANIFIÉ</strong>{% else %}<strong>HORS PLANNING</strong>{% endif %}</td>
           <td class="primary-cell">{{ p.nom_client or '—' }}</td>
           <td>{{ p.specialite or '—' }}</td>
@@ -156,6 +156,13 @@
     opacity:1!important;
     visibility:visible!important;
   }
+}
+
+.prospection-mobile-actions{display:none}
+@media (max-width:600px){
+  .prospection-mobile-actions{display:flex;flex-direction:column;gap:6px;margin-top:10px;min-width:92px}
+  .prospection-mobile-actions .btn{display:flex;align-items:center;justify-content:center;min-height:36px;width:100%;padding:7px 8px!important;font-size:12px!important}
+  .prospection-table .date-cell{vertical-align:top}
 }
 </style>
 
