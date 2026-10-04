@@ -132,6 +132,45 @@
 }
 @media (max-width:600px){
   .prospection-table{min-width:1080px}
+  /* Mobile : garder les actions accessibles sans devoir faire défiler toute la ligne */
+  .prospection-table .col-actions{
+    position:sticky;
+    right:0;
+    z-index:6;
+    width:145px!important;
+    min-width:145px!important;
+    background:#fff;
+    box-shadow:-5px 0 10px rgba(15,23,42,.08);
+  }
+  .prospection-table thead .col-actions{
+    background:#f1f7f3;
+    z-index:8;
+  }
+  .prospection-table tbody td:last-child{
+    position:sticky;
+    right:0;
+    z-index:5;
+    background:#fff;
+    box-shadow:-5px 0 10px rgba(15,23,42,.08);
+  }
+  .prospection-table tbody tr:hover td:last-child{
+    background:#f7fbf9;
+  }
+  .prospection-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:7px!important;
+    min-width:125px;
+  }
+  .prospection-actions .btn{
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    min-height:38px!important;
+    width:100%!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
 }
 </style>
 
