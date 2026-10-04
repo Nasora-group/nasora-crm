@@ -465,3 +465,37 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
     z-index:1300!important;
   }
 }
+
+
+/* DESKTOP LOGOUT - FORCE POSITION 2026-10-04 */
+@media(min-width:1201px){
+  .nasora-topbar{position:sticky!important;padding-right:190px!important;overflow:visible!important}
+  .nasora-userbar{flex:0 0 auto!important;width:auto!important;min-width:0!important;overflow:visible!important}
+  .nasora-header-logout{
+    position:absolute!important;
+    right:10px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    display:flex!important;
+    width:34px!important;
+    height:34px!important;
+    z-index:99999!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  .nasora-header-logout button{
+    display:flex!important;
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    padding:0!important;
+    border:2px solid rgba(255,255,255,.7)!important;
+    background:#0B7A4B!important;
+    color:#fff!important;
+    border-radius:8px!important;
+    visibility:visible!important;
+    opacity:1!important;
+    box-shadow:0 2px 8px rgba(0,0,0,.25)!important;
+  }
+  .nasora-header-logout button>span:first-child{font-size:19px!important}
+}
