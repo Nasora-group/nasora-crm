@@ -398,3 +398,38 @@ main.container .btn-primary:hover,main.container .btn-success:hover{background:#
   .nasora-user-copy small{font-size:8px!important}
   .nasora-chevron{font-size:11px!important}
 }
+
+/* HEADER LOGOUT — visible desktop + mobile, including ADMIN */
+.nasora-header-logout{display:flex!important;align-items:center!important;margin:0!important;padding:0!important;flex:0 0 auto!important}
+.nasora-header-logout button{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:5px!important;min-width:32px!important;height:30px!important;padding:0 7px!important;
+  border:1px solid rgba(255,255,255,.35)!important;border-radius:7px!important;
+  background:rgba(255,255,255,.10)!important;color:#fff!important;
+  font:700 11px/1 Inter,system-ui,sans-serif!important;cursor:pointer!important;
+}
+.nasora-header-logout button:hover,.nasora-header-logout button:focus-visible{
+  background:#fff!important;color:var(--ns-green-900)!important;outline:2px solid rgba(255,255,255,.55)!important;outline-offset:1px!important;
+}
+.nasora-header-logout button>span:first-child{font-size:16px!important;line-height:1!important}
+.nasora-header-logout-label{white-space:nowrap!important}
+@media(min-width:1201px){
+  .nasora-header-logout{margin-left:2px!important}
+  .nasora-header-logout-label{display:none!important}
+  .nasora-header-logout button{width:30px!important;min-width:30px!important;padding:0!important}
+}
+@media(max-width:1200px) and (min-width:901px){
+  .nasora-header-logout-label{display:none!important}
+  .nasora-header-logout button{width:32px!important;min-width:32px!important;padding:0!important}
+}
+@media(max-width:900px){
+  .nasora-topbar{padding:0 10px!important;gap:8px!important}
+  .nasora-userbar{margin-left:auto!important;gap:5px!important;display:flex!important;min-width:0!important}
+  .nasora-header-logout-label{display:inline!important}
+  .nasora-header-logout button{height:36px!important;min-width:36px!important;padding:0 9px!important;border-radius:8px!important;font-size:11px!important}
+  .nasora-header-logout button>span:first-child{font-size:17px!important}
+}
+@media(max-width:520px){
+  .nasora-header-logout-label{display:none!important}
+  .nasora-header-logout button{width:36px!important;min-width:36px!important;padding:0!important}
+}
