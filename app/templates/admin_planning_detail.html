@@ -1,8 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Planning de {{ commercial.username }} — NASORA CRM{% endblock %}
 {% block content %}
+<style>
+/* En visualisation admin, conserver l'identité du commercial visible pendant le défilement des semaines. */
+.planning-admin-sticky-head {
+    position: sticky;
+    top: 88px;
+    z-index: 30;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(20, 32, 25, .08);
+    isolation: isolate;
+}
+@media (max-width: 760px) {
+    .planning-admin-sticky-head {
+        top: 8px;
+    }
+}
+</style>
 <div class="planning-page planning-detail-page">
-    <div class="planning-detail-head">
+    <div class="planning-detail-head planning-admin-sticky-head">
         <div>
             <span class="planning-kicker">Organisation | Tournées</span>
             <h1>Les visites de {{ commercial.username }}</h1>
