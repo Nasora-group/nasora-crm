@@ -19,13 +19,9 @@ NON_WORKING_DAYS = ("samedi", "dimanche")
 
 
 def _build_creneaux_from_form():
-    """Lit les structures sélectionnées et force samedi/dimanche à rester vides."""
+    """Lit les structures sélectionnées pour les sept jours de la semaine."""
     creneaux = {}
-    empty_slot = encode_planning_slot([])
     for jour in JOURS:
-        if jour in NON_WORKING_DAYS:
-            creneaux[jour] = empty_slot
-            continue
         structures_selectionnees = request.form.getlist(jour)
         entries = []
         for structure in structures_selectionnees:
