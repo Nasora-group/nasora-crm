@@ -39,8 +39,17 @@
         <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel") }}</div>
         <div class="form-group prospection-comments-group">
             {{ form.profils_prospect.label(class="form-label") }}
-            {{ form.profils_prospect(class="form-input prospection-comments", rows="10", placeholder="Décrivez les échanges, besoins, objections, prescriptions, produits présentés et suites à donner…", style="min-height:220px; resize:vertical;") }}
-            <small class="form-help">Notez ici le compte-rendu complet de la visite.</small>
+            {% set current_profil = form.profils_prospect.data if form.is_submitted() else prospection.profils_prospect %}
+<select class="form-input" id="profils_prospect" name="profils_prospect" required>
+<option value="">Sélectionner un profil...</option>
+{% for profil in ["PRESCRIPTEUR","NON PRESCRITEUR","PROFILE DEMANDEUR","SCIENTIFIQUE","PRO-ECHANTILLONS","PHARMACIE A COMMANDE","PHARMACIE DE CONSEIL","PHARMACIE SPECTATEUR","PHARMACIE PARTENAIRE"] %}
+<option value="{{ profil }}" {% if current_profil == profil %}selected{% endif %}>{{ profil }}</option>
+{% endfor %}
+{% if current_profil and current_profil not in ["PRESCRIPTEUR","NON PRESCRITEUR","PROFILE DEMANDEUR","SCIENTIFIQUE","PRO-ECHANTILLONS","PHARMACIE A COMMANDE","PHARMACIE DE CONSEIL","PHARMACIE SPECTATEUR","PHARMACIE PARTENAIRE"] %}
+<option value="{{ current_profil }}" selected>Ancien commentaire enregistré</option>
+{% endif %}
+</select>
+            <small class="form-help">Sélectionnez le profil correspondant. Les anciennes valeurs sont conservées lors de la modification.</small>
         </div>
         <div class="form-group">{{ form.produits_presentes.label(class="form-label") }}{{ form.produits_presentes(class="form-input select2-products", multiple=true) }}</div>
         <div class="form-group">{{ form.produits_prescrits.label(class="form-label") }}{{ form.produits_prescrits(class="form-input select2-products", multiple=true) }}</div>
