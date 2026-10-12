@@ -364,6 +364,14 @@ def index():
         if not form.validate():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form, form.date.data)
+
+        # Hors Dakar, la zone CRM est toujours normalisée à HORS DAKAR.
+        # Cela évite qu'une zone de Dakar ou une valeur vide bloque la validation
+        # alors que la région sélectionnée est une région intérieure.
+        selected_region = (form.region.data or "").strip().upper()
+        if selected_region and selected_region != "DAKAR":
+            form.zone.data = "HORS DAKAR"
+
         planning_context = _planning_context_for_date(form.date.data)
         location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=True)
         if location_error:
