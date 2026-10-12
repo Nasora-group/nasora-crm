@@ -127,7 +127,7 @@ def saisie():
 
         # Chaque structure sélectionnée doit avoir son nom précis renseigné.
         missing_names = []
-        for jour in WORKING_DAYS:
+        for jour in JOURS:
             for structure in request.form.getlist(jour):
                 slug = STRUCTURE_SLUGS.get(structure, structure.replace(" ", "_"))
                 nom = request.form.get(f"{jour}_nom__{slug}", "").strip()
@@ -182,7 +182,7 @@ def edit_planning(planning_id):
 
         # En modification aussi, chaque structure sélectionnée doit avoir son nom précis.
         missing_names = []
-        for jour in WORKING_DAYS:
+        for jour in JOURS:
             for structure in request.form.getlist(jour):
                 slug = STRUCTURE_SLUGS.get(structure, structure.replace(" ", "_"))
                 nom = request.form.get(f"{jour}_nom__{slug}", "").strip()
