@@ -64,3 +64,18 @@ def test_prospection_form_is_responsive_without_removing_business_fields():
     assert "form.profils_prospect" in form
     assert "form.produits_presentes" in form
     assert "form.produits_prescrits" in form
+
+ 
+def test_phase_two_visitor_quick_actions_are_mobile_only_and_preserve_existing_routes():
+    dashboard = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase2-visitor-quick-actions.css").read_text(encoding="utf-8")
+
+    assert "current_user.role == 'commercial'" in dashboard
+    assert 'class="ns-mobile-quick-actions"' in dashboard
+    assert 'href="#nouvelle-prospection"' in dashboard
+    assert "planning.visualiser" in dashboard
+    assert "phase2-visitor-quick-actions.css" in base
+    assert "@media(max-width:760px)" in css
+    assert "env(safe-area-inset-bottom)" in css
+    assert "prefers-reduced-motion" in css
