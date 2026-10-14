@@ -97,3 +97,22 @@ def test_phase_three_admin_tools_are_grouped_without_removing_existing_routes():
     assert "phase3-admin-dashboard.css" in base
     assert ".dashboard-tools-disclosure" in css
     assert "@media" in css
+
+def test_phase_four_animator_workflow_styles_preserve_form_fields_and_totals():
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    form = Path("app/templates/animation_sale_form.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase4-animator-workflow.css").read_text(encoding="utf-8")
+
+    assert "phase4-animator-workflow.css" in base
+    assert "ns-animation-form" in form
+    assert 'name="pharmacy_name"' in form
+    assert 'name="animation_date"' in form
+    assert 'name="animation_evidence"' in form
+    assert 'class="sale-unit-price"' in form
+    assert 'class="sale-quantity"' in form
+    assert 'id="animation-total"' in form
+    assert "updateTotal()" in form
+    assert ".ns-animation-form .ns-product-scroll" in css
+    assert ".ns-animation-form .ns-form-footer" in css
+    assert "@media(max-width:700px)" in css
+    assert "prefers-reduced-motion" in css
