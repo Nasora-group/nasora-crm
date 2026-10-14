@@ -41,3 +41,12 @@ def test_animation_form_has_mobile_friendly_layout_hooks_and_keeps_form_fields()
     assert 'name="animation_date"' in form
     assert 'name="animation_evidence"' in form
     assert "animation-total" in form
+
+
+def test_visitor_dashboard_exposes_direct_planning_and_prospection_actions():
+    dashboard = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "visitor-home-title" in dashboard
+    assert "planning.visualiser" in dashboard
+    assert "nouvelle-prospection" in dashboard
+    assert "clients.list_clients" in dashboard
