@@ -79,3 +79,21 @@ def test_phase_two_visitor_quick_actions_are_mobile_only_and_preserve_existing_r
     assert "@media(max-width:760px)" in css
     assert "env(safe-area-inset-bottom, 0px)" in css
     assert "prefers-reduced-motion" in css
+
+
+def test_phase_three_admin_tools_are_grouped_without_removing_existing_routes():
+    dashboard = Path("app/templates/admin_dashboard.html").read_text(encoding="utf-8")
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase3-admin-dashboard.css").read_text(encoding="utf-8")
+
+    assert '<details class="dashboard-tools-disclosure">' in dashboard
+    assert "</details>" in dashboard
+    assert "sales_history" in dashboard
+    assert "products.list_products" in dashboard
+    assert "stock.entry" in dashboard
+    assert "stock.available" in dashboard
+    assert "stock.history" in dashboard
+    assert "planning.admin_plannings" in dashboard
+    assert "phase3-admin-dashboard.css" in base
+    assert ".dashboard-tools-disclosure" in css
+    assert "@media" in css
