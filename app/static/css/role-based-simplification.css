@@ -1,0 +1,54 @@
+/* NASORA CRM — simplification progressive par rôle, phase 1.
+   Couche additive uniquement : aucune règle métier ni donnée modifiée. */
+.ns-role-home{max-width:1440px;margin:0 auto 22px}
+.ns-role-home__intro{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;border:1px solid #d7e6dc;border-radius:16px;background:linear-gradient(135deg,#eff8f2 0%,#fff 76%);box-shadow:0 6px 18px rgba(18,65,44,.045)}
+.ns-role-home__eyebrow{display:block;margin-bottom:5px;color:#16734b;font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.ns-role-home__intro h2{margin:0 0 5px;color:#173b2b;font-size:1.25rem;line-height:1.25}
+.ns-role-home__intro p{margin:0;color:#5e7066;font-size:.88rem;line-height:1.5}
+.ns-role-home__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.ns-role-home__actions .btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:10px;font-weight:750;text-decoration:none}
+.ns-role-home__actions .btn-primary{background:#11643f;border-color:#11643f;color:#fff}
+.ns-role-home__actions .btn-secondary{background:#fff;border:1px solid #cbded2;color:#18563a}
+.ns-role-home__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.ns-role-home__card{display:flex;align-items:flex-start;gap:12px;min-width:0;padding:15px;border:1px solid #dce8e1;border-radius:13px;background:#fff;color:#173b2b;text-decoration:none;box-shadow:0 4px 12px rgba(18,65,44,.035);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.ns-role-home__card:hover{border-color:#b8d4c3;box-shadow:0 8px 20px rgba(18,65,44,.07);transform:translateY(-1px)}
+.ns-role-home__icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:10px;background:#edf7f0;color:#176b45;font-size:1.15rem;font-weight:800}
+.ns-role-home__card strong,.ns-role-home__card small{display:block}
+.ns-role-home__card strong{margin:1px 0 4px;font-size:.88rem}
+.ns-role-home__card small{color:#66776e;font-size:.76rem;line-height:1.45}
+.ns-animation-form .ns-role-home__intro{margin-bottom:16px}
+.ns-animation-form .ns-form-section{min-width:0}
+.ns-animation-form input:not([type=file]),.ns-animation-form select{box-sizing:border-box;min-height:44px;border:1px solid #d3e0d8;border-radius:9px;padding:10px 12px;background:#fff;font:inherit}
+.ns-animation-form input:focus,.ns-animation-form select:focus{outline:3px solid rgba(22,115,75,.15);border-color:#16804a}
+.ns-animation-form .ns-product-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px 120px;gap:10px 14px;align-items:center}
+.ns-animation-form .ns-product-grid>label{overflow-wrap:anywhere}
+.ns-animation-form .ns-product-grid>input{width:100%;min-width:0}
+.ns-animation-form .ns-form-submit{min-height:44px;border-radius:10px;font-weight:800}
+@media(max-width:800px){.ns-role-home__intro{align-items:flex-start;flex-direction:column}.ns-role-home__actions{justify-content:flex-start;width:100%}.ns-role-home__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ns-animation-form .ns-product-grid{grid-template-columns:minmax(0,1fr) 115px 90px;gap:9px}}
+@media(max-width:560px){.ns-role-home{margin-bottom:16px}.ns-role-home__intro{padding:17px;border-radius:13px}.ns-role-home__intro h2{font-size:1.12rem}.ns-role-home__actions{display:grid;grid-template-columns:1fr;width:100%}.ns-role-home__actions .btn{width:100%;box-sizing:border-box}.ns-role-home__grid{grid-template-columns:1fr}.ns-role-home__card{padding:13px}.ns-animation-form{margin:16px auto!important;padding:0 10px}.ns-animation-form form.card{padding:16px!important}.ns-animation-form .ns-form-meta{grid-template-columns:1fr!important;gap:13px!important}.ns-animation-form .ns-product-scroll{overflow-x:auto;padding-bottom:4px}.ns-animation-form .ns-product-grid{min-width:480px}.ns-animation-form .ns-form-footer{display:grid!important;grid-template-columns:1fr;gap:9px!important}.ns-animation-form .ns-form-footer .btn{width:100%;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.ns-role-home__card{transition:none}.ns-role-home__card:hover{transform:none}}
+
+
+/* Phase 2 — rendre la saisie terrain plus lisible sans retirer de champs. */
+.prospection-panel{max-width:1120px;margin:18px auto 30px;padding:clamp(14px,2.2vw,26px);border:1px solid #dce8e1;border-radius:16px;background:#fff;box-shadow:0 8px 26px rgba(18,65,44,.045)}
+.prospection-panel .panel-heading{margin-bottom:18px}
+.prospection-panel .panel-heading h2{margin:3px 0 6px;color:#173b2b;font-size:1.3rem}
+.prospection-panel .panel-heading p{margin:0;color:#66776e;font-size:.9rem;line-height:1.5}
+.prospection-panel .crm-overline{color:#16734b;font-size:.7rem;font-weight:800;letter-spacing:.1em}
+.prospection-panel .prospection-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 18px}
+.prospection-panel .prospection-form>.form-group,.prospection-panel .prospection-form>.planning-day-panel,.prospection-panel .prospection-form>.planning-choice{min-width:0;margin:0}
+.prospection-panel .prospection-form>.form-group:first-child,.prospection-panel .prospection-form>.planning-day-panel,.prospection-panel .prospection-form>.planning-choice,.prospection-panel .prospection-form>.prospection-comments-group,.prospection-panel .prospection-form>.product-select-group,.prospection-panel .prospection-form>.form-submit-row{grid-column:1/-1}
+.prospection-panel .form-label{display:block;margin-bottom:6px;color:#294d3a;font-size:.85rem;font-weight:750}
+.prospection-panel .form-input{box-sizing:border-box;width:100%;min-width:0;min-height:43px;padding:10px 12px;border:1px solid #d4e1d8;border-radius:9px;background:#fff;color:#21392c;font:inherit}
+.prospection-panel .form-input:focus{outline:3px solid rgba(22,115,75,.13);border-color:#16804a}
+.prospection-panel .form-help{color:#69796f;line-height:1.45}
+.prospection-panel .planning-day-panel{padding:15px;border-color:#d3e7da;background:#f5faf6}
+.prospection-panel .planned-structure-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.prospection-panel .planned-structure-card{min-width:0;transition:border-color .15s ease,background .15s ease}
+.prospection-panel .planning-choice{padding:14px;border-color:#d7e7dc;background:#f8fbf9}
+.prospection-panel .product-picker-trigger{min-height:43px;border-color:#d4e1d8;border-radius:9px}
+.prospection-panel .form-submit-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:4px}
+.prospection-panel .btn-submit{min-height:45px;padding:11px 18px;border:1px solid #11643f;border-radius:10px;background:#11643f;color:#fff;font-weight:800;cursor:pointer}
+.prospection-panel .btn-submit:hover{background:#0d5233}
+@media(max-width:700px){.prospection-panel{margin:12px 10px 22px;padding:14px;border-radius:13px}.prospection-panel .prospection-form{grid-template-columns:minmax(0,1fr);gap:13px}.prospection-panel .prospection-form>.form-group,.prospection-panel .prospection-form>.planning-day-panel,.prospection-panel .prospection-form>.planning-choice,.prospection-panel .prospection-form>.prospection-comments-group,.prospection-panel .prospection-form>.product-select-group,.prospection-panel .prospection-form>.form-submit-row{grid-column:1}.prospection-panel .planning-day-header,.prospection-panel .planning-choice-header{align-items:flex-start;flex-direction:column}.prospection-panel .form-submit-row{align-items:stretch}.prospection-panel .btn-submit{width:100%}}
+@media(prefers-reduced-motion:reduce){.prospection-panel .planned-structure-card{transition:none}}
