@@ -217,4 +217,11 @@ if(region){region.addEventListener('change',syncZone);syncZone();}
 });
 </script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-picker').forEach(function(picker){const trigger=picker.querySelector('.product-picker-trigger'),selected=picker.querySelector('.product-selected'),native=picker.querySelector('.product-native-select');function render(){selected.innerHTML='';Array.from(native.selectedOptions).forEach(function(opt){const chip=document.createElement('span');chip.className='product-chip';chip.textContent=opt.text;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Retirer '+opt.text);remove.onclick=function(){opt.selected=false;render();};chip.appendChild(remove);selected.appendChild(chip);});picker.querySelectorAll('.product-option').forEach(function(btn){const opt=Array.from(native.options).find(function(o){return o.value===btn.dataset.value});btn.classList.toggle('is-selected',!!opt&&opt.selected);});}trigger.onclick=function(e){e.stopPropagation();document.querySelectorAll('.product-picker.is-open').forEach(function(x){if(x!==picker)x.classList.remove('is-open')});picker.classList.toggle('is-open')};picker.querySelectorAll('.product-option').forEach(function(btn){btn.onclick=function(){const opt=Array.from(native.options).find(function(o){return o.value===btn.dataset.value});if(opt){opt.selected=!opt.selected;render();}picker.classList.add('is-open');}});render();});document.addEventListener('click',function(e){document.querySelectorAll('.product-picker.is-open').forEach(function(p){if(!p.contains(e.target))p.classList.remove('is-open')});});});</script>
+
+{% if current_user.role == 'commercial' %}
+<nav class="ns-mobile-quick-actions" aria-label="Actions terrain rapides">
+  <a href="#nouvelle-prospection"><span aria-hidden="true">＋</span><span>Prospection</span></a>
+  <a href="{{ url_for('planning.visualiser') }}"><span aria-hidden="true">▦</span><span>Planning</span></a>
+</nav>
+{% endif %}
 {% endblock %}
