@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Espace Visiteur médical | NASORA CRM{% endblock %}
 {% block content %}
+{% if current_user.role == 'commercial' %}
+<section class="ns-role-home" aria-labelledby="visitor-home-title">
+  <div class="ns-role-home__intro">
+    <div><span class="ns-role-home__eyebrow">Espace visiteur médical · {{ current_user.project|upper }}</span><h2 id="visitor-home-title">Bonjour {{ current_user.username.split()[0] }}, votre activité terrain</h2><p>Retrouvez les actions essentielles et saisissez vos visites au fil de la journée.</p></div>
+    <div class="ns-role-home__actions">
+      <a class="btn btn-primary" href="#nouvelle-prospection">＋ Saisir une prospection</a>
+      <a class="btn btn-secondary" href="{{ url_for('planning.visualiser') }}">Consulter mon planning</a>
+    </div>
+  </div>
+  <div class="ns-role-home__grid">
+    <a class="ns-role-home__card" href="#nouvelle-prospection"><span class="ns-role-home__icon">＋</span><span><strong>Nouvelle prospection</strong><small>Enregistrer une visite, même hors planning.</small></span></a>
+    <a class="ns-role-home__card" href="{{ url_for('planning.visualiser') }}"><span class="ns-role-home__icon">▦</span><span><strong>Mon planning</strong><small>Vérifier les structures prévues.</small></span></a>
+    <a class="ns-role-home__card" href="{{ url_for('clients.list_clients') }}"><span class="ns-role-home__icon">♙</span><span><strong>Professionnels</strong><small>Retrouver une structure ou un contact.</small></span></a>
+  </div>
+</section>
+{% endif %}
 {% if current_user.role == 'animateur' %}
 <section class="ns-role-home" aria-labelledby="animation-home-title">
   <div class="ns-role-home__intro">
