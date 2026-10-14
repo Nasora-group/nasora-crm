@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Espace Visiteur médical | NASORA CRM{% endblock %}
 {% block content %}
+{% if current_user.role == 'animateur' %}
+<section class="ns-role-home" aria-labelledby="animation-home-title">
+  <div class="ns-role-home__intro">
+    <div><span class="ns-role-home__eyebrow">Espace animatrice · {{ current_user.project|upper }}</span><h2 id="animation-home-title">Bonjour {{ current_user.username.split()[0] }}, que souhaitez-vous faire ?</h2><p>Accédez directement à vos animations et à leur suivi. Vos autres fonctions CRM restent disponibles ci-dessous.</p></div>
+    <div class="ns-role-home__actions">
+      <a class="btn btn-primary" href="{{ url_for('animation_sales.new_animation_sale') }}">＋ Enregistrer une animation</a>
+      <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Consulter mon historique</a>
+    </div>
+  </div>
+  <div class="ns-role-home__grid">
+    <a class="ns-role-home__card" href="{{ url_for('animation_sales.new_animation_sale') }}"><span class="ns-role-home__icon">＋</span><span><strong>Nouvelle animation</strong><small>Saisir la pharmacie, la date et les produits vendus.</small></span></a>
+    <a class="ns-role-home__card" href="{{ url_for('animation_sales.my_history') }}"><span class="ns-role-home__icon">↻</span><span><strong>Historique des animations</strong><small>Retrouver les saisies et vérifier les montants.</small></span></a>
+    <a class="ns-role-home__card" href="{{ url_for('clients.list_clients') }}"><span class="ns-role-home__icon">⌕</span><span><strong>Base des professionnels</strong><small>Consulter les structures déjà enregistrées.</small></span></a>
+  </div>
+</section>
+{% endif %}
 <section class="v31-dashboard">
   <div class="v31-dashboard-heading">
     <div>
