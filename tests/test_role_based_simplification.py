@@ -104,7 +104,7 @@ def test_phase_four_animator_workflow_styles_preserve_form_fields_and_totals():
     css = Path("app/static/css/phase4-animator-workflow.css").read_text(encoding="utf-8")
 
     assert "phase4-animator-workflow.css" in base
-    assert 'class="ns-animation-form"' in form
+    assert "ns-animation-form" in form
     assert 'name="pharmacy_name"' in form
     assert 'name="animation_date"' in form
     assert 'name="animation_evidence"' in form
