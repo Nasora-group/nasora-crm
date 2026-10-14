@@ -1,0 +1,29 @@
+/* NASORA CRM — simplification progressive par rôle, phase 1.
+   Couche additive uniquement : aucune règle métier ni donnée modifiée. */
+.ns-role-home{max-width:1440px;margin:0 auto 22px}
+.ns-role-home__intro{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;border:1px solid #d7e6dc;border-radius:16px;background:linear-gradient(135deg,#eff8f2 0%,#fff 76%);box-shadow:0 6px 18px rgba(18,65,44,.045)}
+.ns-role-home__eyebrow{display:block;margin-bottom:5px;color:#16734b;font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.ns-role-home__intro h2{margin:0 0 5px;color:#173b2b;font-size:1.25rem;line-height:1.25}
+.ns-role-home__intro p{margin:0;color:#5e7066;font-size:.88rem;line-height:1.5}
+.ns-role-home__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.ns-role-home__actions .btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:10px;font-weight:750;text-decoration:none}
+.ns-role-home__actions .btn-primary{background:#11643f;border-color:#11643f;color:#fff}
+.ns-role-home__actions .btn-secondary{background:#fff;border:1px solid #cbded2;color:#18563a}
+.ns-role-home__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.ns-role-home__card{display:flex;align-items:flex-start;gap:12px;min-width:0;padding:15px;border:1px solid #dce8e1;border-radius:13px;background:#fff;color:#173b2b;text-decoration:none;box-shadow:0 4px 12px rgba(18,65,44,.035);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.ns-role-home__card:hover{border-color:#b8d4c3;box-shadow:0 8px 20px rgba(18,65,44,.07);transform:translateY(-1px)}
+.ns-role-home__icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:10px;background:#edf7f0;color:#176b45;font-size:1.15rem;font-weight:800}
+.ns-role-home__card strong,.ns-role-home__card small{display:block}
+.ns-role-home__card strong{margin:1px 0 4px;font-size:.88rem}
+.ns-role-home__card small{color:#66776e;font-size:.76rem;line-height:1.45}
+.ns-animation-form .ns-role-home__intro{margin-bottom:16px}
+.ns-animation-form .ns-form-section{min-width:0}
+.ns-animation-form input:not([type=file]),.ns-animation-form select{box-sizing:border-box;min-height:44px;border:1px solid #d3e0d8;border-radius:9px;padding:10px 12px;background:#fff;font:inherit}
+.ns-animation-form input:focus,.ns-animation-form select:focus{outline:3px solid rgba(22,115,75,.15);border-color:#16804a}
+.ns-animation-form .ns-product-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px 120px;gap:10px 14px;align-items:center}
+.ns-animation-form .ns-product-grid>label{overflow-wrap:anywhere}
+.ns-animation-form .ns-product-grid>input{width:100%;min-width:0}
+.ns-animation-form .ns-form-submit{min-height:44px;border-radius:10px;font-weight:800}
+@media(max-width:800px){.ns-role-home__intro{align-items:flex-start;flex-direction:column}.ns-role-home__actions{justify-content:flex-start;width:100%}.ns-role-home__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ns-animation-form .ns-product-grid{grid-template-columns:minmax(0,1fr) 115px 90px;gap:9px}}
+@media(max-width:560px){.ns-role-home{margin-bottom:16px}.ns-role-home__intro{padding:17px;border-radius:13px}.ns-role-home__intro h2{font-size:1.12rem}.ns-role-home__actions{display:grid;grid-template-columns:1fr;width:100%}.ns-role-home__actions .btn{width:100%;box-sizing:border-box}.ns-role-home__grid{grid-template-columns:1fr}.ns-role-home__card{padding:13px}.ns-animation-form{margin:16px auto!important;padding:0 10px}.ns-animation-form form.card{padding:16px!important}.ns-animation-form .ns-form-meta{grid-template-columns:1fr!important;gap:13px!important}.ns-animation-form .ns-product-scroll{overflow-x:auto;padding-bottom:4px}.ns-animation-form .ns-product-grid{min-width:480px}.ns-animation-form .ns-form-footer{display:grid!important;grid-template-columns:1fr;gap:9px!important}.ns-animation-form .ns-form-footer .btn{width:100%;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.ns-role-home__card{transition:none}.ns-role-home__card:hover{transform:none}}
