@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Saisir les ventes d'animation - NASORA CRM{% endblock %}
 {% block content %}
-<section class="crm-page" style="max-width:1100px;margin:30px auto;">
+<section class="crm-page ns-animation-form" style="max-width:1100px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
@@ -13,7 +13,7 @@
 
   <form method="post" enctype="multipart/form-data" class="card" style="padding:24px;" id="animation-sale-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:26px;">
+    <div class="ns-form-meta" style="display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:26px;">
       <label><strong>Pharmacie</strong><input required name="pharmacy_name" value="{{ form_data.get('pharmacy_name','') }}" placeholder="Ex. Pharmacie du Centre" style="width:100%;margin-top:8px;"></label>
       <label><strong>Date de l'animation</strong><input required type="date" name="animation_date" value="{{ form_data.get('animation_date','') }}" style="width:100%;margin-top:8px;"></label>
     </div>
@@ -27,8 +27,8 @@
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
     <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué en FCFA.</p>
 
-    <div style="overflow-x:auto;">
-      <div style="min-width:560px;display:grid;grid-template-columns:minmax(260px,1fr) 190px 170px;gap:10px 18px;align-items:center;">
+    <div class="ns-product-scroll" style="overflow-x:auto;">
+      <div class="ns-product-grid" style="min-width:560px;display:grid;grid-template-columns:minmax(260px,1fr) 190px 170px;gap:10px 18px;align-items:center;">
         <strong>Produit</strong><strong>Prix de vente unitaire (FCFA)</strong><strong>Quantité</strong>
         {% for product in products %}
         <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
@@ -48,7 +48,7 @@
       <div style="font-size:.85rem;opacity:.7;">Total = quantité × prix de vente unitaire (FCFA)</div>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
+    <div class="ns-form-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
       <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a>
       <button class="btn btn-primary" type="submit">✓ Enregistrer les ventes</button>
     </div>
