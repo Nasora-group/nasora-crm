@@ -1,0 +1,143 @@
+/* NASORA CRM — Phase 4 : parcours animateur plus clair pour la saisie terrain.
+   Couche visuelle additive : champs, calculs, routes et données restent inchangés. */
+.ns-animation-form{
+  max-width:1100px;
+  color:#203b2d;
+}
+.ns-animation-form>div:first-child{
+  padding:clamp(16px,2.4vw,26px);
+  border:1px solid #dce8e1;
+  border-radius:16px;
+  background:linear-gradient(135deg,#eff8f2 0%,#fff 78%);
+}
+.ns-animation-form>div:first-child h1{
+  font-size:clamp(1.45rem,2.6vw,2rem);
+  line-height:1.2;
+}
+.ns-animation-form>div:first-child p{
+  max-width:720px;
+  line-height:1.55;
+}
+.ns-animation-form form.card{
+  border:1px solid #dce8e1;
+  border-radius:16px;
+  box-shadow:0 8px 26px rgba(18,65,44,.055);
+}
+.ns-animation-form .ns-form-meta label{
+  display:block;
+  min-width:0;
+  color:#294d3a;
+  font-size:.9rem;
+}
+.ns-animation-form input:not([type=file]){
+  min-width:0;
+  min-height:44px;
+  box-sizing:border-box;
+  border:1px solid #d3e0d8;
+  border-radius:9px;
+  padding:10px 12px;
+  background:#fff;
+  color:#203b2d;
+  font:inherit;
+}
+.ns-animation-form input:focus-visible{
+  outline:3px solid rgba(22,115,75,.17);
+  outline-offset:1px;
+  border-color:#16804a;
+}
+.ns-animation-form .ns-product-scroll{
+  border:1px solid #dce8e1;
+  border-radius:12px;
+  background:#fff;
+  scrollbar-width:thin;
+}
+.ns-animation-form .ns-product-grid{
+  padding:12px;
+  gap:9px 14px!important;
+}
+.ns-animation-form .ns-product-grid>strong{
+  position:sticky;
+  top:0;
+  z-index:1;
+  padding:10px 8px;
+  border-radius:7px;
+  background:#edf7f0;
+  color:#174b35;
+  font-size:.78rem;
+  line-height:1.35;
+}
+.ns-animation-form .ns-product-grid>label{
+  padding:8px;
+  border-bottom:1px solid #edf2ee;
+  font-size:.85rem;
+  line-height:1.4;
+}
+.ns-animation-form .ns-product-grid>input{
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:8px 10px;
+}
+.ns-animation-form #animation-total{
+  display:inline-block;
+  font-variant-numeric:tabular-nums;
+  line-height:1.2;
+}
+.ns-animation-form .ns-form-footer .btn{
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 16px;
+  border-radius:10px;
+  font-weight:750;
+  text-decoration:none;
+}
+.ns-animation-form .ns-form-footer .btn-primary{
+  background:#11643f;
+  border-color:#11643f;
+  color:#fff;
+}
+.ns-animation-form .ns-form-footer .btn-primary:hover{
+  background:#0d5233;
+}
+@media(max-width:700px){
+  .ns-animation-form>div:first-child{
+    gap:12px!important;
+    border-radius:13px;
+  }
+  .ns-animation-form form.card{
+    border-radius:13px;
+  }
+  .ns-animation-form .ns-product-scroll{
+    margin-inline:-2px;
+    box-shadow:inset -10px 0 12px -14px rgba(0,0,0,.5);
+  }
+  .ns-animation-form .ns-product-grid{
+    min-width:520px!important;
+    grid-template-columns:minmax(220px,1fr) 155px 105px!important;
+    gap:8px 10px!important;
+  }
+  .ns-animation-form .ns-product-grid>strong{
+    font-size:.74rem;
+  }
+  .ns-animation-form .ns-product-grid>label{
+    padding:8px 5px;
+  }
+  .ns-animation-form .ns-form-footer{
+    position:sticky;
+    bottom:8px;
+    z-index:5;
+    padding:10px;
+    border:1px solid #dce8e1;
+    border-radius:12px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 -5px 18px rgba(18,65,44,.08);
+  }
+  .ns-animation-form .ns-form-footer .btn{
+    min-height:46px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .ns-animation-form *{scroll-behavior:auto!important}
+}
