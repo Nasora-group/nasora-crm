@@ -1,0 +1,86 @@
+/* NASORA CRM — Phase 3 : accueil administrateur plus lisible.
+   Couche additive uniquement : les liens et fonctions existants sont conservés. */
+.direction-dashboard-page .ns-role-home[aria-label="Accès rapides administrateur"]{
+  max-width:none;
+  margin:18px 0 0;
+}
+.direction-dashboard-page .ns-role-home[aria-label="Accès rapides administrateur"] .ns-role-home__grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.direction-dashboard-page .ns-role-home[aria-label="Accès rapides administrateur"] .ns-role-home__card{
+  min-height:76px;
+  align-items:center;
+  padding:12px 14px;
+}
+.direction-dashboard-page .dashboard-tools-disclosure{
+  margin:18px 0 20px;
+  border:1px solid #dce8e1;
+  border-radius:13px;
+  background:#f7faf8;
+  overflow:hidden;
+}
+.direction-dashboard-page .dashboard-tools-disclosure>summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 17px;
+  color:#174b35;
+  cursor:pointer;
+  list-style:none;
+  font-weight:750;
+}
+.direction-dashboard-page .dashboard-tools-disclosure>summary::-webkit-details-marker{display:none}
+.direction-dashboard-page .dashboard-tools-disclosure>summary:after{
+  content:"+";
+  display:grid;
+  place-items:center;
+  flex:0 0 28px;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  background:#e6f2eb;
+  color:#176b45;
+  font-size:1.2rem;
+}
+.direction-dashboard-page .dashboard-tools-disclosure[open]>summary:after{content:"−"}
+.direction-dashboard-page .dashboard-tools-title{font-size:.9rem}
+.direction-dashboard-page .dashboard-tools-description{
+  margin-left:auto;
+  color:#64766c;
+  font-size:.78rem;
+  font-weight:500;
+  text-align:right;
+}
+.direction-dashboard-page .dashboard-tools-disclosure .dashboard-summary{
+  margin:0;
+  padding:0 12px 12px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.direction-dashboard-page .dashboard-tools-disclosure .summary-card{
+  box-shadow:none;
+}
+@media(max-width:900px){
+  .direction-dashboard-page .ns-role-home[aria-label="Accès rapides administrateur"] .ns-role-home__grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:600px){
+  .direction-dashboard-page .ns-role-home[aria-label="Accès rapides administrateur"] .ns-role-home__grid{
+    grid-template-columns:1fr;
+  }
+  .direction-dashboard-page .dashboard-tools-disclosure>summary{
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .direction-dashboard-page .dashboard-tools-description{
+    order:2;
+    width:calc(100% - 40px);
+    margin-left:0;
+    text-align:left;
+  }
+  .direction-dashboard-page .dashboard-tools-disclosure .dashboard-summary{
+    grid-template-columns:1fr;
+  }
+}
