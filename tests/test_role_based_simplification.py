@@ -50,3 +50,17 @@ def test_visitor_dashboard_exposes_direct_planning_and_prospection_actions():
     assert "planning.visualiser" in dashboard
     assert "nouvelle-prospection" in dashboard
     assert "clients.list_clients" in dashboard
+
+
+def test_prospection_form_is_responsive_without_removing_business_fields():
+    css = Path("app/static/css/role-based-simplification.css").read_text(encoding="utf-8")
+    form = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert ".prospection-panel .prospection-form" in css
+    assert "@media(max-width:700px)" in css
+    assert "form.date" in form
+    assert "form.structure" in form
+    assert "form.nom_structure" in form
+    assert "form.profils_prospect" in form
+    assert "form.produits_presentes" in form
+    assert "form.produits_prescrits" in form
