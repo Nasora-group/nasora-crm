@@ -77,5 +77,5 @@ def test_phase_two_visitor_quick_actions_are_mobile_only_and_preserve_existing_r
     assert "planning.visualiser" in dashboard
     assert "phase2-visitor-quick-actions.css" in base
     assert "@media(max-width:760px)" in css
-    assert "env(safe-area-inset-bottom)" in css
+    assert "env(safe-area-inset-bottom, 0px)" in css
     assert "prefers-reduced-motion" in css
