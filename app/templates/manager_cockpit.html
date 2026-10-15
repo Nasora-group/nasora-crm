@@ -24,7 +24,7 @@
   <div class="reporting-control__heading">
     <div>
       <h2 id="reporting-control-title">🧾 Contrôle des saisies quotidiennes</h2>
-      <span class="helper">Période : du {{ reporting_start.strftime('%d/%m/%Y') }} au {{ (reporting_end - today.replace()).strftime('%d/%m/%Y') if false else (reporting_end - timedelta(days=1)).strftime('%d/%m/%Y') }} · 7 derniers jours complets</span>
+      <span class="helper">Période : du {{ reporting_start.strftime('%d/%m/%Y') }} au {{ reporting_last_day.strftime('%d/%m/%Y') }} · 7 derniers jours complets</span>
     </div>
     <span class="reporting-control__count">{{ reporting_rows|length }} collaborateur(s)</span>
   </div>
