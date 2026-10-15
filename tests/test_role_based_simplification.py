@@ -188,3 +188,23 @@ def test_phase_eight_reporting_control_uses_existing_data_and_covers_full_week()
     assert "reporting_last_day" in route
     assert ".reporting-status--warning" in css
     assert "@media(max-width:700px)" in css
+
+def test_phase_nine_consolidated_activity_report_is_read_only_and_filterable():
+    route = Path("app/routes/activity_reporting.py").read_text(encoding="utf-8")
+    template = Path("app/templates/activity_reporting.html").read_text(encoding="utf-8")
+    app_factory = Path("app/__init__.py").read_text(encoding="utf-8")
+    cockpit = Path("app/templates/manager_cockpit.html").read_text(encoding="utf-8")
+
+    assert '@activity_reporting_bp.route("/admin/rapport-activite")' in route
+    assert '@roles_required("admin")' in route
+    assert "Planning.query.filter" in route
+    assert "Prospection.query.filter" in route
+    assert "AnimationSale.query.filter" in route
+    assert "end_exclusive = end_day + timedelta(days=1)" in route
+    assert "Aucun enregistrement n’est modifié" in template
+    assert 'name="date_from"' in template
+    assert 'name="date_to"' in template
+    assert 'name="division"' in template
+    assert 'name="commercial_id"' in template
+    assert "activity_reporting_bp" in app_factory
+    assert "activity_reporting.index" in cockpit
