@@ -333,6 +333,7 @@ def index():
     # Les données restent en lecture seule : aucun enregistrement n'est modifié.
     reporting_start = today - timedelta(days=7)
     reporting_end = today
+    reporting_last_day = reporting_end - timedelta(days=1)
     reporting_users = field_users
     if selected_commercial_id:
         reporting_users = [user for user in reporting_users if user.id == selected_commercial_id]
@@ -455,7 +456,7 @@ def index():
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
         reporting_start=reporting_start, reporting_end=reporting_end,
-        reporting_rows=reporting_rows,
+        reporting_last_day=reporting_last_day, reporting_rows=reporting_rows,
     )
 
 
