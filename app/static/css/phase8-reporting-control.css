@@ -1,0 +1,21 @@
+/* NASORA CRM — Phase 8 : contrôle des saisies dans le cockpit manager. */
+.reporting-control { min-width: 0; }
+.reporting-control__heading { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.reporting-control__heading h2 { margin-bottom:4px; }
+.reporting-control__count { flex:0 0 auto; border:1px solid #dce8df; background:#f7fbf8; color:#315e41; padding:6px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+.reporting-control__note { margin:10px 0 14px; color:#66736b; font-size:.76rem; line-height:1.5; }
+.reporting-control__table-wrap { max-width:100%; -webkit-overflow-scrolling:touch; }
+.reporting-control__table { min-width:760px; }
+.reporting-control__role { display:block; margin-top:3px; color:#7a857e; font-size:.68rem; }
+.reporting-status { display:inline-flex; max-width:100%; padding:5px 8px; border-radius:999px; font-size:.68rem; font-weight:750; line-height:1.35; white-space:normal; }
+.reporting-status--warning { background:#fff4db; color:#8a5b05; }
+.reporting-status--success { background:#eaf7ed; color:#246b3a; }
+.reporting-status--neutral { background:#f0f3f1; color:#5e6a62; }
+@media(max-width:700px) {
+  .reporting-control__heading { flex-direction:column; }
+  .reporting-control__count { align-self:flex-start; }
+  .reporting-control__table { min-width:760px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .reporting-control * { scroll-behavior:auto !important; }
+}
