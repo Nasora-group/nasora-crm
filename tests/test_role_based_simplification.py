@@ -169,3 +169,22 @@ def test_phase_seven_direction_dashboard_indicators_are_mobile_friendly():
     assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
     assert "prefers-reduced-motion" in css
     assert "word-break: normal" in css
+
+
+def test_phase_eight_reporting_control_uses_existing_data_and_covers_full_week():
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    template = Path("app/templates/manager_cockpit.html").read_text(encoding="utf-8")
+    route = Path("app/routes/manager_cockpit.py").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase8-reporting-control.css").read_text(encoding="utf-8")
+
+    assert "phase8-reporting-control.css" in base
+    assert "Contrôle des saisies quotidiennes" in template
+    assert "reporting_start.strftime" in template
+    assert "reporting_rows" in template
+    assert "Prospection" in route
+    assert "AnimationSale" in route
+    assert '("samedi", 5), ("dimanche", 6)' in route
+    assert "À vérifier" in route
+    assert "reporting_last_day" in route
+    assert ".reporting-status--warning" in css
+    assert "@media(max-width:700px)" in css
