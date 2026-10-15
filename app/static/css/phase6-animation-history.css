@@ -1,0 +1,25 @@
+/* NASORA CRM — phase 6 : historique des animations plus lisible sur mobile.
+   Présentation uniquement : filtres, totaux, historique et règles métier conservés. */
+.ns-animation-history{max-width:1200px;margin:24px auto}
+.ns-animation-history .ns-history-filter-form{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;gap:12px}
+.ns-animation-history .ns-history-filter-form>div{min-width:0}
+.ns-animation-history .ns-history-filter-form input,.ns-animation-history .ns-history-filter-form select{width:100%;min-width:0;min-height:44px;box-sizing:border-box}
+.ns-animation-history .ns-history-filter-form .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.ns-animation-history .ns-history-summary-content{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.ns-animation-history .ns-history-table-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ns-animation-history .ns-history-table-scroll>table{min-width:560px}
+.ns-animation-history .pharmacy-sales-table{min-width:620px}
+.ns-animation-history .date-detail-btn,.ns-animation-history .btn{min-height:40px}
+@media(max-width:600px){
+  .ns-animation-history{margin:16px auto}
+  .ns-animation-history .ns-history-filter-form{grid-template-columns:minmax(0,1fr);gap:10px}
+  .ns-animation-history .ns-history-filter-form .btn{width:100%;box-sizing:border-box}
+  .ns-animation-history .ns-history-summary-content{align-items:flex-start;flex-direction:column;gap:12px}
+  .ns-animation-history .ns-history-summary-content>div{width:100%;text-align:left!important}
+  .ns-animation-history .ns-history-summary-content>div>div:nth-child(2){font-size:1.65rem!important;overflow-wrap:anywhere}
+  .ns-animation-history .ns-history-table-scroll>table{min-width:520px}
+  .ns-animation-history .pharmacy-group-head{gap:12px;padding:12px}
+  .ns-animation-history .evidence-actions{width:100%}
+  .ns-animation-history .evidence-actions .btn{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){.ns-animation-history *{scroll-behavior:auto!important}}
