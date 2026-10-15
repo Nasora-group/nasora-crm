@@ -154,3 +154,18 @@ def test_phase_six_animation_history_is_mobile_friendly_and_keeps_history_contro
     assert "@media(max-width:600px)" in css
     assert "prefers-reduced-motion" in css
     assert 'if current_user.role == "animateur":' in route
+
+def test_phase_seven_direction_dashboard_indicators_are_mobile_friendly():
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    dashboard = Path("app/templates/admin_dashboard.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase7-dashboard-mobile.css").read_text(encoding="utf-8")
+
+    assert "phase7-dashboard-mobile.css" in base
+    assert "direction-division-grid" in dashboard
+    assert "crm-kpi-grid" in dashboard
+    assert "direction-metrics" in dashboard
+    assert "@media (max-width: 640px)" in css
+    assert "@media (max-width: 380px)" in css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
+    assert "prefers-reduced-motion" in css
+    assert "word-break: normal" in css
