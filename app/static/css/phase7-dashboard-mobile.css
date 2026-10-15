@@ -1,0 +1,112 @@
+/* NASORA CRM — Phase 7 : indicateurs de direction plus lisibles sur mobile.
+   Styles additifs et strictement limités au tableau de bord direction. */
+.direction-dashboard-page .direction-division-card,
+.direction-dashboard-page .kpi-card,
+.direction-dashboard-page .chart-card,
+.direction-dashboard-page .summary-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.direction-dashboard-page .direction-metric strong,
+.direction-dashboard-page .kpi-value {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.direction-dashboard-page .kpi-card {
+  align-items: center;
+}
+.direction-dashboard-page .kpi-body {
+  flex: 1 1 auto;
+}
+.direction-dashboard-page .chart-card canvas {
+  max-width: 100%;
+}
+.direction-dashboard-page .crm-table-card {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+@media (max-width: 640px) {
+  .direction-dashboard-page .crm-page-hero {
+    padding: 16px;
+    gap: 14px;
+  }
+  .direction-dashboard-page .crm-page-hero h1 {
+    font-size: clamp(1.35rem, 5vw, 1.65rem);
+  }
+  .direction-dashboard-page .direction-division-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .direction-dashboard-page .direction-division-card {
+    padding: 15px;
+  }
+  .direction-dashboard-page .direction-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .direction-dashboard-page .direction-metric {
+    padding: 10px;
+  }
+  .direction-dashboard-page .direction-metric strong {
+    font-size: clamp(.92rem, 3.8vw, 1.1rem);
+  }
+  .direction-dashboard-page .crm-kpi-grid,
+  .direction-dashboard-page .kpi-grid.crm-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .direction-dashboard-page .kpi-card {
+    align-items: flex-start;
+    gap: 9px;
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+  .direction-dashboard-page .kpi-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    display: grid;
+    place-items: center;
+    font-size: .9rem;
+  }
+  .direction-dashboard-page .kpi-label {
+    font-size: .68rem;
+    line-height: 1.3;
+  }
+  .direction-dashboard-page .kpi-value {
+    margin-top: 5px;
+    font-size: clamp(.9rem, 3.8vw, 1.15rem);
+    line-height: 1.25;
+  }
+  .direction-dashboard-page .chart-card {
+    padding: 14px;
+  }
+  .direction-dashboard-page .chart-card canvas {
+    height: 240px !important;
+  }
+  .direction-dashboard-page .crm-section-title {
+    margin-top: 22px;
+  }
+  .direction-dashboard-page .crm-table-card {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  .direction-dashboard-page .crm-table-card .responsive-table {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 380px) {
+  .direction-dashboard-page .crm-kpi-grid,
+  .direction-dashboard-page .kpi-grid.crm-kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .direction-dashboard-page .direction-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .direction-dashboard-page .crm-table-card .responsive-table tbody tr {
+    transition: none !important;
+  }
+}
