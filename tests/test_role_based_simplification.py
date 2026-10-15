@@ -133,3 +133,24 @@ def test_phase_five_planning_week_remains_complete_and_responsive():
     assert "grid-template-columns:repeat(2,minmax(0,1fr))" in css
     assert "@media(max-width:380px)" in css
     assert "planning-badge-nom" in css
+
+
+def test_phase_six_animation_history_is_mobile_friendly_and_keeps_history_controls():
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    history = Path("app/templates/animation_sales_history.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase6-animation-history.css").read_text(encoding="utf-8")
+    route = Path("app/routes/animation_sales.py").read_text(encoding="utf-8")
+
+    assert "phase6-animation-history.css" in base
+    assert 'class="crm-page ns-animation-history"' in history
+    assert 'class="ns-history-filter-form"' in history
+    assert 'class="ns-history-summary-content"' in history
+    assert 'name="month"' in history
+    assert 'name="pharmacy"' in history
+    assert "name=\"animateur_id\"" in history
+    assert "animation_sales.edit_animation_sale" in history
+    assert "animation_sales.delete_animation_sale" in history
+    assert ".ns-animation-history .ns-history-filter-form" in css
+    assert "@media(max-width:600px)" in css
+    assert "prefers-reduced-motion" in css
+    assert 'if current_user.role == "animateur":' in route
