@@ -329,6 +329,96 @@ def index():
         animation_animateurs.append({"name": animateur.username, "amount": amount, "lines": lines})
     animation_animateurs.sort(key=lambda row: row["amount"], reverse=True)
 
+    # Contrôle non bloquant des saisies sur les 7 derniers jours complets.
+    # Les données restent en lecture seule : aucun enregistrement n'est modifié.
+    reporting_start = today - timedelta(days=7)
+    reporting_end = today
+    reporting_last_day = reporting_end - timedelta(days=1)
+    reporting_users = field_users
+    if selected_commercial_id:
+        reporting_users = [user for user in reporting_users if user.id == selected_commercial_id]
+
+    reporting_prospections = Prospection.query.filter(
+        Prospection.date >= reporting_start,
+        Prospection.date < reporting_end,
+    )
+    if selected_commercial_id:
+        reporting_prospections = reporting_prospections.filter(
+            Prospection.commercial_id == selected_commercial_id
+        )
+    prospection_rows = reporting_prospections.all()
+    prospection_counts = Counter(row.commercial_id for row in prospection_rows)
+    prospection_days = {
+        user.id: len({row.date for row in prospection_rows if row.commercial_id == user.id})
+        for user in reporting_users
+    }
+
+    animation_query = AnimationSale.query.filter(
+        AnimationSale.animation_date >= reporting_start,
+        AnimationSale.animation_date < reporting_end,
+    )
+    if selected_commercial_id:
+        animation_query = animation_query.filter(AnimationSale.animateur_id == selected_commercial_id)
+    if division_filter:
+        animation_query = animation_query.filter(AnimationSale.project == division_filter)
+    animation_rows = animation_query.all()
+    animation_counts = Counter(row.animateur_id for row in animation_rows)
+    animation_days = {
+        user.id: len({row.animation_date for row in animation_rows if row.animateur_id == user.id})
+        for user in reporting_users
+    }
+
+    reporting_planned_slots = Counter()
+    reporting_planning_query = Planning.query.filter(
+        Planning.date < reporting_end,
+        Planning.date >= reporting_start - timedelta(days=6),
+    )
+    if selected_commercial_id:
+        reporting_planning_query = reporting_planning_query.filter(
+            Planning.commercial_id == selected_commercial_id
+        )
+    for plan in reporting_planning_query.all():
+        for field, offset in (
+            ("lundi", 0), ("mardi", 1), ("mercredi", 2), ("jeudi", 3),
+            ("vendredi", 4), ("samedi", 5), ("dimanche", 6),
+        ):
+            planned_date = plan.date + timedelta(days=offset)
+            if reporting_start <= planned_date < reporting_end:
+                reporting_planned_slots[plan.commercial_id] += len(
+                    decode_planning_slot(getattr(plan, field, None))
+                )
+
+    reporting_rows = []
+    for user in reporting_users:
+        planned_slots = reporting_planned_slots.get(user.id, 0) if user.role == "commercial" else 0
+        prospect_count = prospection_counts.get(user.id, 0)
+        animation_count = animation_counts.get(user.id, 0) if user.role == "animateur" else 0
+        if user.role == "commercial":
+            if planned_slots and prospect_count < planned_slots:
+                status = "warning"
+                status_text = "À vérifier"
+            elif prospect_count:
+                status = "success"
+                status_text = "Prospections saisies"
+            else:
+                status = "neutral"
+                status_text = "Aucune prospection saisie"
+        else:
+            status = "success" if animation_count else "neutral"
+            status_text = "Animations saisies" if animation_count else "Aucune vente d’animation saisie"
+        reporting_rows.append({
+            "name": user.username,
+            "role": "Visiteur médical" if user.role == "commercial" else "Animateur(trice)",
+            "planned_slots": planned_slots,
+            "prospection_count": prospect_count,
+            "prospection_days": prospection_days.get(user.id, 0),
+            "animation_count": animation_count,
+            "animation_days": animation_days.get(user.id, 0) if user.role == "animateur" else 0,
+            "status": status,
+            "status_text": status_text,
+        })
+    reporting_rows.sort(key=lambda row: (row["status"] != "warning", row["name"].casefold()))
+
     visit_targets = read_visit_targets(field_users)
     ranking = _ranking(field_users, division_filter, start, end, visit_targets)
     if selected_commercial_id:
@@ -365,6 +455,8 @@ def index():
         top_animation_products=animation_products.most_common(6),
         top_animation_pharmacies=sorted(animation_pharmacies.items(), key=lambda item: item[1], reverse=True)[:6],
         animation_animateurs=animation_animateurs,
+        reporting_start=reporting_start, reporting_end=reporting_end,
+        reporting_last_day=reporting_last_day, reporting_rows=reporting_rows,
     )
 
 

@@ -19,6 +19,40 @@
 <article class="manager-kpi"><small>Exécution terrain</small><strong>{% if execution_pct is not none %}{{ execution_pct }} %{% else %}N/A{% endif %}</strong><span>Visites réelles / planning</span></article>
 </div>
 
+
+<section class="manager-card manager-section reporting-control" aria-labelledby="reporting-control-title">
+  <div class="reporting-control__heading">
+    <div>
+      <h2 id="reporting-control-title">🧾 Contrôle des saisies quotidiennes</h2>
+      <span class="helper">Période : du {{ reporting_start.strftime('%d/%m/%Y') }} au {{ reporting_last_day.strftime('%d/%m/%Y') }} · 7 derniers jours complets</span>
+    </div>
+    <span class="reporting-control__count">{{ reporting_rows|length }} collaborateur(s)</span>
+  </div>
+  <p class="reporting-control__note">Un statut « À vérifier » signale un écart entre les créneaux planifiés et les prospections enregistrées. Il s’agit d’un contrôle à confirmer, pas d’une preuve d’absence de visite. Les animations sont suivies séparément.</p>
+  {% if reporting_rows %}
+  <div class="manager-table-wrap reporting-control__table-wrap">
+    <table class="manager-table reporting-control__table">
+      <thead><tr><th>Collaborateur</th><th>Planning prévu</th><th>Prospections</th><th>Jours avec saisie</th><th>Ventes animation</th><th>Statut</th></tr></thead>
+      <tbody>
+      {% for row in reporting_rows %}
+        <tr>
+          <td><strong>{{ row.name }}</strong><small class="reporting-control__role">{{ row.role }}</small></td>
+          <td>{{ row.planned_slots if row.role == 'Visiteur médical' else '—' }}</td>
+          <td>{{ row.prospection_count if row.role == 'Visiteur médical' else '—' }}</td>
+          <td>{% if row.role == 'Visiteur médical' %}{{ row.prospection_days }} jour(s){% else %}{{ row.animation_days }} jour(s) d’animation{% endif %}</td>
+          <td>{% if row.role == 'Animateur(trice)' %}{{ row.animation_count }} ligne(s){% else %}—{% endif %}</td>
+          <td><span class="reporting-status reporting-status--{{ row.status }}">{{ row.status_text }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="manager-empty">Aucun collaborateur actif correspondant aux filtres.</div>
+  {% endif %}
+</section>
+
+
 <div class="manager-grid">
 <section class="manager-card"><h2>🎯 Classement des Visiteurs médicaux</h2><span class="helper">Classement par CA, puis par visites. Les objectifs de visites restent configurables dans Activité terrain.</span>{% if ranking %}<div class="manager-table-wrap"><table class="manager-table"><thead><tr><th>#</th><th>Visiteur médical</th><th>CA</th><th>Visites</th><th>Objectif</th><th>% visites</th></tr></thead><tbody>{% for row in ranking %}<tr><td><strong>{{ row.rank }}</strong></td><td><a class="manager-link" href="{{ url_for('manager_cockpit.visitor_detail', commercial_id=row.id, month=start.strftime('%Y-%m')) }}">{{ row.name }}</a></td><td>{{ '{:,.0f}'.format(row.revenue).replace(',', ' ') }} FCFA</td><td>{{ row.visits }}</td><td>{{ row.target }}</td><td><span class="manager-badge">{{ row.visit_pct }} %</span></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="manager-empty">Sélectionnez une division pour afficher le classement.</div>{% endif %}</section>
 <section class="manager-card"><h2>🚦 Alertes manager</h2><span class="helper">Les points qui demandent une action.</span>{% for alert in alerts %}<div class="manager-alert {{ alert.level }}"><strong>{{ alert.title }}</strong><span>{{ alert.text }}</span></div>{% else %}<div class="manager-empty">Aucune alerte prioritaire.</div>{% endfor %}</section>
