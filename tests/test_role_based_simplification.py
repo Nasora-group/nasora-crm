@@ -116,3 +116,20 @@ def test_phase_four_animator_workflow_styles_preserve_form_fields_and_totals():
     assert ".ns-animation-form .ns-form-footer" in css
     assert "@media(max-width:700px)" in css
     assert "prefers-reduced-motion" in css
+
+
+def test_phase_five_planning_week_remains_complete_and_responsive():
+    base = Path("app/templates/base.html").read_text(encoding="utf-8")
+    planning = Path("app/templates/visualiser_planning.html").read_text(encoding="utf-8")
+    week_card = Path("app/templates/_planning_week_card.html").read_text(encoding="utf-8")
+    css = Path("app/static/css/phase5-planning-mobile.css").read_text(encoding="utf-8")
+
+    assert "phase5-planning-mobile.css" in base
+    assert "planning-week-card" in week_card
+    assert "planning-days-row" in week_card
+    assert "('samedi','Samedi')" in week_card
+    assert "('dimanche','Dimanche')" in week_card
+    assert "planning.saisie" in planning
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in css
+    assert "@media(max-width:380px)" in css
+    assert "planning-badge-nom" in css

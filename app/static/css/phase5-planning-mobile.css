@@ -1,0 +1,24 @@
+/* NASORA CRM — phase 5 : lecture du planning hebdomadaire sur mobile.
+   Couche visuelle additive : les sept jours et toutes les visites restent affichés. */
+.planning-page .planning-hero{align-items:flex-start;gap:18px}
+.planning-page .planning-hero>div{min-width:0}
+.planning-page .planning-hero .btn{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.planning-page .planning-week-card{min-width:0;overflow:hidden;border:1px solid #dbe7df;border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(18,65,44,.045)}
+.planning-page .planning-week-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid #e5eee8;background:#f8fbf9}
+.planning-page .planning-week-header h3{margin:4px 0 0;color:#173b2b;font-size:1rem}
+.planning-page .planning-week-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.planning-page .planning-week-actions form{margin:0}
+.planning-page .planning-week-actions .btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+.planning-page .planning-days-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;padding:12px}
+.planning-page .planning-day-col{min-width:0;padding:10px 8px;border:1px solid #e4ece6;border-radius:10px;background:#fff}
+.planning-page .planning-day-col-label{margin-bottom:9px;color:#286344;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
+.planning-page .planning-badge{display:flex;flex-direction:column;gap:4px;min-width:0;margin:0 0 7px;padding:8px;border-left:3px solid var(--planning-structure-color,#6b8e4e);border-radius:6px;background:#f5f9f6}
+.planning-page .planning-badge-type,.planning-page .planning-badge-nom{min-width:0;overflow-wrap:anywhere}
+.planning-page .planning-badge-type{font-size:.72rem;font-weight:800;color:#264b36}
+.planning-page .planning-badge-nom{font-size:.76rem;line-height:1.4;color:#52665a}
+.planning-page .planning-day-empty{font-size:.74rem;line-height:1.45;color:#7a8980}
+.planning-page .planning-week-actions .btn:focus-visible,.planning-page .planning-hero .btn:focus-visible{outline:3px solid #82cba4;outline-offset:2px}
+@media(max-width:1100px){.planning-page .planning-days-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:760px){.planning-page .planning-hero{flex-direction:column;align-items:stretch}.planning-page .planning-hero .btn{width:100%;box-sizing:border-box}.planning-page .planning-days-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}.planning-page .planning-week-header{align-items:flex-start;padding:14px}.planning-page .planning-week-actions{width:100%}.planning-page .planning-week-actions form{flex:1}.planning-page .planning-week-actions .btn{width:100%;box-sizing:border-box}.planning-page .planning-week-actions>a{flex:1}}
+@media(max-width:380px){.planning-page .planning-days-row{grid-template-columns:minmax(0,1fr)}.planning-page .planning-day-col{padding:12px}.planning-page .planning-week-actions{display:grid;grid-template-columns:1fr}.planning-page .planning-week-actions form{width:100%}}
+@media(prefers-reduced-motion:reduce){.planning-page *{scroll-behavior:auto}}
