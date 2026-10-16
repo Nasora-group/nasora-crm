@@ -37,22 +37,22 @@
   <div class="activity-report__kpis">
     <article class="activity-report__kpi"><small>Créneaux planifiés</small><strong>{{ total_planned }}</strong></article>
     <article class="activity-report__kpi"><small>Prospections saisies</small><strong>{{ total_prospections }}</strong></article>
-    <article class="activity-report__kpi"><small>Exécution indicative</small><strong>{% if execution_pct is not none %}{{ execution_pct }} %{% else %}N/A{% endif %}</strong></article>
+    <article class="activity-report__kpi"><small>Exécution du planning</small><strong>{% if execution_pct is not none %}{{ execution_pct }} %{% else %}N/A{% endif %}</strong></article>
     <article class="activity-report__kpi"><small>CA des animations</small><strong>{{ '{:,.0f}'.format(total_animation_ca).replace(',', ' ') }} FCFA</strong><span class="muted">{{ total_animation_lines }} ligne(s) de vente</span></article>
   </div>
   <section class="activity-report__card">
     <h2>Synthèse par collaborateur</h2>
-    <p class="note">L’exécution compare le nombre de prospections saisies au nombre de créneaux planifiés. C’est un indicateur de contrôle, pas une preuve de visite manquante. Les animations sont suivies séparément.</p>
+    <p class="note">L’exécution compare uniquement les prospections rattachées à un planning aux établissements planifiés. Les prospections hors planning restent comptabilisées séparément. Les animations sont suivies à part.</p>
     {% if summary_rows %}
-    <div class="activity-report__table-wrap"><table><thead><tr><th>Collaborateur</th><th>Planning</th><th>Prospections</th><th>Exécution</th><th>Lignes animation</th><th>CA animation</th><th>Contrôle</th></tr></thead><tbody>
-    {% for row in summary_rows %}<tr><td><strong>{{ row.name }}</strong><br><span class="muted">{{ row.role }}</span></td><td>{{ row.planned if row.role == 'Visiteur médical' else '—' }}</td><td>{{ row.prospections if row.role == 'Visiteur médical' else '—' }}</td><td>{% if row.role == 'Visiteur médical' and row.execution is not none %}{{ row.execution }} %{% else %}—{% endif %}</td><td>{{ row.animation_lines if row.role == 'Animateur(trice)' else '—' }}</td><td>{% if row.role == 'Animateur(trice)' %}{{ '{:,.0f}'.format(row.animation_ca).replace(',', ' ') }} FCFA{% else %}—{% endif %}</td><td><span class="status status--{{ row.status }}">{{ row.status_text }}</span></td></tr>{% endfor %}
+    <div class="activity-report__table-wrap"><table><thead><tr><th>Collaborateur</th><th>Planning</th><th>Prospections</th><th>Hors planning</th><th>Exécution</th><th>Lignes animation</th><th>CA animation</th><th>Contrôle</th></tr></thead><tbody>
+    {% for row in summary_rows %}<tr><td><strong>{{ row.name }}</strong><br><span class="muted">{{ row.role }}</span></td><td>{{ row.planned if row.role == 'Visiteur médical' else '—' }}</td><td>{{ row.prospections if row.role == 'Visiteur médical' else '—' }}</td><td>{{ row.hors_planning if row.role == 'Visiteur médical' else '—' }}</td><td>{% if row.role == 'Visiteur médical' and row.execution is not none %}{{ row.execution }} %{% else %}—{% endif %}</td><td>{{ row.animation_lines if row.role == 'Animateur(trice)' else '—' }}</td><td>{% if row.role == 'Animateur(trice)' %}{{ '{:,.0f}'.format(row.animation_ca).replace(',', ' ') }} FCFA{% else %}—{% endif %}</td><td><span class="status status--{{ row.status }}">{{ row.status_text }}</span></td></tr>{% endfor %}
     </tbody></table></div>
     {% else %}<div class="muted">Aucune donnée pour les filtres sélectionnés.</div>{% endif %}
   </section>
   <section class="activity-report__card">
     <h2>Évolution quotidienne</h2>
-    <div class="activity-report__table-wrap"><table><thead><tr><th>Date</th><th>Créneaux planifiés</th><th>Prospections saisies</th><th>Lignes animation</th><th>CA animation</th></tr></thead><tbody>
-    {% for row in daily_rows %}<tr><td>{{ row.date.strftime('%d/%m/%Y') }}</td><td>{{ row.planned }}</td><td>{{ row.prospections }}</td><td>{{ row.animation_lines }}</td><td>{{ '{:,.0f}'.format(row.animation_ca).replace(',', ' ') }} FCFA</td></tr>{% endfor %}
+    <div class="activity-report__table-wrap"><table><thead><tr><th>Date</th><th>Créneaux planifiés</th><th>Prospections saisies</th><th>Rattachées au planning</th><th>Hors planning</th><th>Lignes animation</th><th>CA animation</th></tr></thead><tbody>
+    {% for row in daily_rows %}<tr><td>{{ row.date.strftime('%d/%m/%Y') }}</td><td>{{ row.planned }}</td><td>{{ row.prospections }}</td><td>{{ row.planned_prospections }}</td><td>{{ row.hors_planning }}</td><td>{{ row.animation_lines }}</td><td>{{ '{:,.0f}'.format(row.animation_ca).replace(',', ' ') }} FCFA</td></tr>{% endfor %}
     </tbody></table></div>
   </section>
   <p class="muted">Période affichée : {{ start_day.strftime('%d/%m/%Y') }} au {{ end_day.strftime('%d/%m/%Y') }}. Aucun enregistrement n’est modifié par ce rapport.</p>
