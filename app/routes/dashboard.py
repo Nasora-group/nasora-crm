@@ -242,6 +242,15 @@ def _planning_context_for_date(visit_date):
             entries.append({"structure": structure, "name": establishment_name})
     return {"planning": planning, "day": day, "day_label": labels[day], "entries": entries}
 
+def _normalize_prospection_location(zone, region):
+    """Normalize the zone for the selected region before validating or saving."""
+    zone = (zone or "").strip()
+    region = (region or "").strip()
+    if region and region.upper() != "DAKAR":
+        return "HORS DAKAR", region
+    return zone, region
+
+
 def _validate_location(zone, region, address=None, required=True):
     zone = (zone or "").strip()
     region = (region or "").strip()
@@ -365,12 +374,10 @@ def index():
             flash("Veuillez corriger les champs indiqués.", "error")
             return _render_dashboard(form, form.date.data)
 
-        # Hors Dakar, la zone CRM est toujours normalisée à HORS DAKAR.
-        # Cela évite qu'une zone de Dakar ou une valeur vide bloque la validation
-        # alors que la région sélectionnée est une région intérieure.
-        selected_region = (form.region.data or "").strip().upper()
-        if selected_region and selected_region != "DAKAR":
-            form.zone.data = "HORS DAKAR"
+        # Harmoniser la zone avec la région choisie avant validation.
+        form.zone.data, form.region.data = _normalize_prospection_location(
+            form.zone.data, form.region.data
+        )
 
         planning_context = _planning_context_for_date(form.date.data)
         location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=True)
@@ -490,6 +497,11 @@ def edit_prospection(prospection_id):
         form.address.data = prospection.address or (client.address if client else "") or ""
         form.hors_planning.data = prospection.planning_id is None
     if form.validate_on_submit():
+        # Une prospection modifiée en région intérieure doit suivre la même
+        # règle que lors de la création : la zone CRM devient HORS DAKAR.
+        form.zone.data, form.region.data = _normalize_prospection_location(
+            form.zone.data, form.region.data
+        )
         planning_context = _planning_context_for_date(form.date.data)
         location_error = _validate_location(form.zone.data, form.region.data, form.address.data, required=False)
         if location_error:
