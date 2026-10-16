@@ -69,6 +69,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-visual-unification.css', v='20261003-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-maquette-20261003.css', v='20261004-2') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/forge-inspired-layout.css', v='20261016-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user-profile.css', v='20261016-1') }}">
 <style>
 .cookie-banner{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:9999;display:none;max-width:900px;margin:auto;padding:1rem 1.15rem;border:1px solid #d9e5df;border-radius:14px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);color:#17352a}.cookie-banner.is-visible{display:block}.cookie-banner p{margin:0 0 .75rem;line-height:1.5}.cookie-actions{display:flex;gap:.6rem;flex-wrap:wrap}.cookie-actions button{border:0;border-radius:8px;padding:.65rem 1rem;font-weight:700;cursor:pointer}.cookie-accept{background:#0b7a4b;color:#fff}.cookie-reject{background:#eef3f0;color:#17352a}.cookie-link{color:#0b7a4b;font-weight:700}
 </style>
@@ -111,7 +112,7 @@
   <div class="nasora-userbar">
     <span class="nasora-notification" aria-label="Notifications">♧{% if current_user.role == 'admin' and admin_unread_notifications %}<b>{{ admin_unread_notifications }}</b>{% elif dashboard_activity is defined and dashboard_activity.relances_a_traiter %}<b>{{ dashboard_activity.relances_a_traiter }}</b>{% endif %}</span>
     <span class="nasora-user-divider"></span>
-    <span class="nasora-avatar" aria-hidden="true">♙</span>
+    <a class="nasora-profile-avatar" href="{{ url_for('profile.my_profile') }}" aria-label="Mon profil" title="Mon profil">{% if current_user.profile and current_user.profile.photo_data %}<img src="{{ url_for('profile.profile_photo') }}" alt="">{% else %}♙{% endif %}</a>
     <span class="nasora-user-copy"><strong>{{ current_user.username.split()[0] }}</strong><small>{{ 'Administrateur' if current_user.role == 'admin' else ('Animateur(trice)' if current_user.role == 'animateur' else 'Visiteur médical') }}</small></span>
     <span class="nasora-chevron">⌄</span>
     <form class="nasora-header-logout" method="post" action="{{ url_for('auth.logout') }}">

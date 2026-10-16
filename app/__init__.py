@@ -99,6 +99,8 @@ def _configure_logging(app):
         audit_logger.addHandler(handler)
 
 def _register_blueprints(app):
+    from app.routes.profile import profile_bp
+    app.register_blueprint(profile_bp)
     from app.routes.auth import auth_bp
     from app.routes.dashboard_direction_safe import terrain_bp
     from app.routes.dashboard import dashboard_bp
