@@ -12,10 +12,10 @@ def route_decorators(path, route_fragment):
     for index, line in enumerate(lines):
         if ".route(" not in line or route_fragment not in line:
             continue
-        start = index
-        while start > 0 and lines[start - 1].lstrip().startswith("@"):
-            start -= 1
-        return "\n".join(lines[start : index + 1])
+        end = index
+        while end + 1 < len(lines) and lines[end + 1].lstrip().startswith("@"):
+            end += 1
+        return "\n".join(lines[index : end + 1])
     raise AssertionError(f"Route {route_fragment!r} not found in {path}")
 
 
