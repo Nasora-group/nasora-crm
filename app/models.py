@@ -12,7 +12,25 @@ SENEGAL_REGIONS=[("DAKAR","DAKAR"),("DIOURBEL","DIOURBEL"),("FATICK","FATICK"),(
 
 class User(UserMixin,db.Model):
     id=db.Column(db.Integer,primary_key=True); username=db.Column(db.String(150),unique=True,nullable=False,index=True); password=db.Column(db.String(255),nullable=False); role=db.Column(db.String(50),nullable=False); zone=db.Column(db.String(100),nullable=True); project=db.Column(db.String(50),nullable=False); is_active_account=db.Column(db.Boolean,default=True,nullable=False)
+    profile = db.relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     def __repr__(self): return f"<User {self.username} ({self.role}/{self.project})>"
+
+
+class UserProfile(db.Model):
+    """Personal contact details and optional photo for an existing account."""
+    __tablename__ = "user_profile"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    first_name = db.Column(db.String(100), nullable=True)
+    last_name = db.Column(db.String(100), nullable=True)
+    email = db.Column(db.String(254), nullable=True)
+    phone = db.Column(db.String(40), nullable=True)
+    job_title = db.Column(db.String(120), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    photo_data = db.Column(db.LargeBinary, nullable=True)
+    photo_mime_type = db.Column(db.String(30), nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user = db.relationship("User", back_populates="profile")
 
 class Prospection(db.Model):
     id=db.Column(db.Integer,primary_key=True); commercial_id=db.Column(db.Integer,db.ForeignKey("user.id"),nullable=False,index=True); date=db.Column(db.Date,nullable=False,index=True); nom_client=db.Column(db.String(150),nullable=False); specialite=db.Column(db.String(150),nullable=False); structure=db.Column(db.String(150),nullable=False); telephone=db.Column(db.String(30),nullable=False); zone=db.Column(db.String(100),nullable=True,index=True); region=db.Column(db.String(100),nullable=True,index=True); address=db.Column(db.String(255),nullable=True); profils_prospect=db.Column(db.Text,nullable=True); produits_presentes=db.Column(db.Text,nullable=True); produits_prescrits=db.Column(db.Text,nullable=True)
