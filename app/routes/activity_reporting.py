@@ -17,6 +17,47 @@ def _parse_day(value, fallback):
         return fallback
 
 
+def _planned_entry_count(raw):
+    """Count individual establishments, including comma-separated names."""
+    count = 0
+    for _structure, name in decode_planning_slot(raw):
+        names = [item.strip() for item in (name or "").split(",") if item.strip()]
+        count += len(names) if names else 1
+    return count
+
+
+def _prospection_counts(rows):
+    """Separate all recorded visits from visits linked to a planning slot."""
+    all_by_user = Counter()
+    all_by_day = Counter()
+    linked_by_user = Counter()
+    linked_by_day = Counter()
+    outside_by_user = Counter()
+    outside_by_day = Counter()
+    for row in rows:
+        all_by_user[row.commercial_id] += 1
+        all_by_day[row.date] += 1
+        if row.planning_id is None:
+            outside_by_user[row.commercial_id] += 1
+            outside_by_day[row.date] += 1
+        else:
+            linked_by_user[row.commercial_id] += 1
+            linked_by_day[row.date] += 1
+    return {
+        "all_by_user": all_by_user,
+        "all_by_day": all_by_day,
+        "linked_by_user": linked_by_user,
+        "linked_by_day": linked_by_day,
+        "outside_by_user": outside_by_user,
+        "outside_by_day": outside_by_day,
+    }
+
+
+def _execution_rate(planned, linked_prospections):
+    """Return execution based only on prospections linked to a planning."""
+    return round(linked_prospections * 100 / planned, 1) if planned else None
+
+
 @activity_reporting_bp.route("/admin/rapport-activite")
 @login_required
 @roles_required("admin")
@@ -64,21 +105,29 @@ def index():
             for field, offset in weekday_fields:
                 planned_date = plan.date + timedelta(days=offset)
                 if start_day <= planned_date <= end_day:
-                    slots = len(decode_planning_slot(getattr(plan, field, None)))
+                    slots = _planned_entry_count(getattr(plan, field, None))
                     planned_by_user[plan.commercial_id] += slots
                     planned_by_day[planned_date] += slots
 
     prospection_by_user = Counter()
     prospection_by_day = Counter()
+    planned_prospection_by_user = Counter()
+    planned_prospection_by_day = Counter()
+    hors_planning_by_user = Counter()
+    hors_planning_by_day = Counter()
     if user_ids:
         prospections = Prospection.query.filter(
             Prospection.commercial_id.in_(user_ids),
             Prospection.date >= start_day,
             Prospection.date < end_exclusive,
         ).all()
-        for row in prospections:
-            prospection_by_user[row.commercial_id] += 1
-            prospection_by_day[row.date] += 1
+        counts = _prospection_counts(prospections)
+        prospection_by_user = counts["all_by_user"]
+        prospection_by_day = counts["all_by_day"]
+        planned_prospection_by_user = counts["linked_by_user"]
+        planned_prospection_by_day = counts["linked_by_day"]
+        hors_planning_by_user = counts["outside_by_user"]
+        hors_planning_by_day = counts["outside_by_day"]
 
     animation_query = AnimationSale.query.filter(
         AnimationSale.animation_date >= start_day,
@@ -107,11 +156,13 @@ def index():
     for user in users:
         planned = planned_by_user[user.id] if user.role == "commercial" else 0
         prospect_count = prospection_by_user[user.id] if user.role == "commercial" else 0
+        linked_prospect_count = planned_prospection_by_user[user.id] if user.role == "commercial" else 0
+        outside_planning_count = hors_planning_by_user[user.id] if user.role == "commercial" else 0
         animation_lines = animation_lines_by_user[user.id] if user.role == "animateur" else 0
         animation_ca = animation_ca_by_user[user.id] if user.role == "animateur" else 0.0
-        execution = round(prospect_count * 100 / planned, 1) if planned else None
+        execution = _execution_rate(planned, linked_prospect_count)
         if user.role == "commercial":
-            status = "warning" if planned and prospect_count < planned else ("success" if prospect_count else "neutral")
+            status = "warning" if planned and linked_prospect_count < planned else ("success" if prospect_count else "neutral")
             status_text = "À vérifier" if status == "warning" else ("Saisies enregistrées" if prospect_count else "Aucune prospection")
         else:
             status = "success" if animation_lines else "neutral"
@@ -122,6 +173,7 @@ def index():
             "role": "Visiteur médical" if user.role == "commercial" else "Animateur(trice)",
             "planned": planned,
             "prospections": prospect_count,
+            "hors_planning": outside_planning_count,
             "execution": execution,
             "animation_lines": animation_lines,
             "animation_ca": animation_ca,
@@ -136,6 +188,8 @@ def index():
             "date": day,
             "planned": planned_by_day[day],
             "prospections": prospection_by_day[day],
+            "planned_prospections": planned_prospection_by_day[day],
+            "hors_planning": hors_planning_by_day[day],
             "animation_lines": animation_lines_by_day[day],
             "animation_ca": animation_ca_by_day[day],
         })
@@ -143,9 +197,10 @@ def index():
 
     total_planned = sum(row["planned"] for row in summary_rows)
     total_prospections = sum(row["prospections"] for row in summary_rows)
+    total_linked_prospections = sum(row["prospections"] - row["hors_planning"] for row in summary_rows)
     total_animation_lines = sum(row["animation_lines"] for row in summary_rows)
     total_animation_ca = sum(row["animation_ca"] for row in summary_rows)
-    execution_pct = round(total_prospections * 100 / total_planned, 1) if total_planned else None
+    execution_pct = _execution_rate(total_planned, total_linked_prospections)
 
     return render_template(
         "activity_reporting.html",
