@@ -245,8 +245,8 @@ def _planning_context_for_date(visit_date):
 def _normalize_prospection_location(zone, region):
     """Normalize the zone for the selected region before validating or saving."""
     zone = (zone or "").strip()
-    region = (region or "").strip()
-    if region and region.upper() != "DAKAR":
+    region = (region or "").strip().upper()
+    if region and region != "DAKAR":
         return "HORS DAKAR", region
     return zone, region
 
