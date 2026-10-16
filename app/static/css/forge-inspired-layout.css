@@ -1,0 +1,110 @@
+/* NASORA CRM — interface inspirée du modèle Forge.
+   Couche visuelle additive : routes, permissions, données et formulaires inchangés. */
+:root{
+  --forge-green:#08784f;
+  --forge-green-dark:#075d3e;
+  --forge-green-soft:#eaf7f0;
+  --forge-ink:#172b22;
+  --forge-muted:#718078;
+  --forge-border:#e2e9e5;
+  --forge-bg:#f3f7f5;
+}
+html,body{background:var(--forge-bg)!important;color:var(--forge-ink)!important;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important}
+body{background:linear-gradient(135deg,#f4f8f6 0%,#edf5f1 100%)!important}
+.nasora-topbar{
+  display:flex!important;gap:20px!important;height:72px!important;min-height:72px!important;
+  padding:0 28px!important;background:rgba(255,255,255,.97)!important;color:var(--forge-ink)!important;
+  border-bottom:1px solid var(--forge-border)!important;box-shadow:0 3px 18px rgba(25,55,40,.045)!important;
+  backdrop-filter:blur(12px)
+}
+.nasora-brand{min-width:185px!important;width:185px!important;border-right:1px solid #edf1ee;padding-right:18px}
+.nasora-brand-logo{width:42px!important;height:42px!important;max-width:42px!important;flex-basis:42px!important;object-fit:contain!important;background:#fff!important;border:1px solid var(--forge-border)!important;border-radius:11px!important;padding:3px!important}
+.nasora-brand-name{font-size:22px!important;color:var(--forge-ink)!important;letter-spacing:-.04em!important}
+.nasora-brand-crm{font-size:12px!important;color:var(--forge-green)!important;font-weight:800!important;align-self:center}
+.nasora-top-search{width:min(340px,30vw)!important;height:40px!important;border:1px solid #dce5df!important;background:#f9fbfa!important;border-radius:999px!important;padding:0 14px!important}
+.nasora-top-search span{color:#5d7065!important}
+.nasora-top-search input{color:var(--forge-ink)!important;font-size:13px!important}
+.nasora-top-search input::placeholder{color:#8a9890!important}
+.nasora-topnav{display:none!important}
+.nasora-userbar{margin-left:auto!important;gap:12px!important}
+.nasora-notification,.nasora-chevron{color:#52665b!important}
+.nasora-user-divider{background:#e1e8e3!important;height:32px!important}
+.nasora-avatar{width:38px!important;height:38px!important;background:#eaf5ee!important;color:var(--forge-green)!important;border:1px solid #dcebe1!important;font-size:19px!important}
+.nasora-user-copy strong{color:var(--forge-ink)!important;font-size:13px!important}
+.nasora-user-copy small{color:var(--forge-muted)!important;font-size:11px!important}
+.nasora-header-logout button{background:#fff!important;color:var(--forge-green-dark)!important;border:1px solid #dce7e0!important;border-radius:9px!important}
+.nasora-sidebar{
+  top:72px!important;width:244px!important;padding:20px 14px 16px!important;
+  background:rgba(255,255,255,.98)!important;border-right:1px solid var(--forge-border)!important;
+  box-shadow:5px 0 24px rgba(26,55,40,.025)!important
+}
+.nasora-sidebar-menu{gap:6px!important}
+.nasora-sidebar-menu a,.ns-logout button{
+  min-height:44px!important;height:auto!important;padding:0 13px!important;gap:12px!important;
+  border-radius:10px!important;color:#415349!important;font-size:13px!important;font-weight:600!important;
+  transition:background .16s ease,color .16s ease,transform .16s ease!important
+}
+.nasora-sidebar-menu a:hover,.ns-logout button:hover{background:#f2f7f4!important;color:var(--forge-green-dark)!important}
+.nasora-sidebar-menu a.is-active{
+  background:linear-gradient(100deg,#08784f,#0a8959)!important;color:#fff!important;
+  box-shadow:0 5px 13px rgba(8,120,79,.16)!important
+}
+.nasora-sidebar-menu a.is-active:before{display:none!important}
+.ns-icon{color:#64766b!important;font-size:19px!important}
+.nasora-sidebar-menu a.is-active .ns-icon{color:#fff!important}
+.ns-badge{background:#eaf7f0!important;color:var(--forge-green-dark)!important}
+.ns-sidebar-divider{margin:17px 6px!important;background:#e9efeb!important}
+.ns-sidebar-brand{padding:20px 10px 6px!important}
+.ns-sidebar-logo{width:42px!important;height:42px!important;margin:0 0 9px 2px!important;border-radius:10px!important}
+.ns-sidebar-brand strong{font-size:18px!important;color:var(--forge-green-dark)!important}
+.ns-sidebar-brand small{font-size:11px!important;color:var(--forge-muted)!important}
+#main-content.container{
+  width:auto!important;max-width:none!important;margin:0!important;
+  padding:24px 28px 42px 272px!important;min-height:calc(100vh - 72px)!important
+}
+#main-content>.v31-dashboard,#main-content>.crm-page-hero,#main-content>.commercial-actions,#main-content>.form-container{max-width:1500px!important}
+#main-content h1,#main-content h2,#main-content h3{letter-spacing:-.025em!important}
+#main-content .crm-page-hero,#main-content .page-hero,#main-content .dashboard-card,
+#main-content .kpi-card,#main-content .chart-card,#main-content .summary-card,
+#main-content .crm-surface,#main-content .data-card,#main-content .responsive-table{
+  border:1px solid var(--forge-border)!important;border-radius:14px!important;
+  box-shadow:0 4px 16px rgba(24,52,38,.035)!important
+}
+#main-content .kpi-card{background:#fff!important}
+#main-content .btn-primary,#main-content .btn-success,#main-content .btn-submit{
+  background:var(--forge-green)!important;border-color:var(--forge-green)!important
+}
+#main-content .btn-primary:hover,#main-content .btn-success:hover,#main-content .btn-submit:hover{background:var(--forge-green-dark)!important}
+footer{margin-left:244px!important;background:transparent!important;border-top:1px solid #e4ece7!important;color:#718078!important}
+@media(max-width:1200px){
+  .nasora-topbar{padding:0 18px!important;gap:12px!important}
+  .nasora-brand{min-width:155px!important;width:155px!important}
+  .nasora-top-search{width:min(300px,28vw)!important}
+  #main-content.container{padding-left:264px!important;padding-right:18px!important}
+}
+@media(max-width:1023px){
+  .nasora-topbar{padding:0 14px!important;gap:10px!important}
+  .nasora-brand{min-width:0!important;width:auto!important;border:0!important;padding:0!important}
+  .nasora-brand-name{font-size:19px!important}
+  .nasora-top-search{width:auto!important;flex:1!important;min-width:80px!important}
+  .nasora-user-copy,.nasora-user-divider,.nasora-chevron,.nasora-header-logout{display:none!important}
+  .nasora-mobile-toggle{display:grid!important;place-items:center!important;flex:0 0 40px!important;width:40px!important;height:40px!important;border:1px solid #dce7e0!important;border-radius:10px!important;background:#fff!important;color:var(--forge-green)!important}
+  .nasora-sidebar{top:72px!important;left:0!important;width:min(300px,86vw)!important;transform:translateX(-105%);transition:transform .2s ease;box-shadow:10px 0 32px rgba(20,45,32,.12)!important}
+  .nasora-sidebar.is-open{transform:translateX(0)!important}
+  #main-content.container{padding:20px 16px 34px!important}
+  footer{margin-left:0!important}
+}
+@media(max-width:560px){
+  .nasora-topbar{height:64px!important;min-height:64px!important}
+  .nasora-brand-logo{width:36px!important;height:36px!important;max-width:36px!important;flex-basis:36px!important}
+  .nasora-brand-name{font-size:17px!important}
+  .nasora-brand-crm{display:none!important}
+  .nasora-top-search{height:36px!important;padding:0 10px!important}
+  .nasora-top-search input{font-size:12px!important}
+  .nasora-sidebar{top:64px!important}
+  #main-content.container{padding:16px 12px 28px!important}
+  #main-content .v31-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .nasora-sidebar,.nasora-sidebar-menu a,.ns-logout button{transition:none!important}
+}
