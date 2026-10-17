@@ -1,6 +1,7 @@
 import logging
+from io import BytesIO
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, abort, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 
@@ -46,6 +47,28 @@ def list_users():
     all_users = query.order_by(User.role.desc(), User.project, User.username).all()
     toggle_form = CSRFOnlyForm()
     return render_template("admin_users.html", users=all_users, toggle_form=toggle_form)
+
+
+@users_bp.route("/<int:user_id>/photo")
+@login_required
+@roles_required("admin")
+def user_photo(user_id):
+    """Affiche à l'administrateur la photo du compte sélectionné."""
+    user = User.query.get_or_404(user_id)
+    profile = user.profile
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    if not profile or not profile.photo_data or profile.photo_mime_type not in allowed_types:
+        abort(404)
+
+    response = send_file(
+        BytesIO(profile.photo_data),
+        mimetype=profile.photo_mime_type,
+        download_name="nasora-user-profile",
+        max_age=0,
+    )
+    response.headers["Cache-Control"] = "private, no-store, max-age=0"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @users_bp.route("/nouveau", methods=["GET", "POST"])
