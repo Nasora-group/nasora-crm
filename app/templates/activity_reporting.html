@@ -32,6 +32,8 @@
       <div><label for="division">Division animation</label><select id="division" name="division"><option value="all" {% if division == 'all' %}selected{% endif %}>Toutes</option>{% for d in divisions %}<option value="{{ d }}" {% if division == d %}selected{% endif %}>{{ d|upper }}</option>{% endfor %}</select></div>
       <div><label for="commercial_id">Collaborateur</label><select id="commercial_id" name="commercial_id"><option value="">Tous</option>{% for u in users %}<option value="{{ u.id }}" {% if selected_commercial_id == u.id %}selected{% endif %}>{{ u.username }}</option>{% endfor %}</select></div>
       <button class="btn" type="submit">Filtrer</button>
+      <button class="btn" type="submit" name="export" value="collaborateurs">Exporter synthèse CSV</button>
+      <button class="btn" type="submit" name="export" value="quotidien">Exporter quotidien CSV</button>
     </form>
   </section>
   <div class="activity-report__kpis">
