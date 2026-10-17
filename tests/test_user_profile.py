@@ -96,3 +96,39 @@ def test_profile_rejects_unsupported_photo_type(profile_client):
     )
     assert response.status_code == 200
     assert "Format de photo non accepté".encode() in response.data
+
+
+def test_profile_photo_requires_login(profile_client):
+    response = profile_client.get("/mon-profil/photo")
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_profile_rejects_photo_larger_than_two_megabytes(profile_client):
+    import io
+
+    login(profile_client)
+    response = profile_client.post(
+        "/mon-profil",
+        data={
+            "photo": (io.BytesIO(b"\\x89PNG\\r\\n\\x1a\\n" + b"x" * (2 * 1024 * 1024)), "large.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "La photo ne doit pas dépasser 2 Mo".encode() in response.data
+
+
+def test_profile_rejects_invalid_email_without_saving_it(profile_client):
+    login(profile_client)
+    response = profile_client.post(
+        "/mon-profil",
+        data={"email": "not-an-email"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "Saisis une adresse e-mail valide".encode() in response.data
+    with profile_client.application.app_context():
+        profile = UserProfile.query.one()
+        assert profile.email is None
