@@ -325,9 +325,6 @@ def client_detail(client_id):
         display_next_visit = latest_crm_next
     linked_prospection_ids = {v.prospection_id for v in visits if v.prospection_id is not None}
     unlinked_legacy_history = [p for p in legacy_history if p.id not in linked_prospection_ids]
-    linked_prospections = [v.prospection for v in visits if v.prospection_id and v.prospection is not None]
-    all_prospections = linked_prospections + unlinked_legacy_history
-    latest_prospection = max(all_prospections, key=lambda p: (p.date, p.id), default=None)
     presented_count = sum(1 for v in visits if (v.products_presented or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_presentes or "").strip())
     prescribed_count = sum(1 for v in visits if (v.products_prescribed or "").strip()) + sum(1 for p in unlinked_legacy_history if (p.produits_prescrits or "").strip())
 
