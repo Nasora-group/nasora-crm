@@ -119,7 +119,7 @@ def test_profile_rejects_photo_larger_than_two_megabytes(profile_client):
     response = profile_client.post(
         "/mon-profil",
         data={
-            "photo": (io.BytesIO(b"\\x89PNG\\r\\n\\x1a\\n" + b"x" * (2 * 1024 * 1024)), "large.png", "image/png"),
+            "photo": (io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"x" * (2 * 1024 * 1024)), "large.png", "image/png"),
         },
         content_type="multipart/form-data",
         follow_redirects=True,
@@ -145,7 +145,7 @@ def test_profile_rejects_invalid_email_without_saving_it(profile_client):
 
 def test_admin_user_list_displays_uploaded_profile_photo(profile_client):
     login(profile_client)
-    png_signature = b"\\x89PNG\\r\\n\\x1a\\n" + b"profile-image-test"
+    png_signature = b"\x89PNG\r\n\x1a\n" + b"profile-image-test"
     profile_client.post(
         "/mon-profil",
         data={"first_name": "Awa", "last_name": "Ndiaye",
@@ -168,6 +168,10 @@ def test_admin_user_list_displays_uploaded_profile_photo(profile_client):
     assert b"/admin/utilisateurs/" in listing.data
     assert b"Photo de Awa" in listing.data
     assert b"Awa Ndiaye" in listing.data
+    photo = profile_client.get("/admin/utilisateurs/1/photo")
+    assert photo.status_code == 200
+    assert photo.mimetype == "image/png"
+    assert photo.data == png_signature
 
 
 def test_admin_photo_endpoint_requires_admin_role(profile_client):
