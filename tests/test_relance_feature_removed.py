@@ -5,11 +5,9 @@ from app.models import Prospection
 
 
 def test_prospection_form_no_longer_exposes_relance_fields():
-    form = ProspectionForm()
-
-    assert "a_revoir" not in form._fields
-    assert "date_relance" not in form._fields
-    assert "motif_relance" not in form._fields
+    assert not hasattr(ProspectionForm, "a_revoir")
+    assert not hasattr(ProspectionForm, "date_relance")
+    assert not hasattr(ProspectionForm, "motif_relance")
 
 
 def test_relance_columns_are_retained_to_preserve_existing_data():
