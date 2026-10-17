@@ -1,13 +1,26 @@
-from collections import Counter, defaultdict
+import csv
+import io
+from collections import Counter
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, Response, render_template, request
 from flask_login import login_required
 
 from app.models import AnimationSale, DIVISION_SUPPLIERS, Planning, Prospection, User
 from app.utils import decode_planning_slot, roles_required
 
 activity_reporting_bp = Blueprint("activity_reporting", __name__)
+
+
+def _csv_response(filename, headers, rows):
+    """Build a UTF-8 CSV response that opens cleanly in spreadsheet software."""
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, delimiter=";", lineterminator="\\r\\n")
+    writer.writerow(headers)
+    writer.writerows(rows)
+    response = Response("\\ufeff" + buffer.getvalue(), content_type="text/csv; charset=utf-8")
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 def _parse_day(value, fallback):
@@ -201,6 +214,41 @@ def index():
     total_animation_lines = sum(row["animation_lines"] for row in summary_rows)
     total_animation_ca = sum(row["animation_ca"] for row in summary_rows)
     execution_pct = _execution_rate(total_planned, total_linked_prospections)
+
+    export_type = request.args.get("export")
+    if export_type == "collaborateurs":
+        rows = []
+        for row in summary_rows:
+            is_vm = row["role"] == "Visiteur médical"
+            is_animator = row["role"] == "Animateur(trice)"
+            rows.append([
+                row["name"], row["role"],
+                row["planned"] if is_vm else "",
+                row["prospections"] if is_vm else "",
+                row["hors_planning"] if is_vm else "",
+                row["execution"] if is_vm and row["execution"] is not None else "",
+                row["animation_lines"] if is_animator else "",
+                round(row["animation_ca"], 2) if is_animator else "",
+                row["status_text"],
+            ])
+        filename = f"nasora_rapport_collaborateurs_{start_day.isoformat()}_{end_day.isoformat()}.csv"
+        return _csv_response(filename, [
+            "Collaborateur", "Rôle", "Créneaux planifiés", "Prospections",
+            "Prospections hors planning", "Exécution (%)", "Lignes animation",
+            "CA animation (FCFA)", "Contrôle",
+        ], rows)
+    if export_type == "quotidien":
+        rows = [[
+            row["date"].isoformat(), row["planned"], row["prospections"],
+            row["planned_prospections"], row["hors_planning"],
+            row["animation_lines"], round(row["animation_ca"], 2),
+        ] for row in daily_rows]
+        filename = f"nasora_rapport_quotidien_{start_day.isoformat()}_{end_day.isoformat()}.csv"
+        return _csv_response(filename, [
+            "Date", "Créneaux planifiés", "Prospections saisies",
+            "Prospections rattachées au planning", "Prospections hors planning",
+            "Lignes animation", "CA animation (FCFA)",
+        ], rows)
 
     return render_template(
         "activity_reporting.html",
