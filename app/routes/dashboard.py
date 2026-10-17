@@ -311,7 +311,6 @@ def _dashboard_activity_for_date(visit_date, planning_context):
         ) if tracking_active else "Non suivi"
         for key in planned_keys
     }
-    relance_rows = [row for row in rows if row.a_revoir and (row.date_relance is None or row.date_relance <= visit_date)]
     planning_rows = []
     for entry in planning_context.get("entries", []):
         key = (_normalize_text(entry["structure"]), _normalize_text(entry["name"]))
@@ -329,7 +328,6 @@ def _dashboard_activity_for_date(visit_date, planning_context):
         "realization_rate": realization_rate,
         "tracking_active": tracking_active,
         "planning_rows": planning_rows,
-        "relances_a_traiter": len(relance_rows),
     }
 
 
@@ -411,9 +409,6 @@ def index():
                 produits_presentes=", ".join(form.produits_presentes.data or []),
                 produits_prescrits=", ".join(form.produits_prescrits.data or []),
                 establishment=form.nom_structure.data.strip(),
-                a_revoir=bool(form.a_revoir.data),
-                date_relance=form.date_relance.data if form.a_revoir.data else None,
-                motif_relance=(form.motif_relance.data or "").strip() or None,
             )
             db.session.add(prospection)
             # La route reste responsable de la transaction complète:
@@ -532,9 +527,6 @@ def edit_prospection(prospection_id):
             prospection.address = form.address.data.strip()
             prospection.planning_id = None if is_hors_planning else (planning_context["planning"].id if planning_context["planning"] else None)
             prospection.planning_day = None if is_hors_planning else planning_context["day"]
-            prospection.a_revoir = bool(form.a_revoir.data)
-            prospection.date_relance = form.date_relance.data if form.a_revoir.data else None
-            prospection.motif_relance = (form.motif_relance.data or "").strip() or None
             prospection.profils_prospect = (form.profils_prospect.data or "").strip()
             prospection.produits_presentes = ", ".join(form.produits_presentes.data or [])
             prospection.produits_prescrits = ", ".join(form.produits_prescrits.data or [])
@@ -836,17 +828,13 @@ def direction():
         Prospection.zone,
         Prospection.region,
         Prospection.planning_id,
-        Prospection.a_revoir,
-        Prospection.date_relance,
     ).all()
     hors_planning_count = sum(1 for row in alert_query if row.planning_id is None)
     missing_geo_count = sum(1 for row in alert_query if not (row.zone or "").strip() or not (row.region or "").strip())
-    overdue_relances = sum(1 for row in alert_query if row.a_revoir and row.date_relance and row.date_relance < date.today())
     active_ids = {c.id for c in commercials if c.is_active_account}
     activity_ids = {row.commercial_id for row in metric_rows}
     inactive_visitors = [c.username for c in commercials if c.id in active_ids and c.id not in activity_ids]
     alerts = [
-        {"type": "danger", "label": "Relances en retard", "value": overdue_relances, "detail": "Prospections avec une date de relance dépassée."},
         {"type": "warning", "label": "Prospections hors planning", "value": hors_planning_count, "detail": "Prospections réalisées sans rattachement à une ligne de planning."},
         {"type": "warning", "label": "Géographie incomplète", "value": missing_geo_count, "detail": "Prospections sans zone ou région renseignée."},
         {"type": "info", "label": "Visiteurs sans activité", "value": len(inactive_visitors), "detail": ", ".join(inactive_visitors[:8]) if inactive_visitors else "Tous les visiteurs actifs ont au moins une prospection dans la période."},
