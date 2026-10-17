@@ -3,11 +3,17 @@ import io
 from collections import Counter
 from datetime import date, timedelta
 
-from flask import Blueprint, Response, render_template, request
+from flask import Blueprint, Response, render_template, request, send_file
 from flask_login import login_required
 
 from app.models import AnimationSale, DIVISION_SUPPLIERS, Planning, Prospection, User
 from app.utils import decode_planning_slot, roles_required
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 activity_reporting_bp = Blueprint("activity_reporting", __name__)
 
@@ -216,6 +222,125 @@ def index():
     execution_pct = _execution_rate(total_planned, total_linked_prospections)
 
     export_type = request.args.get("export")
+    if export_type == "pdf":
+        # Génération en mémoire : aucune donnée métier n'est modifiée ni stockée.
+        buffer = BytesIO()
+        document = SimpleDocTemplate(
+            buffer, pagesize=landscape(A4),
+            rightMargin=12 * mm, leftMargin=12 * mm,
+            topMargin=12 * mm, bottomMargin=12 * mm,
+            title="Rapport hebdomadaire NASORA CRM",
+            author="NASORA CRM",
+        )
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name="NasoraSubtitle", parent=styles["Normal"],
+            fontSize=8, leading=11, textColor=colors.HexColor("#5f6f65"),
+        ))
+        story = [
+            Paragraph("NASORA CRM - RAPPORT CONSOLIDÉ D’ACTIVITÉ", styles["Title"]),
+            Paragraph(
+                f"Période : {start_day.strftime('%d/%m/%Y')} au {end_day.strftime('%d/%m/%Y')} "
+                f"| Division animation : {division.upper() if division != 'all' else 'TOUTES'}",
+                styles["NasoraSubtitle"],
+            ),
+            Spacer(1, 5 * mm),
+            Paragraph("Indicateurs clés", styles["Heading2"]),
+        ]
+        kpi_data = [[
+            "Créneaux planifiés", "Prospections saisies", "Exécution planning",
+            "Lignes animation", "CA animation (FCFA)",
+        ], [
+            str(total_planned), str(total_prospections),
+            f"{execution_pct} %" if execution_pct is not None else "N/A",
+            str(total_animation_lines), f"{total_animation_ca:,.0f}".replace(",", " "),
+        ]]
+        kpi_table = Table(kpi_data, colWidths=[48*mm, 48*mm, 42*mm, 38*mm, 48*mm])
+        kpi_table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#eaf3ed")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#24563a")),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTNAME", (0,1), (-1,1), "Helvetica-Bold"),
+            ("FONTSIZE", (0,0), (-1,-1), 8),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("GRID", (0,0), (-1,-1), .4, colors.HexColor("#d8e3db")),
+            ("TOPPADDING", (0,0), (-1,-1), 7),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 7),
+        ]))
+        story.extend([kpi_table, Spacer(1, 6 * mm), Paragraph("Synthèse par collaborateur", styles["Heading2"])])
+        summary_data = [[
+            "Collaborateur", "Rôle", "Planning", "Prospections", "Hors planning",
+            "Exécution", "Lignes animation", "CA animation (FCFA)", "Contrôle",
+        ]]
+        for row in summary_rows:
+            is_vm = row["role"] == "Visiteur médical"
+            is_animator = row["role"] == "Animateur(trice)"
+            summary_data.append([
+                row["name"], row["role"],
+                str(row["planned"]) if is_vm else "-",
+                str(row["prospections"]) if is_vm else "-",
+                str(row["hors_planning"]) if is_vm else "-",
+                f'{row["execution"]} %' if is_vm and row["execution"] is not None else "-",
+                str(row["animation_lines"]) if is_animator else "-",
+                f'{row["animation_ca"]:,.0f}'.replace(",", " ") if is_animator else "-",
+                row["status_text"],
+            ])
+        summary_table = Table(summary_data, repeatRows=1, colWidths=[34*mm, 28*mm, 20*mm, 23*mm, 24*mm, 20*mm, 24*mm, 32*mm, 35*mm])
+        summary_table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#eaf3ed")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#24563a")),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE", (0,0), (-1,-1), 7),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+            ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#d8e3db")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f7faf8")]),
+            ("TOPPADDING", (0,0), (-1,-1), 5),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ]))
+        story.extend([
+            summary_table, Spacer(1, 6 * mm),
+            Paragraph("Évolution quotidienne", styles["Heading2"]),
+        ])
+        daily_data = [[
+            "Date", "Planifié", "Prospections", "Rattachées au planning",
+            "Hors planning", "Lignes animation", "CA animation (FCFA)",
+        ]]
+        for row in daily_rows:
+            daily_data.append([
+                row["date"].strftime("%d/%m/%Y"), str(row["planned"]),
+                str(row["prospections"]), str(row["planned_prospections"]),
+                str(row["hors_planning"]), str(row["animation_lines"]),
+                f'{row["animation_ca"]:,.0f}'.replace(",", " "),
+            ])
+        daily_table = Table(daily_data, repeatRows=1, colWidths=[30*mm, 25*mm, 30*mm, 38*mm, 30*mm, 32*mm, 40*mm])
+        daily_table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#eaf3ed")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#24563a")),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE", (0,0), (-1,-1), 7),
+            ("ALIGN", (1,1), (-1,-1), "RIGHT"),
+            ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#d8e3db")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f7faf8")]),
+            ("TOPPADDING", (0,0), (-1,-1), 5),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ]))
+        story.extend([
+            daily_table, Spacer(1, 4 * mm),
+            Paragraph(
+                "Note : l’exécution compare les prospections rattachées au planning aux créneaux estimés. "
+                "Les prospections hors planning sont présentées séparément. Un écart constitue un point à vérifier, "
+                "pas une preuve d’absence d’activité. Les données proviennent des saisies enregistrées dans le CRM.",
+                styles["NasoraSubtitle"],
+            ),
+        ])
+        document.build(story)
+        buffer.seek(0)
+        return send_file(
+            buffer,
+            download_name=f"nasora_rapport_activite_{start_day.isoformat()}_{end_day.isoformat()}.pdf",
+            as_attachment=True,
+            mimetype="application/pdf",
+        )
     if export_type == "collaborateurs":
         rows = []
         for row in summary_rows:
