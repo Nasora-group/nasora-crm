@@ -15,10 +15,10 @@ activity_reporting_bp = Blueprint("activity_reporting", __name__)
 def _csv_response(filename, headers, rows):
     """Build a UTF-8 CSV response that opens cleanly in spreadsheet software."""
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer, delimiter=";", lineterminator="\\r\\n")
+    writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
     writer.writerow(headers)
     writer.writerows(rows)
-    response = Response("\\ufeff" + buffer.getvalue(), content_type="text/csv; charset=utf-8")
+    response = Response("\ufeff" + buffer.getvalue(), content_type="text/csv; charset=utf-8")
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
