@@ -48,7 +48,6 @@
     <article class="v31-kpi-card"><span class="v31-kpi-label">Prospections réalisées</span><strong>{{ dashboard_activity.realized_total }}</strong><small>établissement{{ '' if dashboard_activity.realized_total == 1 else 's' }} planifié{{ '' if dashboard_activity.realized_total == 1 else 's' }}</small></article>
     <article class="v31-kpi-card"><span class="v31-kpi-label">Hors planning</span><strong>{{ dashboard_activity.hors_planning }}</strong><small>prospection{{ '' if dashboard_activity.hors_planning == 1 else 's' }} indépendante{{ '' if dashboard_activity.hors_planning == 1 else 's' }}</small></article>
     <article class="v31-kpi-card"><span class="v31-kpi-label">Professionnels visités</span><strong>{{ dashboard_activity.professionals_visited }}</strong><small>professionnel{{ '' if dashboard_activity.professionals_visited == 1 else 's' }} distinct{{ '' if dashboard_activity.professionals_visited == 1 else 's' }}</small></article>
-    <article class="v31-kpi-card"><span class="v31-kpi-label">Relances à traiter</span><strong>{{ dashboard_activity.relances_a_traiter }}</strong><small>à revoir, aujourd’hui ou en retard</small></article>
     <article class="v31-kpi-card v31-kpi-rate"><span class="v31-kpi-label">Taux de réalisation</span><strong>{% if dashboard_activity.realization_rate is not none %}{{ dashboard_activity.realization_rate }} %{% else %}—{% endif %}</strong><small>{% if dashboard_activity.tracking_active and dashboard_activity.planned_total %}réalisé / planifié{% else %}Aucun établissement planifié{% endif %}</small></article>
   </div>
 
@@ -98,7 +97,6 @@
           <div><i class="done"></i><span>Réalisé</span><b>{{ dashboard_activity.realized_total }}</b></div>
           <div><i class="todo"></i><span>À faire</span><b>{{ dashboard_activity.planned_total - dashboard_activity.realized_total if dashboard_activity.tracking_active else 0 }}</b></div>
           <div><i class="outside"></i><span>Hors planning</span><b>{{ dashboard_activity.hors_planning }}</b></div>
-          <div><i class="review"></i><span>À revoir</span><b>{{ dashboard_activity.relances_a_traiter }}</b></div>
           <div><i class="untracked"></i><span>Non suivi</span><b>{{ dashboard_activity.planned_total if not dashboard_activity.tracking_active else 0 }}</b></div>
         </div>
       </section>
@@ -180,7 +178,7 @@
 <div class="form-group">{{ form.nom_client.label(class="form-label") }}{{ form.nom_client(class="form-input", placeholder="Ex. Dr. Ndiaye") }}{% for error in form.nom_client.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 <div class="form-group">{{ form.specialite.label(class="form-label") }}{{ form.specialite(class="form-input") }}{% for error in form.specialite.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 <div class="form-group">{{ form.telephone.label(class="form-label") }}{{ form.telephone(class="form-input", inputmode="tel", placeholder="Ex. 77 000 00 00") }}<small class="form-help">Un numéro fiable facilite le suivi du professionnel.</small>{% for error in form.telephone.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
-<div class="planning-choice" style="margin-top:18px;"><div class="planning-choice-header"><strong>Suivi et relance</strong><span>À revoir / relancer</span></div><label class="planning-choice-toggle">{{ form.a_revoir(class="planning-choice-checkbox", id="prospection-a-revoir") }}<span>Marquer cette prospection « À revoir »</span></label><div class="location-grid" style="margin-top:12px;"><div class="form-group">{{ form.date_relance.label(class="form-label") }}{{ form.date_relance(class="form-input", id="prospection-date-relance") }}<small class="form-help">Laissez vide si aucune date n’est encore fixée.</small></div><div class="form-group">{{ form.motif_relance.label(class="form-label") }}{{ form.motif_relance(class="form-input", rows="3", placeholder="Ex. Recontacter après décision du professionnel") }}</div></div></div><div class="form-group prospection-comments-group">{{ form.profils_prospect.label(class="form-label") }}<select class="form-input" id="profils_prospect" name="profils_prospect" required>
+<div class="form-group prospection-comments-group">{{ form.profils_prospect.label(class="form-label") }}<select class="form-input" id="profils_prospect" name="profils_prospect" required>
 <option value="">Sélectionner un profil...</option>
 {% for profil in ["PRESCRIPTEUR","NON PRESCRITEUR","PROFILE DEMANDEUR","SCIENTIFIQUE","PRO-ECHANTILLONS","PHARMACIE A COMMANDE","PHARMACIE DE CONSEIL","PHARMACIE SPECTATEUR","PHARMACIE PARTENAIRE"] %}
 <option value="{{ profil }}" {% if form.profils_prospect.data == profil %}selected{% endif %}>{{ profil }}</option>
