@@ -16,9 +16,9 @@ def test_csv_response_uses_utf8_bom_semicolon_delimiter_and_download_filename():
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("text/csv")
     assert response.headers["Content-Disposition"] == 'attachment; filename="rapport_test.csv"'
-    assert response.get_data().startswith(b"\\xef\\xbb\\xbf")
+    assert response.get_data().startswith(bytes.fromhex("efbbbf"))
 
-    text = response.get_data(as_text=True).lstrip("\\ufeff")
+    text = response.get_data(as_text=True).lstrip(chr(0xfeff))
     rows = list(csv.reader(io.StringIO(text), delimiter=";"))
     assert rows == [
         ["Collaborateur", "CA animation (FCFA)"],
@@ -28,6 +28,6 @@ def test_csv_response_uses_utf8_bom_semicolon_delimiter_and_download_filename():
 
 def test_csv_response_quotes_values_containing_separator():
     response = _csv_response("rapport_test.csv", ["Nom"], [["Pharmacie A; B"]])
-    text = response.get_data(as_text=True).lstrip("\\ufeff")
+    text = response.get_data(as_text=True).lstrip(chr(0xfeff))
     rows = list(csv.reader(io.StringIO(text), delimiter=";"))
     assert rows == [["Nom"], ["Pharmacie A; B"]]
