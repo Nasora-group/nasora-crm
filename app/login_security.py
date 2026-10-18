@@ -19,9 +19,10 @@ les workers gunicorn : Redis si ``CACHE_REDIS_URL`` est défini, sinon un cache
 fichier dans ``instance/cache`` (voir ``app/config.py``). Aucune colonne ni
 migration n'est nécessaire.
 
-L'adresse IP vient de ``request.remote_addr``. Derrière le proxy de
-l'hébergeur, elle n'est correcte que si ``TRUSTED_PROXY_COUNT`` (ProxyFix, voir
-``app/__init__.py``) correspond au nombre réel de proxys.
+En production sur Render, l'adresse client est l'en-tête ``CF-Connecting-IP``
+fourni par Cloudflare, après validation syntaxique. ``X-Forwarded-For`` n'est
+jamais utilisé, car le client peut le falsifier. Si l'en-tête de confiance est
+absent ou invalide, le code revient à ``request.remote_addr``.
 """
 import hashlib
 import ipaddress
