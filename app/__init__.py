@@ -21,9 +21,7 @@ def create_app(config_object=None):
         if not os.environ.get("DATABASE_URL"):
             raise RuntimeError("DATABASE_URL manquant : définis la variable d'environnement DATABASE_URL avant de lancer l'application en production.")
     _configure_logging(app)
-    # Vraie adresse IP du client derrière le(s) proxy(s) de l'hébergeur : sans
-    # cela, request.remote_addr est celle du proxy, commune à tous les
-    # utilisateurs, et la limitation des connexions ne distingue personne.
+    # Corrige l'adresse client derrière le proxy de l'hébergeur pour la limitation des connexions.
     proxy_count = int(app.config.get("TRUSTED_PROXY_COUNT") or 0)
     if proxy_count > 0:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_count)
