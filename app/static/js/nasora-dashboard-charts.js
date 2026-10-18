@@ -195,6 +195,8 @@
     var schedule = function () {
       start(function () {
         applyNasoraChartTheme();
+        // applyNasoraChartTheme sets light defaults; reapply the selected theme before charts are created.
+        syncChartsWithTheme();
         initAdminDashboardCharts();
       }, { timeout: 1200 });
     };
