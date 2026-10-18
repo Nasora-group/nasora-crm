@@ -1,9 +1,9 @@
-"""Anti-brute-force : couple (IP, identifiant), délai croissant, ProxyFix, cache partagé."""
+"""Anti-brute-force : couple (IP, identifiant), délai croissant, IP fiable, cache partagé."""
 import pytest
 from werkzeug.security import generate_password_hash
 
 from app import create_app, login_security
-from app.config import ProductionConfig, TestingConfig, _env_int
+from app.config import ProductionConfig, TestingConfig
 from app.extensions import cache, db
 from app.models import User
 
@@ -103,53 +103,34 @@ def test_username_matching_is_case_insensitive(app):
     assert b"Trop de tentatives" in _login(app, "alice", "correct-password", IP_A).data
 
 
-def _ip_probe_app(config_class):
-    app = create_app(config_class)
-    from flask import request
+def test_client_ip_uses_cloudflare_header_only_in_production(app):
+    from app import login_security
 
-    @app.get("/_probe_ip")
-    def probe_ip():
-        return request.remote_addr
-
-    return app
-
-
-def test_forwarded_for_is_ignored_without_trusted_proxy():
-    app = _ip_probe_app(TestingConfig)
-    response = app.test_client().get(
-        "/_probe_ip", headers={"X-Forwarded-For": "6.6.6.6"}, environ_overrides=IP_A
-    )
-    assert response.get_data(as_text=True) == "10.0.0.1"
+    with app.test_request_context(
+        "/login",
+        headers={"CF-Connecting-IP": "203.0.113.12", "X-Forwarded-For": "6.6.6.6"},
+        environ_overrides=IP_A,
+    ):
+        app.config["IS_PRODUCTION"] = True
+        assert login_security.client_ip() == "203.0.113.12"
+        app.config["IS_PRODUCTION"] = False
+        assert login_security.client_ip() == "10.0.0.1"
 
 
-def test_proxyfix_uses_address_added_by_the_trusted_proxy():
-    class OneProxy(TestingConfig):
-        TRUSTED_PROXY_COUNT = 1
+def test_client_ip_ignores_invalid_cloudflare_header(app):
+    from app import login_security
 
-    app = _ip_probe_app(OneProxy)
-    # 6.6.6.6 est falsifié par le client ; 7.7.7.7 est ce que le proxy a vu.
-    response = app.test_client().get(
-        "/_probe_ip", headers={"X-Forwarded-For": "6.6.6.6, 7.7.7.7"}, environ_overrides=IP_A
-    )
-    assert response.get_data(as_text=True) == "7.7.7.7"
-
-
-def test_trusted_proxy_count_defaults_and_parsing(monkeypatch):
-    assert TestingConfig.TRUSTED_PROXY_COUNT == 0
-    monkeypatch.delenv("TRUSTED_PROXY_COUNT", raising=False)
-    assert _env_int("TRUSTED_PROXY_COUNT", 1) == 1
-    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "2")
-    assert _env_int("TRUSTED_PROXY_COUNT", 1) == 2
-    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "abc")
-    assert _env_int("TRUSTED_PROXY_COUNT", 1) == 1
-    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "-3")
-    assert _env_int("TRUSTED_PROXY_COUNT", 1) == 0
+    with app.test_request_context(
+        "/login", headers={"CF-Connecting-IP": "not-an-ip"}, environ_overrides=IP_A
+    ):
+        app.config["IS_PRODUCTION"] = True
+        assert login_security.client_ip() == "10.0.0.1"
 
 
 def test_production_uses_a_cache_shared_between_workers():
     assert ProductionConfig.CACHE_TYPE in {"FileSystemCache", "RedisCache"}
     assert ProductionConfig.CACHE_TYPE != "SimpleCache"
-    assert ProductionConfig.TRUSTED_PROXY_COUNT >= 0
+    assert ProductionConfig.IS_PRODUCTION is True
 
 
 def test_file_cache_shares_counters_between_app_instances(tmp_path):
