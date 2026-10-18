@@ -22,6 +22,7 @@
       else root.removeAttribute('data-theme');
       try { localStorage.setItem('nasora_theme', dark ? 'dark' : 'light'); } catch (e) {}
       render();
+      try { window.dispatchEvent(new CustomEvent('nasora:themechange', { detail: { theme: dark ? 'dark' : 'light' } })); } catch (e) {}
     });
     render();
   }
