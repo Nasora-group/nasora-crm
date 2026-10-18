@@ -2,5 +2,5 @@
 -r requirements.txt
 
 # Test and security-audit tooling; not installed by the production build.
-pytest==8.3.5
+pytest==9.0.3
 pip-audit>=2.9,<3
