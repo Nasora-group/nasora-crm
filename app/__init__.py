@@ -14,7 +14,7 @@ def create_app(config_object=None):
     app.config.from_object(config_object)
     app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 86400)
     os.makedirs(app.instance_path, exist_ok=True)
-    if app.config.get("ENV") == "production" or os.environ.get("FLASK_ENV") == "production":
+    if app.config.get("IS_PRODUCTION"):
         if not os.environ.get("SECRET_KEY"):
             raise RuntimeError("SECRET_KEY manquant : définis la variable d'environnement SECRET_KEY avant de lancer l'application en production.")
         if not os.environ.get("DATABASE_URL"):
@@ -46,7 +46,7 @@ def create_app(config_object=None):
     @app.before_request
     def force_https_in_production():
         """Canonical HTTPS redirect when the app is behind Render's proxy."""
-        if os.environ.get("FLASK_ENV", "").lower() == "production":
+        if app.config.get("IS_PRODUCTION"):
             forwarded_proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip().lower()
             if forwarded_proto == "http":
                 return redirect(request.url.replace("http://", "https://", 1), code=308)
@@ -65,7 +65,7 @@ def create_app(config_object=None):
         if current_user.is_authenticated or request.path == "/login":
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
-        if os.environ.get("FLASK_ENV", "").lower() == "production":
+        if app.config.get("IS_PRODUCTION"):
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
 

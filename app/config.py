@@ -29,6 +29,9 @@ class BaseConfig:
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     WTF_CSRF_ENABLED = True
+    # Vrai uniquement pour ProductionConfig : pilote HTTPS forcé, HSTS et
+    # vérification des variables d'environnement obligatoires.
+    IS_PRODUCTION = False
 
     # Session applicative : expiration après 8 h, avec renouvellement pendant
     # l'activité. Les cookies restent inaccessibles au JavaScript et limitent
@@ -48,6 +51,7 @@ class DevelopmentConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
+    IS_PRODUCTION = True
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
@@ -67,5 +71,12 @@ config_by_name = {
 
 
 def get_config():
-    env = os.environ.get("FLASK_ENV", "development").lower()
-    return config_by_name.get(env, DevelopmentConfig)
+    """Choisit la configuration selon FLASK_ENV.
+
+    Par sécurité, l'absence de FLASK_ENV ou une valeur inconnue (faute de
+    frappe) donne la configuration de PRODUCTION. Le mode développement
+    (DEBUG, clé secrète de secours) doit être demandé explicitement avec
+    FLASK_ENV=development.
+    """
+    env = (os.environ.get("FLASK_ENV") or "production").strip().lower()
+    return config_by_name.get(env, ProductionConfig)
