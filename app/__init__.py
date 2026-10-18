@@ -20,6 +20,9 @@ def create_app(config_object=None):
         if not os.environ.get("DATABASE_URL"):
             raise RuntimeError("DATABASE_URL manquant : définis la variable d'environnement DATABASE_URL avant de lancer l'application en production.")
     _configure_logging(app)
+    if app.config.get("CACHE_TYPE") == "FileSystemCache":
+        app.config.setdefault("CACHE_DIR", os.path.join(app.instance_path, "cache"))
+        os.makedirs(app.config["CACHE_DIR"], exist_ok=True)
     db.init_app(app); migrate.init_app(app, db); csrf.init_app(app); cache.init_app(app); login_manager.init_app(app)
     from app.models import User, AdminNotification
     from app.models_stock import StockEntry

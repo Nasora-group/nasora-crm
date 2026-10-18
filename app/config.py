@@ -26,7 +26,9 @@ class BaseConfig:
         "pool_pre_ping": True,
         "pool_recycle": 300,
     }
-    CACHE_TYPE = "SimpleCache"
+    # Cache partagé pour les compteurs anti-brute-force en production.
+    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "").strip() or None
+    CACHE_TYPE = "RedisCache" if CACHE_REDIS_URL else "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     WTF_CSRF_ENABLED = True
     # Vrai uniquement pour ProductionConfig : pilote HTTPS forcé, HSTS et
@@ -52,6 +54,7 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     IS_PRODUCTION = True
+    CACHE_TYPE = "RedisCache" if BaseConfig.CACHE_REDIS_URL else "FileSystemCache"
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
