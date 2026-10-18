@@ -78,7 +78,7 @@
 <script>window.NASORA_GA_ID={{ ga_measurement_id|tojson }};</script>
 {% endif %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" defer fetchpriority="low"></script>
-<script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20260901-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/nasora-dashboard-charts.js', v='20261018-2') }}" defer></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
 <script src="{{ url_for('static', filename='js/nasora-phone-responsive.js', v='20260910-3') }}" defer></script>
@@ -89,7 +89,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/phase7-dashboard-mobile.css', v='20261015-1') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/phase8-reporting-control.css', v='20261015-1') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/logout-visibility-fix.css', v='20261016-1') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-dark-mode.css', v='20261018-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nasora-dark-mode.css', v='20261018-2') }}">
 <script>(function(){try{if(localStorage.getItem('nasora_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}})();</script>
 </head>
 <body>
@@ -166,5 +166,5 @@ document.addEventListener('DOMContentLoaded',function(){
   const toggle=document.querySelector('.nasora-mobile-toggle'), sidebar=document.getElementById('nasora-sidebar');
   if(toggle&&sidebar){toggle.addEventListener('click',function(){const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});}
 });
-</script><script src="{{ url_for('static', filename='js/nasora-dark-mode.js', v='20261018-1') }}" defer></script>
+</script><script src="{{ url_for('static', filename='js/nasora-dark-mode.js', v='20261018-2') }}" defer></script>
 </body></html>
