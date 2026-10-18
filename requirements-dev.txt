@@ -1,0 +1,6 @@
+# Runtime dependencies remain identical to production.
+-r requirements.txt
+
+# Test and security-audit tooling; not installed by the production build.
+pytest==8.3.5
+pip-audit>=2.9,<3
