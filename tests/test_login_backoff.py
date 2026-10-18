@@ -127,6 +127,30 @@ def test_client_ip_ignores_invalid_cloudflare_header(app):
         assert login_security.client_ip() == "10.0.0.1"
 
 
+def test_client_ip_uses_true_client_ip_when_cloudflare_header_is_missing(app):
+    with app.test_request_context(
+        "/login",
+        headers={"True-Client-IP": "203.0.113.25", "X-Forwarded-For": "6.6.6.6"},
+        environ_overrides=IP_A,
+    ):
+        app.config["IS_PRODUCTION"] = True
+        assert login_security.client_ip() == "203.0.113.25"
+
+
+def test_client_ip_falls_back_to_true_client_ip_when_cloudflare_value_is_invalid(app):
+    with app.test_request_context(
+        "/login",
+        headers={
+            "CF-Connecting-IP": "not-an-ip",
+            "True-Client-IP": "203.0.113.26",
+            "X-Forwarded-For": "6.6.6.6",
+        },
+        environ_overrides=IP_A,
+    ):
+        app.config["IS_PRODUCTION"] = True
+        assert login_security.client_ip() == "203.0.113.26"
+
+
 def test_production_uses_a_cache_shared_between_workers():
     assert ProductionConfig.CACHE_TYPE in {"FileSystemCache", "RedisCache"}
     assert ProductionConfig.CACHE_TYPE != "SimpleCache"
