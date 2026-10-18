@@ -4,7 +4,6 @@ from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, redirect
 from flask_login import current_user
 from dotenv import load_dotenv
-from werkzeug.middleware.proxy_fix import ProxyFix
 from app.config import get_config
 from app.extensions import db, login_manager, migrate, csrf, cache
 load_dotenv()
@@ -21,10 +20,6 @@ def create_app(config_object=None):
         if not os.environ.get("DATABASE_URL"):
             raise RuntimeError("DATABASE_URL manquant : définis la variable d'environnement DATABASE_URL avant de lancer l'application en production.")
     _configure_logging(app)
-    # Corrige l'adresse client derrière le proxy de l'hébergeur pour la limitation des connexions.
-    proxy_count = int(app.config.get("TRUSTED_PROXY_COUNT") or 0)
-    if proxy_count > 0:
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_count)
     if app.config.get("CACHE_TYPE") == "FileSystemCache":
         app.config.setdefault("CACHE_DIR", os.path.join(app.instance_path, "cache"))
         os.makedirs(app.config["CACHE_DIR"], exist_ok=True)
