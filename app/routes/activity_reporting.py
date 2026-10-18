@@ -96,10 +96,15 @@ def index():
         division = "all"
     division_filter = None if division == "all" else division
 
-    users = User.query.filter(
+    users_query = User.query.filter(
         User.role.in_(("commercial", "animateur")),
         User.is_active_account.is_(True),
-    ).order_by(User.username).all()
+    )
+    # A division filter must scope planning/prospections to the same team as
+    # animation sales; otherwise the consolidated report mixes divisions.
+    if division_filter:
+        users_query = users_query.filter(User.project == division_filter)
+    users = users_query.order_by(User.username).all()
     selected_raw = (request.args.get("commercial_id") or "").strip()
     selected_id = int(selected_raw) if selected_raw.isdigit() else None
     if selected_id and not any(user.id == selected_id for user in users):
@@ -381,10 +386,18 @@ def index():
         end_day=end_day,
         division=division,
         divisions=list(DIVISION_SUPPLIERS.keys()),
-        users=User.query.filter(
-            User.role.in_(("commercial", "animateur")),
-            User.is_active_account.is_(True),
-        ).order_by(User.username).all(),
+        users=(
+            User.query.filter(
+                User.role.in_(("commercial", "animateur")),
+                User.is_active_account.is_(True),
+                User.project == division_filter,
+            ).order_by(User.username).all()
+            if division_filter
+            else User.query.filter(
+                User.role.in_(("commercial", "animateur")),
+                User.is_active_account.is_(True),
+            ).order_by(User.username).all()
+        ),
         selected_commercial_id=selected_id,
         summary_rows=summary_rows,
         daily_rows=daily_rows,
