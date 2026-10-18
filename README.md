@@ -111,8 +111,8 @@ variables automatiquement si tu ajoutes une référence).
 | `SECRET_KEY` | générée avec `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `FLASK_ENV` | `production` (valeur par défaut si la variable est absente ou inconnue) |
 | `DATABASE_URL` | fournie automatiquement par le service Postgres |
-| `TRUSTED_PROXY_COUNT` | optionnel, `1` par défaut : nombre de proxys devant l'application (voir « Limitation des connexions ») |
-| `CACHE_REDIS_URL` | optionnel : URL Redis (ex. Render Key Value) pour partager les compteurs de connexion ; sinon un cache fichier dans `instance/cache` est utilisé |
+| `TRUSTED_PROXY_COUNT` | optionnel, `1` par défaut : nombre de proxys devant l'application (à confirmer pour Render) |
+| `CACHE_REDIS_URL` | optionnel : URL Redis pour partager les compteurs de connexion ; sinon cache fichier dans `instance/cache` |
 | `SEED_ADMIN_PASSWORD` | mot de passe choisi pour le compte admin (à ne définir que le temps du premier déploiement) |
 | `SEED_DEFAULT_COMMERCIAL_PASSWORD` | optionnel — sinon mots de passe aléatoires générés individuellement |
 
@@ -155,16 +155,10 @@ après exécution.
 
 ## Limitation des connexions (anti brute-force)
 
-- Les échecs sont comptés par couple **(adresse IP, identifiant)** : après 5 échecs en 10 minutes,
-  cette adresse est bloquée pour cet identifiant 30 s, puis 1 min, 2 min… (plafond 15 min).
-  Un tiers ne peut donc pas verrouiller le compte d'un collègue depuis une autre adresse.
-- Un second compteur par adresse IP (50 échecs en 10 minutes, tous identifiants confondus)
-  ralentit l'essai d'un grand nombre d'identifiants.
-- Les compteurs sont partagés entre les workers gunicorn : Redis si `CACHE_REDIS_URL` est défini,
-  sinon cache fichier dans `instance/cache` (une seule machine). Avec plusieurs instances, utilise Redis.
-- `TRUSTED_PROXY_COUNT` doit correspondre au nombre réel de proxys devant l'application. Trop bas :
-  tous les utilisateurs partagent l'adresse du proxy ; trop haut : un client peut falsifier
-  `X-Forwarded-For` et échapper à la limitation. À vérifier après le déploiement.
+- Les échecs sont comptés par couple **(adresse IP, identifiant)** : après 5 échecs en 10 minutes, cette adresse est bloquée pour cet identifiant 30 s, puis 1 min, 2 min… (plafond 15 min). Un tiers ne peut donc pas verrouiller le compte d'un collègue depuis une autre adresse.
+- Un second compteur par adresse IP (50 échecs en 10 minutes, tous identifiants confondus) ralentit l'essai d'un grand nombre d'identifiants.
+- Les compteurs sont partagés entre les workers gunicorn : Redis si `CACHE_REDIS_URL` est défini, sinon cache fichier dans `instance/cache` (une seule machine). Avec plusieurs instances, utilise Redis.
+- `TRUSTED_PROXY_COUNT` doit correspondre au nombre réel de proxys devant l'application. Trop bas, tous les utilisateurs partagent l'adresse du proxy ; trop haut, un client peut falsifier `X-Forwarded-For`. À vérifier avant/après déploiement.
 
 ## Prochaines améliorations possibles
 
