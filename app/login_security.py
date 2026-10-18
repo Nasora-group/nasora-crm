@@ -24,9 +24,10 @@ l'hébergeur, elle n'est correcte que si ``TRUSTED_PROXY_COUNT`` (ProxyFix, voir
 ``app/__init__.py``) correspond au nombre réel de proxys.
 """
 import hashlib
+import ipaddress
 import time
 
-from flask import has_request_context, request
+from flask import current_app, has_request_context, request
 
 from app.extensions import cache
 
@@ -51,9 +52,24 @@ def _digest(value):
 
 
 def client_ip():
-    """Adresse du client, ou valeur stable hors requête HTTP."""
+    """Adresse client sûre derrière Render ; ne fait pas confiance à X-Forwarded-For."""
     if not has_request_context():
         return "no-request-context"
+
+    # Render est servi derrière Cloudflare : ce dernier renseigne CF-Connecting-IP.
+    # Ne lire cet en-tête qu'en production, où la requête passe par l'infrastructure
+    # Render/Cloudflare. En local, les en-têtes HTTP sont contrôlables par le client.
+    if current_app.config.get("IS_PRODUCTION"):
+        for header in ("CF-Connecting-IP", "True-Client-IP"):
+            candidate = (request.headers.get(header) or "").strip()
+            if candidate:
+                try:
+                    return str(ipaddress.ip_address(candidate))
+                except ValueError:
+                    continue
+
+    # Repli conservateur : si l'en-tête de confiance manque, utiliser le pair
+    # réseau réel plutôt qu'un X-Forwarded-For falsifiable.
     return request.remote_addr or "unknown"
 
 
