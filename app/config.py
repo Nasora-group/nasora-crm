@@ -4,14 +4,6 @@ from datetime import timedelta
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def _env_int(name: str, default: int) -> int:
-    """Entier lu dans l'environnement ; valeur par défaut si absent ou invalide."""
-    try:
-        return max(0, int(os.environ.get(name, "").strip()))
-    except ValueError:
-        return default
-
-
 def _normalize_db_url(url: str) -> str:
     """Render/Railway/Heroku fournissent parfois 'postgres://' alors que
     SQLAlchemy 1.4+ exige 'postgresql://'."""
@@ -38,7 +30,6 @@ class BaseConfig:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "").strip() or None
     CACHE_TYPE = "RedisCache" if CACHE_REDIS_URL else "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
-    TRUSTED_PROXY_COUNT = 0
     WTF_CSRF_ENABLED = True
     # Vrai uniquement pour ProductionConfig : pilote HTTPS forcé, HSTS et
     # vérification des variables d'environnement obligatoires.
@@ -64,7 +55,6 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     IS_PRODUCTION = True
     CACHE_TYPE = "RedisCache" if BaseConfig.CACHE_REDIS_URL else "FileSystemCache"
-    TRUSTED_PROXY_COUNT = _env_int("TRUSTED_PROXY_COUNT", 1)
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
