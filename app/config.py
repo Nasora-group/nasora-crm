@@ -4,6 +4,14 @@ from datetime import timedelta
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+def _env_int(name: str, default: int) -> int:
+    """Entier lu dans l'environnement ; valeur par défaut si absent ou invalide."""
+    try:
+        return max(0, int(os.environ.get(name, "").strip()))
+    except ValueError:
+        return default
+
+
 def _normalize_db_url(url: str) -> str:
     """Render/Railway/Heroku fournissent parfois 'postgres://' alors que
     SQLAlchemy 1.4+ exige 'postgresql://'."""
@@ -26,8 +34,17 @@ class BaseConfig:
         "pool_pre_ping": True,
         "pool_recycle": 300,
     }
-    CACHE_TYPE = "SimpleCache"
+    # Cache applicatif. Il porte aussi les compteurs anti-brute-force
+    # (app/login_security.py), qui doivent être partagés entre les workers.
+    # SimpleCache (mémoire du processus) reste le défaut en développement/test ;
+    # la production utilise Redis (CACHE_REDIS_URL) ou, à défaut, un cache fichier.
+    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "").strip() or None
+    CACHE_TYPE = "RedisCache" if CACHE_REDIS_URL else "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
+
+    # Nombre de proxys de confiance devant l'application (ProxyFix, en-tête
+    # X-Forwarded-For). 0 = aucun : l'en-tête est ignoré.
+    TRUSTED_PROXY_COUNT = 0
     WTF_CSRF_ENABLED = True
     # Vrai uniquement pour ProductionConfig : pilote HTTPS forcé, HSTS et
     # vérification des variables d'environnement obligatoires.
@@ -52,6 +69,12 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     IS_PRODUCTION = True
+    # Cache partagé entre les workers gunicorn (voir app/login_security.py).
+    # Le dossier CACHE_DIR est fixé dans create_app() (instance/cache).
+    CACHE_TYPE = "RedisCache" if BaseConfig.CACHE_REDIS_URL else "FileSystemCache"
+    # Render place un proxy devant l'application : 1 par défaut. À ajuster avec
+    # TRUSTED_PROXY_COUNT si l'hébergeur ajoute d'autres couches (CDN...).
+    TRUSTED_PROXY_COUNT = _env_int("TRUSTED_PROXY_COUNT", 1)
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
@@ -59,6 +82,8 @@ class ProductionConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    CACHE_REDIS_URL = None
+    CACHE_TYPE = "SimpleCache"
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "testing-key"
 
