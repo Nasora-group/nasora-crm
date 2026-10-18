@@ -135,6 +135,57 @@
       });
   }
 
+
+  function syncChartsWithTheme() {
+    if (!window.Chart) return;
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var text = dark ? '#edf5ef' : '#53645e';
+    var grid = dark ? 'rgba(220,239,226,0.18)' : 'rgba(31,51,44,0.08)';
+    var tooltipBg = dark ? '#101812' : '#20352d';
+    var border = dark ? '#202a24' : '#ffffff';
+    Chart.defaults.color = text;
+    Chart.defaults.scale.grid.color = grid;
+    Chart.defaults.scale.ticks.color = text;
+    Chart.defaults.plugins.legend.labels.color = text;
+    Chart.defaults.plugins.tooltip.backgroundColor = tooltipBg;
+    Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+    Chart.defaults.plugins.tooltip.bodyColor = '#ffffff';
+    Chart.defaults.plugins.tooltip.borderColor = dark ? '#52675a' : 'rgba(255,255,255,0.12)';
+    Object.keys(Chart.instances || {}).forEach(function (key) {
+      var chart = Chart.instances[key];
+      if (!chart || !chart.options) return;
+      chart.options.color = text;
+      if (chart.options.scales) {
+        Object.keys(chart.options.scales).forEach(function (axis) {
+          var scale = chart.options.scales[axis];
+          if (scale.ticks) scale.ticks.color = text;
+          if (scale.grid) scale.grid.color = grid;
+        });
+      }
+      if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+        chart.options.plugins.legend.labels.color = text;
+      }
+      if (chart.options.plugins && chart.options.plugins.tooltip) {
+        chart.options.plugins.tooltip.backgroundColor = tooltipBg;
+        chart.options.plugins.tooltip.titleColor = '#ffffff';
+        chart.options.plugins.tooltip.bodyColor = '#ffffff';
+        chart.options.plugins.tooltip.borderColor = dark ? '#52675a' : 'rgba(255,255,255,0.12)';
+      }
+      (chart.data.datasets || []).forEach(function (dataset) {
+        if (dataset.pointBorderColor === '#ffffff' || dataset.pointBorderColor == null) dataset.pointBorderColor = border;
+        if (dataset.borderColor === '#ffffff' && dark) dataset.borderColor = '#202a24';
+      });
+      chart.update('none');
+    });
+  }
+
+  window.addEventListener('nasora:themechange', syncChartsWithTheme);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncChartsWithTheme);
+  } else {
+    syncChartsWithTheme();
+  }
+
   function boot() {
     var lineCanvas = document.getElementById('globalSalesChart');
     var divisionCanvas = document.getElementById('divisionChart');
