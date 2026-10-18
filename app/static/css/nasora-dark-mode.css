@@ -192,3 +192,53 @@ html[data-theme="dark"] .nasora-theme-toggle:hover { background: #30483a; }
 @media (prefers-reduced-motion: reduce) {
   html[data-theme="dark"] *, html[data-theme="dark"] *::before, html[data-theme="dark"] *::after { transition: none !important; }
 }
+
+
+/* Renfort contraste : textes hérités des feuilles historiques du CRM. */
+html[data-theme="dark"] :where(.container,.container-fluid,.row,[class*="col-"],.card-body,.card-header,.card-footer,.panel-body,.panel-heading,.modal-body,.modal-header,.dropdown-item,.list-group-item,.form-text,.form-label,.control-label,.breadcrumb,.pagination,.page-link,.alert,.badge,.kpi-label,.kpi-sub,.kpi-value,.chart-card h3,.chart-card p,.chart-card span,.chart-card label,.dashboard-card h3,.dashboard-card p,.dashboard-card span,.dashboard-card label,.ranking-rate,.ranking-target,.status-good,.status-warning) {
+  color: #edf5ef !important;
+}
+html[data-theme="dark"] :where(.text-dark,.text-body,.text-secondary,.text-body-secondary,.text-black,.text-black-50,.text-secondary-emphasis,.link-dark) {
+  color: #edf5ef !important;
+}
+html[data-theme="dark"] :where(.bg-white,.bg-light,.list-group-item,.page-link,.breadcrumb,.alert-light,.alert-secondary,.table-light,.table-striped>tbody>tr:nth-of-type(odd)>*) {
+  background-color: #202a24 !important;
+  color: #edf5ef !important;
+  border-color: #405448 !important;
+}
+html[data-theme="dark"] .chart-card,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .crm-table-card {
+  background: #202a24 !important;
+  color: #edf5ef !important;
+  border-color: #405448 !important;
+}
+html[data-theme="dark"] .chart-card h3,
+html[data-theme="dark"] .kpi-value,
+html[data-theme="dark"] .kpi-label,
+html[data-theme="dark"] .kpi-sub,
+html[data-theme="dark"] .ranking-rate,
+html[data-theme="dark"] .ranking-target {
+  color: #f3f8f4 !important;
+}
+html[data-theme="dark"] .kpi-icon {
+  background: #254b38 !important;
+  color: #a9f0c8 !important;
+  border-color: #3b7656 !important;
+}
+html[data-theme="dark"] .status-good,
+html[data-theme="dark"] .ranking-status.good { color: #9cebb9 !important; }
+html[data-theme="dark"] .status-warning,
+html[data-theme="dark"] .ranking-status.warning { color: #ffd27c !important; }
+html[data-theme="dark"] .ranking-status.bad { color: #ffaaa6 !important; }
+html[data-theme="dark"] canvas { color: #edf5ef; }
+html[data-theme="dark"] .chart-card::before {
+  background: linear-gradient(90deg, #62dda0, #7ccfff) !important;
+}
+html[data-theme="dark"] .progress,
+html[data-theme="dark"] .progress-bar,
+html[data-theme="dark"] .progress-track { border-color: #405448 !important; }
+html[data-theme="dark"] .btn:not(.nasora-theme-toggle),
+html[data-theme="dark"] button:not(.nasora-theme-toggle) {
+  text-shadow: none;
+}
