@@ -36,7 +36,7 @@ def _generate_password():
 
 
 def create_initial_users(credentials_log):
-    production = os.environ.get("FLASK_ENV", "").lower() == "production"
+    production = bool(app.config.get("IS_PRODUCTION"))
     if not User.query.filter_by(username="Anna Diallo").first():
         admin_password = os.environ.get("SEED_ADMIN_PASSWORD")
         if production and not admin_password:

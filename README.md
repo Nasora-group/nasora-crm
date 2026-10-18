@@ -79,7 +79,9 @@ source .venv/bin/activate          # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# Édite .env : mets une vraie SECRET_KEY et des mots de passe de seed
+# Édite .env : mets une vraie SECRET_KEY et des mots de passe de seed.
+# Garde FLASK_ENV=development : sans cette variable, l'application démarre en
+# mode production (HTTPS forcé, SECRET_KEY et DATABASE_URL obligatoires).
 
 export FLASK_APP=wsgi.py           # Windows (PowerShell) : $env:FLASK_APP="wsgi.py"
 flask db upgrade                   # crée les tables via les migrations
@@ -107,7 +109,7 @@ variables automatiquement si tu ajoutes une référence).
 | Variable | Valeur |
 |---|---|
 | `SECRET_KEY` | générée avec `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `FLASK_ENV` | `production` |
+| `FLASK_ENV` | `production` (valeur par défaut si la variable est absente ou inconnue) |
 | `DATABASE_URL` | fournie automatiquement par le service Postgres |
 | `SEED_ADMIN_PASSWORD` | mot de passe choisi pour le compte admin (à ne définir que le temps du premier déploiement) |
 | `SEED_DEFAULT_COMMERCIAL_PASSWORD` | optionnel — sinon mots de passe aléatoires générés individuellement |
