@@ -1,0 +1,143 @@
+/* NASORA CRM — tableau de bord sombre inspiré de la référence, avec accents verts NASORA. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --nd-bg: #0b1110;
+  --nd-sidebar: #101918;
+  --nd-card: #141e1b;
+  --nd-card-hover: #192722;
+  --nd-border: #263831;
+  --nd-text: #edf5f0;
+  --nd-muted: #9aada3;
+  --nd-green: #36c879;
+  --nd-green-bright: #4be08d;
+  --nd-green-soft: rgba(54, 200, 121, .14);
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .nasora-app-shell,
+html[data-theme="dark"] #main-content.container {
+  background: var(--nd-bg) !important;
+  color: var(--nd-text) !important;
+}
+html[data-theme="dark"] .nasora-topbar {
+  background: var(--nd-sidebar) !important;
+  color: var(--nd-text) !important;
+  border-color: var(--nd-border) !important;
+  box-shadow: 0 5px 24px rgba(0,0,0,.22) !important;
+}
+html[data-theme="dark"] .nasora-brand-name,
+html[data-theme="dark"] .nasora-user-copy strong,
+html[data-theme="dark"] #main-content h1,
+html[data-theme="dark"] #main-content h2,
+html[data-theme="dark"] #main-content h3,
+html[data-theme="dark"] #main-content h4 {
+  color: var(--nd-text) !important;
+}
+html[data-theme="dark"] .nasora-brand-crm,
+html[data-theme="dark"] #main-content a:not(.btn),
+html[data-theme="dark"] .ns-icon {
+  color: var(--nd-green-bright) !important;
+}
+html[data-theme="dark"] .nasora-sidebar {
+  background: var(--nd-sidebar) !important;
+  border-color: var(--nd-border) !important;
+  box-shadow: 6px 0 26px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .nasora-sidebar-menu a,
+html[data-theme="dark"] .ns-logout button {
+  color: #b9c9c0 !important;
+}
+html[data-theme="dark"] .nasora-sidebar-menu a:hover,
+html[data-theme="dark"] .ns-logout button:hover {
+  background: #1b2c24 !important;
+  color: #fff !important;
+}
+html[data-theme="dark"] .nasora-sidebar-menu a.is-active {
+  background: linear-gradient(100deg, #147b49, #20a65f) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 18px rgba(20, 180, 95, .18) !important;
+}
+html[data-theme="dark"] .nasora-sidebar-menu a.is-active .ns-icon {
+  color: #fff !important;
+}
+html[data-theme="dark"] .nasora-top-search,
+html[data-theme="dark"] .nasora-top-search input {
+  background: #0d1512 !important;
+  color: var(--nd-text) !important;
+  border-color: var(--nd-border) !important;
+}
+html[data-theme="dark"] .nasora-top-search input::placeholder { color: #81968a !important; }
+html[data-theme="dark"] :is(.kpi-card,.panel,.chart-card,.form-container,.filter-form,.responsive-table,.summary-card,.card,.data-card,.dashboard-card,.crm-surface,.crm-table-card,.planning-hero,.planning-info-card,.planning-admin-card,.planning-empty,.planning-empty-card,.planning-week-card,.eval-hero,.eval-commercial-card,.eval-empty,.eval-live-card,.eval-panel,.modal-content,.dropdown-menu,.crm-page-hero,.page-hero) {
+  background: var(--nd-card) !important;
+  color: var(--nd-text) !important;
+  border: 1px solid var(--nd-border) !important;
+  box-shadow: 0 6px 22px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] #main-content .kpi-card,
+html[data-theme="dark"] #main-content .chart-card,
+html[data-theme="dark"] #main-content .dashboard-card {
+  border-radius: 12px !important;
+}
+html[data-theme="dark"] :is(p,li,label,td,th,small,.muted,.text-muted,.section-subtitle,.panel-subtitle,.kpi-label,.kpi-sub,.nasora-user-copy small) {
+  color: var(--nd-muted) !important;
+}
+html[data-theme="dark"] :is(.kpi-value,.chart-card h3,.dashboard-card h3,strong,b) {
+  color: var(--nd-text) !important;
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .select2-container--default .select2-selection--single,
+html[data-theme="dark"] .select2-dropdown {
+  background: #0d1512 !important;
+  color: var(--nd-text) !important;
+  border-color: #344a3f !important;
+}
+html[data-theme="dark"] table,
+html[data-theme="dark"] .responsive-table table {
+  background: var(--nd-card) !important;
+  color: var(--nd-text) !important;
+}
+html[data-theme="dark"] table thead th,
+html[data-theme="dark"] .responsive-table thead th {
+  background: #1a2a22 !important;
+  color: #c9f6dc !important;
+  border-color: var(--nd-border) !important;
+}
+html[data-theme="dark"] table td,
+html[data-theme="dark"] table th { border-color: var(--nd-border) !important; }
+html[data-theme="dark"] table tbody tr:nth-child(even) { background: #111a16 !important; }
+html[data-theme="dark"] table tbody tr:hover { background: #1b2c24 !important; }
+html[data-theme="dark"] :is(.btn-primary,.btn-success,.btn-submit,.btn:not(.nasora-theme-toggle)) {
+  background: #16834d !important;
+  border-color: #16834d !important;
+  color: #fff !important;
+}
+html[data-theme="dark"] .nasora-theme-toggle {
+  background: #1b2c24 !important;
+  border-color: #365545 !important;
+  color: #d8f8e5 !important;
+}
+html[data-theme="dark"] .nasora-theme-toggle:hover { background: #244333 !important; }
+/* Les graphiques gardent un fond transparent : seules les séries et accents deviennent verts. */
+html[data-theme="dark"] .chart-card::before {
+  background: linear-gradient(90deg, #23c76d, #6de6a2) !important;
+}
+html[data-theme="dark"] .progress-bar { background-color: var(--nd-green) !important; }
+html[data-theme="dark"] .kpi-icon {
+  background: #173b29 !important;
+  border-color: #28583e !important;
+  color: #91f0b8 !important;
+}
+html[data-theme="dark"] footer {
+  background: transparent !important;
+  color: var(--nd-muted) !important;
+  border-color: var(--nd-border) !important;
+}
+@media (max-width: 1023px) {
+  html[data-theme="dark"] .nasora-mobile-toggle {
+    background: #17231d !important;
+    color: var(--nd-green-bright) !important;
+    border-color: var(--nd-border) !important;
+  }
+}
