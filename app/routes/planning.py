@@ -120,6 +120,10 @@ def visualiser():
 @roles_required("commercial")
 def saisie():
     formulaire = PlanningForm()
+    # En création uniquement, proposer le prochain lundi sans imposer cette date
+    # après une soumission invalide ni lors de la modification d'un planning.
+    if request.method == "GET" and formulaire.date.data is None:
+        formulaire.date.data = _next_monday()
     if formulaire.validate_on_submit():
         if not _valid_week_start(formulaire.date.data):
             flash("La date de début doit être un lundi.", "error")
