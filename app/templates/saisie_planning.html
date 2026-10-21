@@ -18,6 +18,10 @@
         {{ formulaire.date(class="form-input") }}
     </div>
 
+    <div class="form-group planning-top-actions">
+        <button type="submit" class="btn-submit">Enregistrer le planning</button>
+    </div>
+
     <div class="planning-week-grid">
         {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
         <div class="planning-day-card">
@@ -49,6 +53,45 @@
 <a href="{{ url_for('planning.visualiser') }}">Retour au planning</a>
 
 <style>
+/* Mobile-first : formulaire lisible sans défilement horizontal. */
+#planning-form {
+    width: 100%;
+    max-width: 100%;
+}
+#planning-form .form-group {
+    width: 100%;
+    max-width: 100%;
+}
+#planning-form .form-input,
+#planning-form .form-control,
+#planning-form .select2-container {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+.planning-week-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.planning-day-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border, #dce5df);
+    border-radius: 12px;
+}
+.planning-day-title {
+    margin-top: 0;
+}
+#planning-form .btn-submit {
+    min-height: 48px;
+    min-width: 160px;
+    touch-action: manipulation;
+}
+.planning-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0 14px;
+}
 .planning-select {
     width: 100%;
     min-height: 46px;
@@ -95,6 +138,32 @@
     font-size: 13px;
     color: var(--ink-soft);
 }
+@media (max-width: 760px) {
+    .planning-week-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+    .planning-day-card {
+        padding: 12px;
+    }
+    #planning-form .form-group[style] {
+        max-width: 100% !important;
+    }
+    #planning-form .btn-submit {
+        width: 100%;
+        min-height: 52px;
+    }
+    .planning-top-actions {
+        margin-top: 8px;
+    }
+    .structure-detail-item {
+        padding: 12px;
+    }
+    .structure-detail-item input {
+        min-height: 46px;
+        font-size: 16px;
+    }
+}
 </style>
 
 <script>
@@ -124,9 +193,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!details || !summary) return;
 
         var existing = getExisting(selectEl);
+        // Cache en mémoire de session : une désélection temporaire ne doit pas
+        // effacer le nom que l'utilisateur a déjà saisi.
+        var nameCache = selectEl._planningNameCache || (selectEl._planningNameCache = {});
         var entered = {};
         Array.prototype.slice.call(details.querySelectorAll('input[data-structure-input]')).forEach(function (input) {
-            entered[input.getAttribute('data-structure-input')] = input.value;
+            var structure = input.getAttribute('data-structure-input');
+            entered[structure] = input.value;
+            nameCache[structure] = input.value;
         });
         var selectedValues = getSelectedValues(selectEl);
 
@@ -177,7 +251,10 @@ document.addEventListener('DOMContentLoaded', function () {
             input.setAttribute('data-structure-input', value);
             input.value = Object.prototype.hasOwnProperty.call(entered, value)
                 ? entered[value]
-                : (existing[value] || '');
+                : (Object.prototype.hasOwnProperty.call(nameCache, value) ? nameCache[value] : (existing[value] || ''));
+            input.addEventListener('input', function () {
+                nameCache[value] = input.value;
+            });
 
             wrapper.appendChild(label);
             wrapper.appendChild(input);
