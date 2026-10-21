@@ -30,7 +30,6 @@ def test_planning_form_has_mobile_first_layout_and_large_touch_targets():
     assert "@media (max-width: 760px)" in content
     assert "grid-template-columns: minmax(0, 1fr)" in content
     assert "min-height: 52px" in content
-    assert "input.required" not in content  # Existing required-name validation remains explicit in JavaScript.
     assert "input.required = true" in content
     assert "Renseigne le nom précis de chaque structure sélectionnée" in content
 
