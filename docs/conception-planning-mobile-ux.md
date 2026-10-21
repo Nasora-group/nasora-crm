@@ -24,10 +24,10 @@ Issue de suivi : #272
 
 ### Étape 1 — réduire les gestes et erreurs dans la saisie existante
 
-1. Afficher une action principale visible en haut et en bas du formulaire sur téléphone, avec des zones tactiles confortables.
+1. Afficher une action principale de sauvegarde près du haut du formulaire et une autre en bas, avec des zones tactiles confortables.
 2. Préremplir la date avec le prochain lundi uniquement en création, sans écraser une date explicitement choisie ni la date d'un planning en modification.
 3. Rendre la progression plus claire : date de semaine, puis cartes de jours; afficher le nombre de structures sélectionnées par jour et un état vide explicite.
-4. Garder les champs de nom précis obligatoires et visibles pour chaque structure sélectionnée. Ne jamais supprimer silencieusement une valeur lors d'un changement de sélection.
+4. Garder les champs de nom précis obligatoires et visibles pour chaque structure sélectionnée. Conserver en mémoire de session les valeurs saisies lorsqu'une structure est temporairement désélectionnée, afin de les restaurer si elle est resélectionnée.
 5. Conserver les sept jours, y compris samedi et dimanche, ainsi que les sélections et noms déjà enregistrés en mode modification.
 6. Ajouter une confirmation légère avant de quitter un formulaire modifié, si elle peut être faite sans bloquer les soumissions valides.
 
@@ -55,7 +55,7 @@ Cette étape ne doit pas faire de requête inter-utilisateurs ni exposer les pla
 - Création : la date par défaut est le prochain lundi; une date explicitement fournie est conservée.
 - Modification : la date et les valeurs existantes ne sont pas écrasées par les valeurs par défaut.
 - Mobile/HTML : le formulaire expose des contrôles utilisables sur petit écran, labels accessibles et actions de sauvegarde claires.
-- Sélections : ajout/retrait d'une structure conserve les noms déjà saisis pour les structures qui restent sélectionnées.
+- Sélections : ajout/retrait et désélection puis resélection d'une structure conservent les noms déjà saisis.
 - Validation : les noms des structures sélectionnées restent obligatoires côté navigateur et côté serveur.
 - Persistance : une sauvegarde met à jour le planning existant de l'utilisateur pour la même date; aucune ligne n'est créée en double par le flux normal.
 - Isolation : un utilisateur ne peut ni consulter ni modifier le planning d'un autre.
