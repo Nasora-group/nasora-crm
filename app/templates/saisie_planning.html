@@ -18,6 +18,10 @@
         {{ formulaire.date(class="form-input") }}
     </div>
 
+    <div class="form-group planning-top-actions">
+        <button type="submit" class="btn-submit">Enregistrer le planning</button>
+    </div>
+
     <div class="planning-week-grid">
         {% for jour, jour_label in [('lundi','Lundi'), ('mardi','Mardi'), ('mercredi','Mercredi'), ('jeudi','Jeudi'), ('vendredi','Vendredi'), ('samedi','Samedi'), ('dimanche','Dimanche')] %}
         <div class="planning-day-card">
@@ -83,6 +87,11 @@
     min-width: 160px;
     touch-action: manipulation;
 }
+.planning-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0 14px;
+}
 .planning-select {
     width: 100%;
     min-height: 46px;
@@ -144,6 +153,9 @@
         width: 100%;
         min-height: 52px;
     }
+    .planning-top-actions {
+        margin-top: 8px;
+    }
     .structure-detail-item {
         padding: 12px;
     }
@@ -181,9 +193,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!details || !summary) return;
 
         var existing = getExisting(selectEl);
+        // Cache en mémoire de session : une désélection temporaire ne doit pas
+        // effacer le nom que l'utilisateur a déjà saisi.
+        var nameCache = selectEl._planningNameCache || (selectEl._planningNameCache = {});
         var entered = {};
         Array.prototype.slice.call(details.querySelectorAll('input[data-structure-input]')).forEach(function (input) {
-            entered[input.getAttribute('data-structure-input')] = input.value;
+            var structure = input.getAttribute('data-structure-input');
+            entered[structure] = input.value;
+            nameCache[structure] = input.value;
         });
         var selectedValues = getSelectedValues(selectEl);
 
@@ -234,7 +251,10 @@ document.addEventListener('DOMContentLoaded', function () {
             input.setAttribute('data-structure-input', value);
             input.value = Object.prototype.hasOwnProperty.call(entered, value)
                 ? entered[value]
-                : (existing[value] || '');
+                : (Object.prototype.hasOwnProperty.call(nameCache, value) ? nameCache[value] : (existing[value] || ''));
+            input.addEventListener('input', function () {
+                nameCache[value] = input.value;
+            });
 
             wrapper.appendChild(label);
             wrapper.appendChild(input);
