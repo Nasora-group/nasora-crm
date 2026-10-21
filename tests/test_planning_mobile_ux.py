@@ -39,3 +39,20 @@ def test_planning_form_keeps_all_seven_days():
 
     for day in ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"):
         assert "('" + day + "'" in content
+
+
+def test_planning_form_caches_names_when_a_structure_is_deselected_and_reselected():
+    content = TEMPLATE.read_text(encoding="utf-8")
+
+    assert "selectEl._planningNameCache" in content
+    assert "nameCache[structure] = input.value" in content
+    assert "nameCache[value] = input.value" in content
+    assert "nameCache[value]" in content
+
+
+def test_planning_form_has_save_action_near_top_and_bottom():
+    content = TEMPLATE.read_text(encoding="utf-8")
+
+    assert content.count('class="btn-submit"') >= 2
+    assert 'class="form-group planning-top-actions"' in content
+    assert "Enregistrer le planning" in content
