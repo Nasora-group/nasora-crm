@@ -38,3 +38,11 @@ def test_animation_quantity_accepts_zero_as_no_sale():
     assert _parse_non_negative_quantity("3") == 3
     assert _parse_non_negative_quantity("-1") is None
     assert _parse_non_negative_quantity("invalid") is None
+
+def test_edit_animation_quantity_must_remain_positive():
+    from app.routes.animation_sales import _parse_positive_quantity
+
+    assert _parse_positive_quantity("1") == 1
+    assert _parse_positive_quantity("0") is None
+    assert _parse_positive_quantity("-2") is None
+    assert _parse_positive_quantity("invalid") is None
