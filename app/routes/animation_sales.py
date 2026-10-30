@@ -10,6 +10,7 @@ from app.extensions import db
 from app.models import User, AnimationEvidence, get_active_products_for_division, get_active_product_prices_for_division
 from app.utils import roles_required
 from app.services.admin_notifications import notify_admins
+from app.permissions import division_matches
 
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
 logger = logging.getLogger(__name__)
@@ -447,10 +448,13 @@ def delete_animation_sale(sale_id):
 
 @animation_sales_bp.route("/justificatif/<int:evidence_id>")
 @login_required
-@roles_required("admin", "animateur")
+@roles_required("admin", "commercial", "animateur")
 def animation_evidence(evidence_id):
+    """Serve an animation proof only to its owner or users in its division."""
     evidence = AnimationEvidence.query.get_or_404(evidence_id)
     if current_user.role == "animateur" and evidence.animateur_id != current_user.id:
+        abort(403)
+    if current_user.role == "commercial" and not division_matches(current_user, evidence.project):
         abort(403)
     download = request.args.get("download") == "1"
     return send_file(
