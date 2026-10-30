@@ -31,3 +31,13 @@ def test_weekly_duplication_copies_all_seven_days_and_keeps_source():
     assert "db.session.delete(planning)" not in duplicate_handler
     assert "planning.duplicate_planning" in card
     assert "Dupliquer la semaine" in card
+
+def test_planning_duplication_commits_before_admin_notification():
+    content = ROUTE.read_text(encoding="utf-8")
+    duplicate_handler = content.split("def duplicate_planning(planning_id):", 1)[1].split("def delete_planning(planning_id):", 1)[0]
+
+    commit_position = duplicate_handler.index("db.session.commit()")
+    notification_position = duplicate_handler.index("notify_admins(")
+    assert commit_position < notification_position
+    assert "except Exception:" in duplicate_handler[notification_position:]
+    assert "db.session.rollback()" in duplicate_handler[notification_position:]
