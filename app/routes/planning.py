@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import logging
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
@@ -13,6 +14,16 @@ from app.services.admin_notifications import notify_admins
 from app.services.audit import audit_event
 
 planning_bp = Blueprint("planning", __name__)
+logger = logging.getLogger(__name__)
+
+
+def _safe_audit_event(*args, **kwargs):
+    """Journalise sans transformer un échec de log en échec de sauvegarde."""
+    try:
+        audit_event(*args, **kwargs)
+    except Exception:
+        logger.exception("Échec de journalisation d’une action planning")
+
 
 WORKING_DAYS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
 NON_WORKING_DAYS = ("samedi", "dimanche")
@@ -165,7 +176,7 @@ def saisie():
             except Exception:
                 db.session.rollback()
 
-            audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
+            _safe_audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer le planning pour le moment. Votre saisie n'a pas été enregistrée.", "error")
@@ -234,7 +245,7 @@ def edit_planning(planning_id):
             except Exception:
                 db.session.rollback()
 
-            audit_event(
+            _safe_audit_event(
                 "planning_updated",
                 "planning",
                 affected_id,
@@ -290,7 +301,7 @@ def duplicate_planning(planning_id):
         except Exception:
             db.session.rollback()
 
-        audit_event("planning_duplicated", "planning", duplicate.id, {"source_planning_id": planning.id, "date": target_date.isoformat()})
+        _safe_audit_event("planning_duplicated", "planning", duplicate.id, {"source_planning_id": planning.id, "date": target_date.isoformat()})
     except Exception:
         db.session.rollback()
         flash("Impossible de dupliquer le planning pour le moment.", "error")
@@ -328,7 +339,7 @@ def delete_planning(planning_id):
             except Exception:
                 db.session.rollback()
 
-            audit_event(
+            _safe_audit_event(
                 "planning_deleted",
                 "planning",
                 planning_id_value,
