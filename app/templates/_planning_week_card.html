@@ -5,6 +5,10 @@
         {% if delete_form %}
         <div class="planning-week-actions">
             <a href="{{ url_for('planning.edit_planning', planning_id=planning.id) }}" class="btn btn-outline">Modifier</a>
+            <form method="POST" action="{{ url_for('planning.duplicate_planning', planning_id=planning.id) }}">
+                {{ delete_form.hidden_tag() }}
+                <button type="submit" class="btn btn-outline" onclick="return confirm('Dupliquer cette semaine vers la semaine suivante ? Le planning existant ne sera jamais écrasé.');">Dupliquer la semaine</button>
+            </form>
             <form method="POST" action="{{ url_for('planning.delete_planning', planning_id=planning.id) }}">
                 {{ delete_form.hidden_tag() }}
                 <button type="submit" class="btn btn-danger-outline" onclick="return confirm('Supprimer ce planning (semaine du {{ planning.date.strftime('%d/%m/%Y') }}) ?');">Supprimer</button>
