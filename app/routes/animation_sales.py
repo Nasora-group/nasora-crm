@@ -374,14 +374,22 @@ def edit_animation_sale(sale_id):
                 sale.quantity = quantity
                 sale.unit_price = unit_price
                 sale.project = division
-                notify_admins(
-                    current_user,
-                    "animation_updated",
-                    "Animation modifiée",
-                    "Une vente d'animation a été modifiée.",
-                    "animation_sales.my_history",
-                )
                 db.session.commit()
+
+                # La notification est secondaire : une panne de notification ne
+                # doit pas annuler une modification métier déjà valide.
+                try:
+                    notify_admins(
+                        current_user,
+                        "animation_updated",
+                        "Animation modifiée",
+                        "Une vente d'animation a été modifiée.",
+                        "animation_sales.my_history",
+                    )
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
                 flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
                 return redirect(url_for("animation_sales.my_history"))
             except Exception:
