@@ -46,3 +46,16 @@ def test_edit_animation_quantity_must_remain_positive():
     assert _parse_positive_quantity("0") is None
     assert _parse_positive_quantity("-2") is None
     assert _parse_positive_quantity("invalid") is None
+
+def test_animation_edit_commits_business_data_before_notification():
+    from pathlib import Path
+
+    route = Path(__file__).resolve().parents[1] / "app" / "routes" / "animation_sales.py"
+    content = route.read_text(encoding="utf-8")
+    edit_block = content.split('def edit_animation_sale(sale_id):', 1)[1].split('@animation_sales_bp.route("/<int:sale_id>/supprimer"', 1)[0]
+
+    commit_position = edit_block.index("db.session.commit()")
+    notification_position = edit_block.index("notify_admins(")
+    assert commit_position < notification_position
+    assert "except Exception:" in edit_block[notification_position:]
+    assert "db.session.rollback()" in edit_block[notification_position:]
