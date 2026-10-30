@@ -52,7 +52,7 @@ def test_animation_edit_commits_business_data_before_notification():
 
     route = Path(__file__).resolve().parents[1] / "app" / "routes" / "animation_sales.py"
     content = route.read_text(encoding="utf-8")
-    edit_block = content.split('def edit_animation_sale(sale_id):', 1)[1].split('@animation_sales_bp.route("/<int:sale_id>/supprimer"', 1)[0]
+    edit_block = content.split('def edit_full_animation(sale_id):', 1)[1].split('def edit_animation_sale(sale_id):', 1)[0]
 
     commit_position = edit_block.index("db.session.commit()")
     notification_position = edit_block.index("notify_admins(")
