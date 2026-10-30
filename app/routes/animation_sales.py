@@ -28,10 +28,10 @@ def _parse_sale_date(raw):
         return None
 
 
-def _parse_positive_quantity(raw):
+def _parse_non_negative_quantity(raw):
     try:
         value = int((raw or "").strip())
-        return value if value > 0 else None
+        return value if value >= 0 else None
     except (TypeError, ValueError):
         return None
 
@@ -120,11 +120,21 @@ def new_animation_sale():
         for product_name in products:
             raw_quantity = request.form.get(f"quantity__{product_name}")
             raw_price = request.form.get(f"unit_price__{product_name}")
-            if not (raw_quantity or raw_price):
+            if not (raw_quantity or "").strip():
+                if not (raw_price or "").strip():
+                    continue
+                invalid_product = product_name
+                break
+            quantity = _parse_non_negative_quantity(raw_quantity)
+            if quantity is None:
+                invalid_product = product_name
+                break
+            # Une quantité nulle signifie que le produit n'a pas été vendu.
+            # On ignore cette ligne, même si un prix a été saisi par erreur.
+            if quantity == 0:
                 continue
-            quantity = _parse_positive_quantity(raw_quantity)
             unit_price = _parse_non_negative_price(raw_price)
-            if quantity is None or unit_price is None:
+            if unit_price is None:
                 invalid_product = product_name
                 break
             items.append((product_name, quantity, unit_price))
