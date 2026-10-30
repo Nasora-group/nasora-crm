@@ -35,6 +35,11 @@ def _parse_non_negative_quantity(raw):
     except (TypeError, ValueError):
         return None
 
+def _parse_positive_quantity(raw):
+    """Validate a strictly positive quantity for editing an existing sale."""
+    value = _parse_non_negative_quantity(raw)
+    return value if value is not None and value > 0 else None
+
 
 def _parse_non_negative_price(raw):
     try:
