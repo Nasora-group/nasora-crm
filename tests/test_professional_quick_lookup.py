@@ -25,3 +25,25 @@ def test_prospection_form_offers_existing_professionals_and_autofills_details():
     assert "professionalInput.addEventListener('change'" in content
     assert "data.address" in content
     assert "data.region" in content
+
+
+def test_prospection_creation_commits_before_admin_notification():
+    content = ROUTE.read_text(encoding="utf-8")
+    create_block = content.split('def index():', 1)[1].split('@dashboard_bp.route("/dashboard/prospections"', 1)[0]
+
+    commit_position = create_block.index("db.session.commit()")
+    notification_position = create_block.index("notify_admins(")
+    assert commit_position < notification_position
+    assert "except Exception:" in create_block[notification_position:]
+    assert "Prospection enregistrée, mais notification administrateur impossible." in create_block
+
+
+def test_prospection_edit_commits_before_admin_notification():
+    content = ROUTE.read_text(encoding="utf-8")
+    edit_block = content.split("def edit_prospection(prospection_id):", 1)[1].split('@dashboard_bp.route("/dashboard/prospection/<int:prospection_id>/supprimer"', 1)[0]
+
+    commit_position = edit_block.index("db.session.commit()")
+    notification_position = edit_block.index("notify_admins(")
+    assert commit_position < notification_position
+    assert "except Exception:" in edit_block[notification_position:]
+    assert "Prospection modifiée, mais notification administrateur impossible." in edit_block
