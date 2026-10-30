@@ -50,6 +50,16 @@ def app():
                 file_data=b"\\xff\\xd8\\xffpreuve",
                 file_size=9,
             ),
+            AnimationEvidence(
+                animateur_id=users[4].id,
+                pharmacy_name="Pharmacie Animateur Deux",
+                animation_date=date(2026, 10, 30),
+                project="nasmedic",
+                filename="preuve-animateur-deux.jpg",
+                mime_type="image/jpeg",
+                file_data=b"\\xff\\xd8\\xffpreuve",
+                file_size=9,
+            ),
         ])
         db.session.commit()
         yield app
@@ -80,6 +90,7 @@ def test_medical_visitor_can_view_evidence_in_own_division_only(client):
 def test_animateur_can_view_only_own_evidence(client):
     login(client, "evidence_animator_two")
     assert client.get("/animations/ventes/justificatif/1").status_code == 403
+    assert client.get("/animations/ventes/justificatif/3").status_code == 200
 
 
 def test_admin_can_view_evidence_across_divisions(client):
