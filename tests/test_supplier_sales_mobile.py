@@ -27,6 +27,7 @@ def test_animation_sale_styles_do_not_corrupt_document_title():
     template = ROOT / "app" / "templates" / "animation_sale_form.html"
     content = template.read_text(encoding="utf-8")
 
+    assert content.count("{% block title %}") == 1
     title_block = content.split("{% block title %}", 1)[1].split("{% endblock %}", 1)[0]
     assert "<style>" not in title_block
     assert "Saisir les ventes d'animation" in title_block
