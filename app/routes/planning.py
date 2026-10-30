@@ -266,9 +266,16 @@ def duplicate_planning(planning_id):
     )
     try:
         db.session.add(duplicate)
-        db.session.flush()
-        notify_admins(current_user, "planning_created", "Planning dupliqué", "Un planning a été dupliqué pour la semaine suivante.", "planning.admin_plannings")
         db.session.commit()
+
+        # La duplication est enregistrée avant l'envoi de la notification.
+        # Une panne du service de notification ne doit pas annuler le planning.
+        try:
+            notify_admins(current_user, "planning_created", "Planning dupliqué", "Un planning a été dupliqué pour la semaine suivante.", "planning.admin_plannings")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         audit_event("planning_duplicated", "planning", duplicate.id, {"source_planning_id": planning.id, "date": target_date.isoformat()})
     except Exception:
         db.session.rollback()
