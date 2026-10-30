@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import logging
@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 def _render_sale_form(products, prices, form_data):
+    form_data = dict(form_data or {})
+    form_data.setdefault("animation_date", date.today().isoformat())
     return render_template("animation_sale_form.html", products=products, prices=prices, form_data=form_data)
 
 
