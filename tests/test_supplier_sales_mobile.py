@@ -33,3 +33,5 @@ def test_animation_sale_styles_do_not_corrupt_document_title():
     assert "Saisir les ventes d'animation" in title_block
     assert "{% block content %}" in content
     assert ".ns-animation-product" in content
+    assert "prices.get(product, '')" in content
+    assert "form_data.get('unit_price__' ~ product, prices.get(product, ''))" in content
