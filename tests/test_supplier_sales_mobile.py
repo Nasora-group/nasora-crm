@@ -21,3 +21,14 @@ def test_supplier_sales_form_has_mobile_product_cards_and_no_gradients():
     assert "@media(max-width:800px)" in content
     assert "sales-table tbody{display:grid" in content
     assert "linear-gradient" not in content
+
+
+def test_animation_sale_styles_do_not_corrupt_document_title():
+    template = ROOT / "app" / "templates" / "animation_sale_form.html"
+    content = template.read_text(encoding="utf-8")
+
+    title_block = content.split("{% block title %}", 1)[1].split("{% endblock %}", 1)[0]
+    assert "<style>" not in title_block
+    assert "Saisir les ventes d'animation" in title_block
+    assert "{% block content %}" in content
+    assert ".ns-animation-product" in content
