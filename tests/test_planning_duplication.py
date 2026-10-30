@@ -27,6 +27,7 @@ def test_weekly_duplication_copies_all_seven_days_and_keeps_source():
     card = CARD.read_text(encoding="utf-8")
 
     assert "**{day: getattr(planning, day) for day in JOURS}" in content
-    assert "db.session.delete(planning)" not in content
+    duplicate_handler = content.split("def duplicate_planning(planning_id):", 1)[1].split("def delete_planning(planning_id):", 1)[0]
+    assert "db.session.delete(planning)" not in duplicate_handler
     assert "planning.duplicate_planning" in card
     assert "Dupliquer la semaine" in card
