@@ -17,7 +17,7 @@
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
       <h1 style="margin-bottom:6px;">{{ 'Modifier l’animation' if editing_animation else 'Enregistrer les ventes de l\'animation' }}</h1>
-      <p style="margin:0;opacity:.75;">Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.</p>
+      <p style="margin:0;opacity:.75;">{{ 'Les produits déjà enregistrés sont préremplis. Vous pouvez modifier les quantités et les prix, ajouter des produits ou laisser vide une ligne à retirer.' if editing_animation else 'Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.' }}</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
@@ -31,7 +31,7 @@
 
     <div style="margin-bottom:26px;padding:16px 18px;border:1px solid #dcefe5;border-radius:12px;background:#f7fcf9;">
       <label for="animation_evidence"><strong>Justificatif photo de l'animation <span style="font-weight:400;opacity:.65;">(facultatif)</span></strong></label>
-      <p style="margin:6px 0 10px;opacity:.72;font-size:.88rem;">Vous pouvez ajouter une photo prise pendant l'animation dans cette pharmacie. JPG, PNG ou WEBP, 5 Mo maximum.</p>
+      <p style="margin:6px 0 10px;opacity:.72;font-size:.88rem;">{% if editing_animation and existing_evidence %}Le justificatif déjà enregistré sera conservé. Ajoutez une nouvelle photo uniquement si vous souhaitez le remplacer. JPG, PNG ou WEBP, 5 Mo maximum.{% else %}Vous pouvez ajouter une photo prise pendant l'animation dans cette pharmacie. JPG, PNG ou WEBP, 5 Mo maximum.{% endif %}</p>
       <input id="animation_evidence" name="animation_evidence" type="file" accept="image/jpeg,image/png,image/webp" style="width:100%;">
     </div>
 
