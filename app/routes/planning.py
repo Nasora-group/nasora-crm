@@ -156,8 +156,15 @@ def saisie():
                 db.session.add(existing)
             for champ, valeur in creneaux.items():
                 setattr(existing, champ, valeur)
-            notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
             db.session.commit()
+
+            # La sauvegarde du planning reste acquise même si les notifications échouent.
+            try:
+                notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
         except Exception:
             db.session.rollback()
@@ -212,14 +219,21 @@ def edit_planning(planning_id):
         affected_id = target.id if target is not None else planning.id
         affected_date = formulaire.date.data
         try:
-            notify_admins(
-                current_user,
-                "planning_updated",
-                "Planning modifié",
-                "Un planning a été modifié.",
-                "planning.admin_plannings",
-            )
             db.session.commit()
+
+            # Une panne de notification ne doit pas annuler la modification métier.
+            try:
+                notify_admins(
+                    current_user,
+                    "planning_updated",
+                    "Planning modifié",
+                    "Un planning a été modifié.",
+                    "planning.admin_plannings",
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             audit_event(
                 "planning_updated",
                 "planning",
@@ -298,15 +312,22 @@ def delete_planning(planning_id):
         planning_date = planning.date
         planning_id_value = planning.id
         try:
-            notify_admins(
-                current_user,
-                "planning_deleted",
-                "Planning supprimé",
-                "Un planning a été supprimé.",
-                "planning.admin_plannings",
-            )
             db.session.delete(planning)
             db.session.commit()
+
+            # La suppression est validée avant la notification administrateur.
+            try:
+                notify_admins(
+                    current_user,
+                    "planning_deleted",
+                    "Planning supprimé",
+                    "Un planning a été supprimé.",
+                    "planning.admin_plannings",
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             audit_event(
                 "planning_deleted",
                 "planning",
