@@ -85,7 +85,7 @@ def test_planning_audit_logging_cannot_turn_a_saved_action_into_a_failure():
     assert "except Exception:" in helper
     assert "logger.exception(" in helper
 
-    assert '_safe_audit_event("planning_saved"' in content
-    assert '_safe_audit_event("planning_updated"' in content
-    assert '_safe_audit_event("planning_duplicated"' in content
-    assert '_safe_audit_event("planning_deleted"' in content
+    # Les appels peuvent être écrits sur une ou plusieurs lignes.
+    for action in ("planning_saved", "planning_updated", "planning_duplicated", "planning_deleted"):
+        assert f'"{action}"' in content
+    assert content.count("_safe_audit_event(") >= 5  # définition + quatre opérations
