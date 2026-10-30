@@ -2,6 +2,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from app.permissions import has_role, is_commercial, owns_record
+from app.routes.animation_sales import _parse_non_negative_quantity
+
 
 
 def test_animation_sales_total_is_quantity_times_unit_price():
@@ -29,3 +31,10 @@ def test_animateur_has_shared_field_permissions_but_is_distinct_role():
 def test_role_permission_keeps_admin_separate():
     # This documents the intended route-level contract for animation sales.
     assert "animateur" != "admin"
+
+
+def test_animation_quantity_accepts_zero_as_no_sale():
+    assert _parse_non_negative_quantity("0") == 0
+    assert _parse_non_negative_quantity("3") == 3
+    assert _parse_non_negative_quantity("-1") is None
+    assert _parse_non_negative_quantity("invalid") is None
