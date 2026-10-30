@@ -236,6 +236,48 @@ def edit_planning(planning_id):
     return _render_saisie(formulaire, "edit", planning)
 
 
+@planning_bp.route("/planning/<int:planning_id>/dupliquer", methods=["POST"])
+@login_required
+@roles_required("commercial")
+def duplicate_planning(planning_id):
+    """Duplicate a user planning into the following week without overwriting data."""
+    form = CSRFOnlyForm()
+    planning = Planning.query.get_or_404(planning_id)
+    if not owns_record(current_user, planning):
+        abort(404)
+
+    if not form.validate_on_submit():
+        flash("La demande de duplication est invalide. Réessayez.", "error")
+        return redirect(url_for("planning.visualiser"))
+
+    target_date = planning.date + timedelta(days=7)
+    existing = Planning.query.filter_by(
+        commercial_id=current_user.id,
+        date=target_date,
+    ).first()
+    if existing is not None:
+        flash("Un planning existe déjà pour la semaine suivante. Le planning existant reste intact.", "warning")
+        return redirect(url_for("planning.visualiser"))
+
+    duplicate = Planning(
+        commercial_id=current_user.id,
+        date=target_date,
+        **{day: getattr(planning, day) for day in JOURS},
+    )
+    try:
+        db.session.add(duplicate)
+        db.session.flush()
+        notify_admins(current_user, "planning_created", "Planning dupliqué", "Un planning a été dupliqué pour la semaine suivante.", "planning.admin_plannings")
+        db.session.commit()
+        audit_event("planning_duplicated", "planning", duplicate.id, {"source_planning_id": planning.id, "date": target_date.isoformat()})
+    except Exception:
+        db.session.rollback()
+        flash("Impossible de dupliquer le planning pour le moment.", "error")
+        return redirect(url_for("planning.visualiser"))
+
+    flash(f"Planning dupliqué pour la semaine du {target_date.strftime('%d/%m/%Y')}.", "success")
+    return redirect(url_for("planning.visualiser"))
+
 @planning_bp.route("/planning/<int:planning_id>/supprimer", methods=["POST"])
 @login_required
 @roles_required("commercial")
