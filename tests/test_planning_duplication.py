@@ -74,3 +74,18 @@ def test_planning_delete_commits_before_admin_notification():
     assert commit_position < notification_position
     assert "except Exception:" in delete_block[notification_position:]
     assert "db.session.rollback()" in delete_block[notification_position:]
+
+
+def test_planning_audit_logging_cannot_turn_a_saved_action_into_a_failure():
+    content = ROUTE.read_text(encoding="utf-8")
+
+    helper = content.split("def _safe_audit_event(", 1)[1].split("\n\ndef ", 1)[0]
+    assert "try:" in helper
+    assert "audit_event(*args, **kwargs)" in helper
+    assert "except Exception:" in helper
+    assert "logger.exception(" in helper
+
+    assert '_safe_audit_event("planning_saved"' in content
+    assert '_safe_audit_event("planning_updated"' in content
+    assert '_safe_audit_event("planning_duplicated"' in content
+    assert '_safe_audit_event("planning_deleted"' in content
