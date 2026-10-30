@@ -44,7 +44,7 @@
         <h3>{{ product }}</h3>
         <div class="ns-animation-product-fields">
           <label>Prix unitaire (FCFA)
-            <input class="sale-unit-price" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Ex. 5000" aria-label="Prix de vente de {{ product }} en FCFA">
+            <input class="sale-unit-price" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, prices.get(product, '')) }}" placeholder="Ex. 5000" aria-label="Prix de vente de {{ product }} en FCFA">
           </label>
           <label>Quantité vendue
             <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
