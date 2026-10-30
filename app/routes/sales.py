@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
@@ -56,6 +57,8 @@ def _handle_supplier_sales(slug, template_name):
         abort(403)
 
     form = SupplierSalesForm()
+    if request.method == "GET" and form.sale_date.data is None:
+        form.sale_date.data = date.today()
     products = product_model.query.filter_by(is_active=True).order_by(product_model.name).all()
     read_only = False
 
