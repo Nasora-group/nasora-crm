@@ -337,12 +337,20 @@ def _render_dashboard(form, selected_date=None):
     visit_date = selected_date or form.date.data or date.today()
     planning_context = _planning_context_for_date(visit_date)
     dashboard_activity = _dashboard_activity_for_date(visit_date, planning_context)
+    quick_clients = (
+        Client.query
+        .filter((Client.owner_id.is_(None)) | (Client.owner_id == current_user.id))
+        .order_by(Client.name.asc())
+        .limit(150)
+        .all()
+    )
     return render_template(
         "dashboard.html",
         form=form,
         sales_kpis=sales_kpis,
         planning_context=planning_context,
         dashboard_activity=dashboard_activity,
+        quick_clients=quick_clients,
     )
 
 
