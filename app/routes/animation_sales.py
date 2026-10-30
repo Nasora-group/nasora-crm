@@ -224,7 +224,7 @@ def new_animation_sale():
 @animation_sales_bp.route("/<int:sale_id>/animation/modifier", methods=["GET", "POST"])
 @login_required
 @roles_required("admin", "animateur")
-def edit_animation_group(sale_id):
+def edit_full_animation(sale_id):
     """Edit every product line belonging to one pharmacy animation."""
     from app.models import AnimationSale
 
@@ -478,6 +478,7 @@ def my_history():
 @roles_required("admin", "animateur")
 def edit_animation_sale(sale_id):
     """Edit all mutable fields; animateur may edit only their own sale."""
+    return edit_full_animation(sale_id)
     from app.models import AnimationSale
     sale = AnimationSale.query.get_or_404(sale_id)
     if current_user.role == "animateur" and sale.animateur_id != current_user.id:
