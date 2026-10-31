@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import logging
@@ -10,12 +10,15 @@ from app.extensions import db
 from app.models import User, AnimationEvidence, get_active_products_for_division, get_active_product_prices_for_division
 from app.utils import roles_required
 from app.services.admin_notifications import notify_admins
+from app.permissions import division_matches
 
 animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animations/ventes")
 logger = logging.getLogger(__name__)
 
 
 def _render_sale_form(products, prices, form_data):
+    form_data = dict(form_data or {})
+    form_data.setdefault("animation_date", date.today().isoformat())
     return render_template("animation_sale_form.html", products=products, prices=prices, form_data=form_data)
 
 
@@ -26,12 +29,17 @@ def _parse_sale_date(raw):
         return None
 
 
-def _parse_positive_quantity(raw):
+def _parse_non_negative_quantity(raw):
     try:
         value = int((raw or "").strip())
-        return value if value > 0 else None
+        return value if value >= 0 else None
     except (TypeError, ValueError):
         return None
+
+def _parse_positive_quantity(raw):
+    """Validate a strictly positive quantity for editing an existing sale."""
+    value = _parse_non_negative_quantity(raw)
+    return value if value is not None and value > 0 else None
 
 
 def _parse_non_negative_price(raw):
@@ -118,11 +126,21 @@ def new_animation_sale():
         for product_name in products:
             raw_quantity = request.form.get(f"quantity__{product_name}")
             raw_price = request.form.get(f"unit_price__{product_name}")
-            if not (raw_quantity or raw_price):
+            if not (raw_quantity or "").strip():
+                if not (raw_price or "").strip():
+                    continue
+                invalid_product = product_name
+                break
+            quantity = _parse_non_negative_quantity(raw_quantity)
+            if quantity is None:
+                invalid_product = product_name
+                break
+            # Une quantité nulle signifie que le produit n'a pas été vendu.
+            # On ignore cette ligne, même si un prix a été saisi par erreur.
+            if quantity == 0:
                 continue
-            quantity = _parse_positive_quantity(raw_quantity)
             unit_price = _parse_non_negative_price(raw_price)
-            if quantity is None or unit_price is None:
+            if unit_price is None:
                 invalid_product = product_name
                 break
             items.append((product_name, quantity, unit_price))
@@ -202,6 +220,172 @@ def new_animation_sale():
     return _render_sale_form(products, prices, {})
 
 
+
+@animation_sales_bp.route("/<int:sale_id>/animation/modifier", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "animateur")
+def edit_full_animation(sale_id):
+    """Edit every product line belonging to one pharmacy animation."""
+    from app.models import AnimationSale
+
+    anchor = AnimationSale.query.get_or_404(sale_id)
+    if current_user.role == "animateur" and anchor.animateur_id != current_user.id:
+        abort(403)
+    if current_user.role not in {"animateur", "admin"}:
+        abort(403)
+
+    # Evidence IDs distinguish separate sessions. Older entries without a
+    # photo use owner + date + pharmacy as their stable grouping key.
+    if anchor.evidence_id:
+        sales_query = AnimationSale.query.filter_by(evidence_id=anchor.evidence_id)
+    else:
+        sales_query = AnimationSale.query.filter(
+            AnimationSale.evidence_id.is_(None),
+            AnimationSale.animateur_id == anchor.animateur_id,
+            AnimationSale.animation_date == anchor.animation_date,
+            AnimationSale.pharmacy_name == anchor.pharmacy_name,
+        )
+    sales = sales_query.order_by(AnimationSale.id.asc()).all()
+    if not sales:
+        abort(404)
+
+    division = (anchor.project or current_user.project or "").strip().lower()
+    products = get_active_products_for_division(division)
+    saved_by_product = {}
+    for item in sales:
+        saved_by_product.setdefault(item.product_name, item)
+    products = sorted(set(products) | set(saved_by_product))
+    prices = get_active_product_prices_for_division(division)
+    evidence = anchor.evidence
+
+    form_data = {
+        "pharmacy_name": anchor.pharmacy_name,
+        "animation_date": anchor.animation_date.isoformat(),
+    }
+    for product_name, item in saved_by_product.items():
+        form_data[f"quantity__{product_name}"] = str(item.quantity)
+        form_data[f"unit_price__{product_name}"] = str(item.unit_price)
+
+    if request.method == "POST":
+        pharmacy = (request.form.get("pharmacy_name") or "").strip()
+        animation_date = _parse_sale_date(request.form.get("animation_date"))
+        if not pharmacy or len(pharmacy) > 200 or not animation_date:
+            flash("Le nom de la pharmacie et une date d'animation valide sont obligatoires.", "error")
+            form_data = dict(request.form)
+        else:
+            items = []
+            invalid_product = None
+            for product_name in products:
+                raw_quantity = (request.form.get(f"quantity__{product_name}") or "").strip()
+                raw_price = (request.form.get(f"unit_price__{product_name}") or "").strip()
+                if not raw_quantity:
+                    if raw_price:
+                        invalid_product = product_name
+                        break
+                    continue
+                quantity = _parse_non_negative_quantity(raw_quantity)
+                if quantity is None:
+                    invalid_product = product_name
+                    break
+                if quantity == 0:
+                    continue
+                unit_price = _parse_non_negative_price(raw_price)
+                if unit_price is None:
+                    invalid_product = product_name
+                    break
+                items.append((product_name, quantity, unit_price))
+
+            if invalid_product:
+                flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
+                form_data = dict(request.form)
+            elif not items:
+                flash("L'animation doit contenir au moins un produit vendu.", "error")
+                form_data = dict(request.form)
+            else:
+                try:
+                    uploaded = request.files.get("animation_evidence")
+                    evidence_data = _read_animation_evidence(uploaded) if uploaded and uploaded.filename else None
+                    if evidence is None and evidence_data:
+                        evidence = AnimationEvidence(
+                            animateur_id=anchor.animateur_id,
+                            pharmacy_name=pharmacy,
+                            animation_date=animation_date,
+                            project=division,
+                            **evidence_data,
+                        )
+                        db.session.add(evidence)
+                        db.session.flush()
+                    elif evidence is not None:
+                        evidence.pharmacy_name = pharmacy
+                        evidence.animation_date = animation_date
+                        evidence.project = division
+                        if evidence_data:
+                            for key, value in evidence_data.items():
+                                setattr(evidence, key, value)
+
+                    existing = {}
+                    for item in sales:
+                        existing.setdefault(item.product_name, item)
+
+                    submitted_names = {name for name, _, _ in items}
+                    for product_name, quantity, unit_price in items:
+                        item = existing.get(product_name)
+                        if item is None:
+                            item = AnimationSale(
+                                animateur_id=anchor.animateur_id,
+                                pharmacy_name=pharmacy,
+                                animation_date=animation_date,
+                                product_name=product_name,
+                                quantity=quantity,
+                                unit_price=unit_price,
+                                project=division,
+                                evidence_id=evidence.id if evidence else None,
+                            )
+                            db.session.add(item)
+                        else:
+                            item.pharmacy_name = pharmacy
+                            item.animation_date = animation_date
+                            item.quantity = quantity
+                            item.unit_price = unit_price
+                            item.project = division
+                            if evidence is not None:
+                                item.evidence = evidence
+
+                    for item in sales:
+                        if item.product_name not in submitted_names:
+                            db.session.delete(item)
+
+                    db.session.commit()
+                    try:
+                        notify_admins(
+                            current_user,
+                            "animation_updated",
+                            "Animation modifiée",
+                            "Une animation complète a été mise à jour.",
+                            "animation_sales.my_history",
+                        )
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+
+                    flash("Animation mise à jour. Les produits et le montant total ont été recalculés.", "success")
+                    return redirect(url_for("animation_sales.my_history"))
+                except Exception:
+                    db.session.rollback()
+                    logger.exception("Échec de la modification complète de l'animation id=%s", sale_id)
+                    flash("Impossible de modifier l'animation. Aucun changement n'a été appliqué.", "error")
+                    form_data = dict(request.form)
+
+    return render_template(
+        "animation_sale_form.html",
+        products=products,
+        prices=prices,
+        form_data=form_data,
+        editing_animation=True,
+        existing_evidence=evidence,
+    )
+
+
 def _animation_sales_query():
     """Return animation sales restricted to the authenticated user's scope."""
     from app.models import AnimationSale
@@ -225,14 +409,23 @@ def _group_sales(sales):
             by_pharmacy.setdefault(sale.pharmacy_name, []).append(sale)
         pharmacies = []
         for pharmacy_name, pharmacy_items in sorted(by_pharmacy.items(), key=lambda pair: pair[0].lower()):
-            pharmacies.append({
-                "pharmacy_name": pharmacy_name,
-                "items": pharmacy_items,
-                "total_quantity": sum(i.quantity for i in pharmacy_items),
-                "total_amount": sum((i.total_amount for i in pharmacy_items), Decimal("0.00")),
-                "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in pharmacy_items}),
-                "evidence": next((sale.evidence for sale in pharmacy_items if sale.evidence), None),
-            })
+            sessions = {}
+            for sale in pharmacy_items:
+                session_key = ("evidence", sale.evidence_id) if sale.evidence_id else ("legacy", sale.animateur_id)
+                sessions.setdefault(session_key, []).append(sale)
+            for session_items in sessions.values():
+                pharmacies.append({
+                    "pharmacy_name": pharmacy_name,
+                    "items": session_items,
+                    "total_quantity": sum(i.quantity for i in session_items),
+                    "total_amount": sum((i.total_amount for i in session_items), Decimal("0.00")),
+                    "animateurs": sorted({sale.animateur.username if sale.animateur else "-" for sale in session_items}),
+                    "evidence": next((sale.evidence for sale in session_items if sale.evidence), None),
+                    "edit_sale_id": session_items[0].id,
+                    "can_edit": current_user.role == "admin" or any(
+                        sale.animateur_id == current_user.id for sale in session_items
+                    ),
+                })
         days.append({
             "animation_date": animation_date,
             "pharmacies": pharmacies,
@@ -241,7 +434,6 @@ def _group_sales(sales):
             "total_amount": sum((i.total_amount for i in items), Decimal("0.00")),
         })
     return days
-
 
 @animation_sales_bp.route("/historique")
 @login_required
@@ -285,94 +477,8 @@ def my_history():
 @login_required
 @roles_required("admin", "animateur")
 def edit_animation_sale(sale_id):
-    """Edit all mutable fields; animateur may edit only their own sale."""
-    from app.models import AnimationSale
-    sale = AnimationSale.query.get_or_404(sale_id)
-    if current_user.role == "animateur" and sale.animateur_id != current_user.id:
-        abort(403)
-    if current_user.role not in {"animateur", "admin"}:
-        abort(403)
-
-    division = (sale.project or current_user.project or "").strip().lower()
-    products = get_active_products_for_division(division)
-    if sale.product_name not in products:
-        products = sorted(set(products) | {sale.product_name})
-
-    if request.method == "POST":
-        pharmacy = (request.form.get("pharmacy_name") or "").strip()
-        animation_date = _parse_sale_date(request.form.get("animation_date"))
-        product_name = (request.form.get("product_name") or "").strip()
-        quantity = _parse_positive_quantity(request.form.get("quantity"))
-        unit_price = _parse_non_negative_price(request.form.get("unit_price"))
-        if not pharmacy or len(pharmacy) > 200:
-            flash("Le nom de la pharmacie est obligatoire.", "error")
-        elif not animation_date:
-            flash("La date d'animation est invalide.", "error")
-        elif not product_name or product_name not in products:
-            flash("Le produit sélectionné n'est pas valide.", "error")
-        elif quantity is None or unit_price is None:
-            flash("La quantité et le prix unitaire doivent être valides.", "error")
-        else:
-            try:
-                uploaded_evidence = request.files.get("animation_evidence")
-                if uploaded_evidence and uploaded_evidence.filename:
-                    evidence_data = _read_animation_evidence(uploaded_evidence)
-                    if sale.evidence is None:
-                        sale.evidence = AnimationEvidence(
-                            animateur_id=sale.animateur_id,
-                            pharmacy_name=pharmacy,
-                            animation_date=animation_date,
-                            project=division,
-                            **evidence_data,
-                        )
-                    else:
-                        sale.evidence.pharmacy_name = pharmacy
-                        sale.evidence.animation_date = animation_date
-                        sale.evidence.project = division
-                        for key, value in evidence_data.items():
-                            setattr(sale.evidence, key, value)
-                elif sale.evidence is not None:
-                    sale.evidence.pharmacy_name = pharmacy
-                    sale.evidence.animation_date = animation_date
-                    sale.evidence.project = division
-
-                # Une même animation peut contenir plusieurs lignes produits partageant
-                # le même justificatif. Si la pharmacie ou la date est modifiée sur une
-                # ligne, garder toutes les lignes de cette animation regroupées.
-                from app.models import AnimationSale
-                sibling_sales = []
-                if sale.evidence_id:
-                    sibling_sales = AnimationSale.query.filter(
-                        AnimationSale.evidence_id == sale.evidence_id,
-                        AnimationSale.id != sale.id,
-                    ).all()
-                    for sibling in sibling_sales:
-                        sibling.pharmacy_name = pharmacy
-                        sibling.animation_date = animation_date
-                        sibling.project = division
-
-                sale.pharmacy_name = pharmacy
-                sale.animation_date = animation_date
-                sale.product_name = product_name
-                sale.quantity = quantity
-                sale.unit_price = unit_price
-                sale.project = division
-                notify_admins(
-                    current_user,
-                    "animation_updated",
-                    "Animation modifiée",
-                    "Une vente d'animation a été modifiée.",
-                    "animation_sales.my_history",
-                )
-                db.session.commit()
-                flash("Vente d'animation modifiée avec succès. Le montant total a été recalculé.", "success")
-                return redirect(url_for("animation_sales.my_history"))
-            except Exception:
-                db.session.rollback()
-                flash("Impossible de modifier la vente d'animation. Aucun changement n'a été appliqué.", "error")
-
-    return render_template("animation_sale_edit.html", sale=sale, products=products)
-
+    """Keep the existing edit URL while opening the complete animation form."""
+    return edit_full_animation(sale_id)
 
 @animation_sales_bp.route("/<int:sale_id>/supprimer", methods=["POST"])
 @login_required
@@ -397,14 +503,22 @@ def delete_animation_sale(sale_id):
             ).first()
             if remaining_sale is None:
                 db.session.delete(evidence)
-        notify_admins(
-            current_user,
-            "animation_deleted",
-            "Vente d'animation supprimée",
-            f"La vente {product} - {pharmacy} du {sale_date.strftime('%d/%m/%Y')} a été supprimée.",
-            "animation_sales.my_history",
-        )
         db.session.commit()
+
+        # La suppression est déjà validée : une notification en échec ne doit
+        # pas laisser croire que la vente existe encore ni annuler l'opération.
+        try:
+            notify_admins(
+                current_user,
+                "animation_deleted",
+                "Vente d'animation supprimée",
+                f"La vente {product} - {pharmacy} du {sale_date.strftime('%d/%m/%Y')} a été supprimée.",
+                "animation_sales.my_history",
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         flash(f"Vente supprimée : {product} - {pharmacy} ({sale_date.strftime('%d/%m/%Y')}).", "success")
     except Exception:
         db.session.rollback()
@@ -414,10 +528,13 @@ def delete_animation_sale(sale_id):
 
 @animation_sales_bp.route("/justificatif/<int:evidence_id>")
 @login_required
-@roles_required("admin", "animateur")
+@roles_required("admin", "commercial", "animateur")
 def animation_evidence(evidence_id):
+    """Serve an animation proof only to its owner or users in its division."""
     evidence = AnimationEvidence.query.get_or_404(evidence_id)
     if current_user.role == "animateur" and evidence.animateur_id != current_user.id:
+        abort(403)
+    if current_user.role == "commercial" and not division_matches(current_user, evidence.project):
         abort(403)
     download = request.args.get("download") == "1"
     return send_file(

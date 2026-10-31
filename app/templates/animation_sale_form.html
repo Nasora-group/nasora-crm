@@ -1,12 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Saisir les ventes d'animation - NASORA CRM{% endblock %}
+{% block title %}{% if editing_animation %}Modifier l’animation{% else %}Saisir les ventes d'animation{% endif %} - NASORA CRM{% endblock %}
 {% block content %}
+<style>
+.ns-animation-form .ns-product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ns-animation-form .ns-animation-product{min-width:0;padding:15px;border:1px solid #dce5df;border-radius:12px;background:#fff}
+.ns-animation-form .ns-animation-product h3{margin:0 0 12px;font-size:1rem;line-height:1.35}
+.ns-animation-form .ns-animation-product-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ns-animation-form .ns-animation-product-fields label{display:block;font-size:.82rem;font-weight:600}
+.ns-animation-form .ns-animation-product-fields input{box-sizing:border-box;width:100%;min-width:0;margin-top:7px;padding:11px;border:1px solid #d5ded8;border-radius:8px;font:inherit}
+.ns-animation-form input:focus{outline:2px solid rgba(23,100,63,.2);border-color:#17643f}
+@media(max-width:700px){.ns-animation-form{margin:12px auto!important;padding:0 12px}.ns-animation-form .ns-product-grid{grid-template-columns:1fr}.ns-animation-form form.card{padding:16px!important}.ns-animation-form .ns-form-meta{grid-template-columns:1fr!important;gap:14px!important}.ns-animation-form .ns-animation-product-fields{grid-template-columns:1fr 1fr;gap:8px}.ns-animation-form .ns-form-footer{display:grid!important;grid-template-columns:1fr 1fr}.ns-animation-form .ns-form-footer>*{text-align:center;justify-content:center}}
+</style>
+
 <section class="crm-page ns-animation-form" style="max-width:1100px;margin:30px auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
-      <h1 style="margin-bottom:6px;">Enregistrer les ventes de l'animation</h1>
-      <p style="margin:0;opacity:.75;">Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.</p>
+      <h1 style="margin-bottom:6px;">{{ 'Modifier l’animation' if editing_animation else 'Enregistrer les ventes de l\'animation' }}</h1>
+      <p style="margin:0;opacity:.75;">{{ 'Les produits déjà enregistrés sont préremplis. Vous pouvez modifier les quantités et les prix, ajouter des produits ou laisser vide une ligne à retirer.' if editing_animation else 'Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.' }}</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
@@ -20,24 +31,29 @@
 
     <div style="margin-bottom:26px;padding:16px 18px;border:1px solid #dcefe5;border-radius:12px;background:#f7fcf9;">
       <label for="animation_evidence"><strong>Justificatif photo de l'animation <span style="font-weight:400;opacity:.65;">(facultatif)</span></strong></label>
-      <p style="margin:6px 0 10px;opacity:.72;font-size:.88rem;">Vous pouvez ajouter une photo prise pendant l'animation dans cette pharmacie. JPG, PNG ou WEBP, 5 Mo maximum.</p>
+      <p style="margin:6px 0 10px;opacity:.72;font-size:.88rem;">{% if editing_animation and existing_evidence %}Le justificatif déjà enregistré sera conservé. Ajoutez une nouvelle photo uniquement si vous souhaitez le remplacer. JPG, PNG ou WEBP, 5 Mo maximum.{% else %}Vous pouvez ajouter une photo prise pendant l'animation dans cette pharmacie. JPG, PNG ou WEBP, 5 Mo maximum.{% endif %}</p>
       <input id="animation_evidence" name="animation_evidence" type="file" accept="image/jpeg,image/png,image/webp" style="width:100%;">
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
     <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué en FCFA.</p>
 
-    <div class="ns-product-scroll" style="overflow-x:auto;">
-      <div class="ns-product-grid" style="min-width:560px;display:grid;grid-template-columns:minmax(260px,1fr) 190px 170px;gap:10px 18px;align-items:center;">
-        <strong>Produit</strong><strong>Prix de vente unitaire (FCFA)</strong><strong>Quantité</strong>
-        {% for product in products %}
-        <label for="q-{{ loop.index }}"><strong>{{ product }}</strong></label>
-        <input class="sale-unit-price" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, '') }}" placeholder="Ex. 5000" aria-label="Prix de vente de {{ product }} en FCFA">
-        <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
-        {% else %}
-        <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
-        {% endfor %}
-      </div>
+    <div class="ns-product-grid">
+      {% for product in products %}
+      <article class="ns-animation-product">
+        <h3>{{ product }}</h3>
+        <div class="ns-animation-product-fields">
+          <label>Prix unitaire (FCFA)
+            <input class="sale-unit-price" id="p-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="unit_price__{{ product }}" value="{{ form_data.get('unit_price__' ~ product, prices.get(product, '')) }}" placeholder="Ex. 5000" aria-label="Prix de vente de {{ product }} en FCFA">
+          </label>
+          <label>Quantité vendue
+            <input class="sale-quantity" data-price-input="p-{{ loop.index }}" id="q-{{ loop.index }}" type="number" min="0" step="1" inputmode="numeric" name="quantity__{{ product }}" value="{{ form_data.get('quantity__' ~ product, '') }}" placeholder="Ex. 2" aria-label="Quantité vendue de {{ product }}">
+          </label>
+        </div>
+      </article>
+      {% else %}
+      <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
+      {% endfor %}
     </div>
 
     <div style="margin-top:24px;padding:18px;border-radius:12px;background:#f5faf7;border:1px solid #dcefe5;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
@@ -50,7 +66,7 @@
 
     <div class="ns-form-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
       <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a>
-      <button class="btn btn-primary" type="submit">✓ Enregistrer les ventes</button>
+      <button class="btn btn-primary" type="submit">{{ '✓ Enregistrer les modifications' if editing_animation else '✓ Enregistrer les ventes' }}</button>
     </div>
   </form>
 </section>

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import logging
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
@@ -13,6 +14,16 @@ from app.services.admin_notifications import notify_admins
 from app.services.audit import audit_event
 
 planning_bp = Blueprint("planning", __name__)
+logger = logging.getLogger(__name__)
+
+
+def _safe_audit_event(*args, **kwargs):
+    """Journalise sans transformer un échec de log en échec de sauvegarde."""
+    try:
+        audit_event(*args, **kwargs)
+    except Exception:
+        logger.exception("Échec de journalisation d’une action planning")
+
 
 WORKING_DAYS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi")
 NON_WORKING_DAYS = ("samedi", "dimanche")
@@ -156,9 +167,16 @@ def saisie():
                 db.session.add(existing)
             for champ, valeur in creneaux.items():
                 setattr(existing, champ, valeur)
-            notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
             db.session.commit()
-            audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
+
+            # La sauvegarde du planning reste acquise même si les notifications échouent.
+            try:
+                notify_admins(current_user, "planning_created", "Planning enregistré", "Un planning a été enregistré.", "planning.admin_plannings")
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            _safe_audit_event("planning_saved", "planning", existing.id, {"date": existing.date.isoformat()})
         except Exception:
             db.session.rollback()
             flash("Impossible d'enregistrer le planning pour le moment. Votre saisie n'a pas été enregistrée.", "error")
@@ -212,15 +230,22 @@ def edit_planning(planning_id):
         affected_id = target.id if target is not None else planning.id
         affected_date = formulaire.date.data
         try:
-            notify_admins(
-                current_user,
-                "planning_updated",
-                "Planning modifié",
-                "Un planning a été modifié.",
-                "planning.admin_plannings",
-            )
             db.session.commit()
-            audit_event(
+
+            # Une panne de notification ne doit pas annuler la modification métier.
+            try:
+                notify_admins(
+                    current_user,
+                    "planning_updated",
+                    "Planning modifié",
+                    "Un planning a été modifié.",
+                    "planning.admin_plannings",
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            _safe_audit_event(
                 "planning_updated",
                 "planning",
                 affected_id,
@@ -236,6 +261,55 @@ def edit_planning(planning_id):
     return _render_saisie(formulaire, "edit", planning)
 
 
+@planning_bp.route("/planning/<int:planning_id>/dupliquer", methods=["POST"])
+@login_required
+@roles_required("commercial")
+def duplicate_planning(planning_id):
+    """Duplicate a user planning into the following week without overwriting data."""
+    form = CSRFOnlyForm()
+    planning = Planning.query.get_or_404(planning_id)
+    if not owns_record(current_user, planning):
+        abort(404)
+
+    if not form.validate_on_submit():
+        flash("La demande de duplication est invalide. Réessayez.", "error")
+        return redirect(url_for("planning.visualiser"))
+
+    target_date = planning.date + timedelta(days=7)
+    existing = Planning.query.filter_by(
+        commercial_id=current_user.id,
+        date=target_date,
+    ).first()
+    if existing is not None:
+        flash("Un planning existe déjà pour la semaine suivante. Le planning existant reste intact.", "warning")
+        return redirect(url_for("planning.visualiser"))
+
+    duplicate = Planning(
+        commercial_id=current_user.id,
+        date=target_date,
+        **{day: getattr(planning, day) for day in JOURS},
+    )
+    try:
+        db.session.add(duplicate)
+        db.session.commit()
+
+        # La duplication est enregistrée avant l'envoi de la notification.
+        # Une panne du service de notification ne doit pas annuler le planning.
+        try:
+            notify_admins(current_user, "planning_created", "Planning dupliqué", "Un planning a été dupliqué pour la semaine suivante.", "planning.admin_plannings")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        _safe_audit_event("planning_duplicated", "planning", duplicate.id, {"source_planning_id": planning.id, "date": target_date.isoformat()})
+    except Exception:
+        db.session.rollback()
+        flash("Impossible de dupliquer le planning pour le moment.", "error")
+        return redirect(url_for("planning.visualiser"))
+
+    flash(f"Planning dupliqué pour la semaine du {target_date.strftime('%d/%m/%Y')}.", "success")
+    return redirect(url_for("planning.visualiser"))
+
 @planning_bp.route("/planning/<int:planning_id>/supprimer", methods=["POST"])
 @login_required
 @roles_required("commercial")
@@ -249,16 +323,23 @@ def delete_planning(planning_id):
         planning_date = planning.date
         planning_id_value = planning.id
         try:
-            notify_admins(
-                current_user,
-                "planning_deleted",
-                "Planning supprimé",
-                "Un planning a été supprimé.",
-                "planning.admin_plannings",
-            )
             db.session.delete(planning)
             db.session.commit()
-            audit_event(
+
+            # La suppression est validée avant la notification administrateur.
+            try:
+                notify_admins(
+                    current_user,
+                    "planning_deleted",
+                    "Planning supprimé",
+                    "Un planning a été supprimé.",
+                    "planning.admin_plannings",
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            _safe_audit_event(
                 "planning_deleted",
                 "planning",
                 planning_id_value,

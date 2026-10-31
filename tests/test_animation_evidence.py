@@ -31,3 +31,15 @@ def test_animation_evidence_rejects_oversized_file():
         _read_animation_evidence(
             _file("animation.jpg", "image/jpeg", b"\xff\xd8\xff" + b"x" * (5 * 1024 * 1024))
         )
+
+
+def test_animation_evidence_allows_commercial_only_in_their_division():
+    from pathlib import Path
+
+    route = Path(__file__).resolve().parents[1] / "app" / "routes" / "animation_sales.py"
+    content = route.read_text(encoding="utf-8")
+    evidence_route = content.split('def animation_evidence(evidence_id):', 1)[1].split('@animation_sales_bp.route("/animateur/', 1)[0]
+
+    assert '@roles_required("admin", "commercial", "animateur")' in content
+    assert 'current_user.role == "commercial" and not division_matches(current_user, evidence.project)' in evidence_route
+    assert 'current_user.role == "animateur" and evidence.animateur_id != current_user.id' in evidence_route
