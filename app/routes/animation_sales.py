@@ -16,10 +16,16 @@ animation_sales_bp = Blueprint("animation_sales", __name__, url_prefix="/animati
 logger = logging.getLogger(__name__)
 
 
-def _render_sale_form(products, prices, form_data):
+def _render_sale_form(products, prices, form_data, server_feedback=None):
     form_data = dict(form_data or {})
     form_data.setdefault("animation_date", date.today().isoformat())
-    return render_template("animation_sale_form.html", products=products, prices=prices, form_data=form_data)
+    return render_template(
+        "animation_sale_form.html",
+        products=products,
+        prices=prices,
+        form_data=form_data,
+        server_feedback=server_feedback,
+    )
 
 
 def _parse_sale_date(raw):
@@ -139,21 +145,29 @@ def new_animation_sale():
         raw_date = (request.form.get("animation_date") or "").strip()
         animation_date = _parse_sale_date(raw_date)
         if not pharmacy or len(pharmacy) > 200 or not animation_date:
-            flash("Le nom de la pharmacie et une date d'animation valide sont obligatoires.", "error")
-            return _render_sale_form(products, prices, request.form)
+            message = "Le nom de la pharmacie et une date d'animation valide sont obligatoires."
+            logger.warning("Animation sale rejected: missing/invalid pharmacy or date; user_id=%s", current_user.id)
+            flash(message, "error")
+            return _render_sale_form(products, prices, request.form, message)
 
         items, invalid_product = _collect_animation_sale_items(products, request.form)
         allowed_products = set(products)
 
         if invalid_product:
-            flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
-            return _render_sale_form(products, prices, request.form)
+            message = f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides."
+            logger.warning("Animation sale rejected: invalid product fields; user_id=%s product=%r", current_user.id, invalid_product)
+            flash(message, "error")
+            return _render_sale_form(products, prices, request.form, message)
         if not items:
-            flash("Sélectionnez au moins un produit et renseignez sa quantité et son prix unitaire.", "error")
-            return _render_sale_form(products, prices, request.form)
+            message = "Sélectionnez au moins un produit et renseignez sa quantité et son prix unitaire."
+            logger.warning("Animation sale rejected: no sale line; user_id=%s division=%r active_products=%s", current_user.id, division, len(products))
+            flash(message, "error")
+            return _render_sale_form(products, prices, request.form, message)
         if any(product_name not in allowed_products for product_name, _, _ in items):
-            flash("Un produit sélectionné n'est pas disponible dans cette division.", "error")
-            return _render_sale_form(products, prices, request.form)
+            message = "Un produit sélectionné n'est pas disponible dans cette division."
+            logger.warning("Animation sale rejected: product outside division; user_id=%s division=%r", current_user.id, division)
+            flash(message, "error")
+            return _render_sale_form(products, prices, request.form, message)
 
         try:
             # Le justificatif photo est facultatif. S'il est fourni, on le valide et
@@ -177,8 +191,7 @@ def new_animation_sale():
                 db.session.add(AnimationSale(
                     animateur_id=current_user.id,
                     pharmacy_name=pharmacy,
-                    animation_date=animation_date,
-                    product_name=product_name,
+                    animation_date=animation_date,                    product_name=product_name,
                     quantity=quantity,
                     unit_price=unit_price,
                     project=division,
@@ -214,8 +227,9 @@ def new_animation_sale():
                 animation_date,
                 [item[0] for item in items],
             )
-            flash(f"Impossible d'enregistrer les ventes de l'animation. Erreur technique : {type(exc).__name__}.", "error")
-            return _render_sale_form(products, prices, request.form)
+            message = f"Impossible d'enregistrer les ventes de l'animation. Erreur technique : {type(exc).__name__}. Référence : animation-sale-{current_user.id}."
+            flash(message, "error")
+            return _render_sale_form(products, prices, request.form, message)
 
     return _render_sale_form(products, prices, {})
 
@@ -357,8 +371,7 @@ def edit_full_animation(sale_id):
                     form_data = dict(request.form)
 
     return render_template(
-        "animation_sale_form.html",
-        products=products,
+        "animation_sale_form.html",        products=products,
         prices=prices,
         form_data=form_data,
         editing_animation=True,
