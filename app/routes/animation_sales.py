@@ -550,7 +550,8 @@ def animateur_history(user_id):
     if animateur.role != "animateur":
         abort(404)
 
-    selected_month = (request.args.get("month") or "").strip()    month_date = None
+    selected_month = (request.args.get("month") or "").strip()
+    month_date = None
     if selected_month:
         try:
             month_date = datetime.strptime(selected_month, "%Y-%m").date()
