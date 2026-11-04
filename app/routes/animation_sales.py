@@ -49,6 +49,28 @@ def _parse_non_negative_price(raw):
     except (InvalidOperation, TypeError, ValueError, ArithmeticError):
         return None
 
+def _collect_animation_sale_items(products, form_data):
+    """Collect only products with a quantity; ignore untouched default-price fields."""
+    items = []
+    invalid_product = None
+    for product_name in products:
+        raw_quantity = (form_data.get(f"quantity__{product_name}") or "").strip()
+        raw_price = (form_data.get(f"unit_price__{product_name}") or "").strip()
+        if not raw_quantity:
+            continue
+        quantity = _parse_non_negative_quantity(raw_quantity)
+        if quantity is None:
+            invalid_product = product_name
+            break
+        if quantity == 0:
+            continue
+        unit_price = _parse_non_negative_price(raw_price)
+        if unit_price is None:
+            invalid_product = product_name
+            break
+        items.append((product_name, quantity, unit_price))
+    return items, invalid_product
+
 
 MAX_EVIDENCE_SIZE = 5 * 1024 * 1024
 ALLOWED_EVIDENCE_TYPES = {
@@ -120,30 +142,8 @@ def new_animation_sale():
             flash("Le nom de la pharmacie et une date d'animation valide sont obligatoires.", "error")
             return _render_sale_form(products, prices, request.form)
 
-        items = []
-        invalid_product = None
+        items, invalid_product = _collect_animation_sale_items(products, request.form)
         allowed_products = set(products)
-        for product_name in products:
-            raw_quantity = request.form.get(f"quantity__{product_name}")
-            raw_price = request.form.get(f"unit_price__{product_name}")
-            if not (raw_quantity or "").strip():
-                if not (raw_price or "").strip():
-                    continue
-                invalid_product = product_name
-                break
-            quantity = _parse_non_negative_quantity(raw_quantity)
-            if quantity is None:
-                invalid_product = product_name
-                break
-            # Une quantité nulle signifie que le produit n'a pas été vendu.
-            # On ignore cette ligne, même si un prix a été saisi par erreur.
-            if quantity == 0:
-                continue
-            unit_price = _parse_non_negative_price(raw_price)
-            if unit_price is None:
-                invalid_product = product_name
-                break
-            items.append((product_name, quantity, unit_price))
 
         if invalid_product:
             flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
@@ -273,27 +273,7 @@ def edit_full_animation(sale_id):
             flash("Le nom de la pharmacie et une date d'animation valide sont obligatoires.", "error")
             form_data = dict(request.form)
         else:
-            items = []
-            invalid_product = None
-            for product_name in products:
-                raw_quantity = (request.form.get(f"quantity__{product_name}") or "").strip()
-                raw_price = (request.form.get(f"unit_price__{product_name}") or "").strip()
-                if not raw_quantity:
-                    if raw_price:
-                        invalid_product = product_name
-                        break
-                    continue
-                quantity = _parse_non_negative_quantity(raw_quantity)
-                if quantity is None:
-                    invalid_product = product_name
-                    break
-                if quantity == 0:
-                    continue
-                unit_price = _parse_non_negative_price(raw_price)
-                if unit_price is None:
-                    invalid_product = product_name
-                    break
-                items.append((product_name, quantity, unit_price))
+            items, invalid_product = _collect_animation_sale_items(products, request.form)
 
             if invalid_product:
                 flash(f"La quantité et le prix unitaire de « {invalid_product} » doivent être valides.", "error")
