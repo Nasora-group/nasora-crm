@@ -9,6 +9,9 @@
 .ns-animation-form .ns-animation-product-fields label{display:block;font-size:.82rem;font-weight:600}
 .ns-animation-form .ns-animation-product-fields input{box-sizing:border-box;width:100%;min-width:0;margin-top:7px;padding:11px;border:1px solid #d5ded8;border-radius:8px;font:inherit}
 .ns-animation-form input:focus{outline:2px solid rgba(23,100,63,.2);border-color:#17643f}
+.ns-animation-form .ns-form-validation{margin:14px 0;padding:13px 15px;border:1px solid #e2b8b8;border-left:4px solid #b42318;border-radius:8px;background:#fff5f4;color:#8f1d16;font-weight:600}
+.flash-messages{position:sticky;top:8px;z-index:1000;max-width:1060px;margin:8px auto 16px;padding:0 4px}
+.flash-messages .flash{padding:14px 16px;border-radius:9px;box-shadow:0 4px 18px rgba(0,0,0,.12);font-weight:600}
 @media(max-width:700px){.ns-animation-form{margin:12px auto!important;padding:0 12px}.ns-animation-form .ns-product-grid{grid-template-columns:1fr}.ns-animation-form form.card{padding:16px!important}.ns-animation-form .ns-form-meta{grid-template-columns:1fr!important;gap:14px!important}.ns-animation-form .ns-animation-product-fields{grid-template-columns:1fr 1fr;gap:8px}.ns-animation-form .ns-form-footer{display:grid!important;grid-template-columns:1fr 1fr}.ns-animation-form .ns-form-footer>*{text-align:center;justify-content:center}}
 </style>
 
@@ -17,7 +20,7 @@
     <div>
       <span style="display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.08em;color:#17643f;text-transform:uppercase;margin-bottom:7px;">Suivi commercial · Animation</span>
       <h1 style="margin-bottom:6px;">{{ 'Modifier l’animation' if editing_animation else 'Enregistrer les ventes de l\'animation' }}</h1>
-      <p style="margin:0;opacity:.75;">{{ 'Les produits déjà enregistrés sont préremplis. Vous pouvez modifier les quantités et les prix, ajouter des produits ou laisser vide une ligne à retirer.' if editing_animation else 'Pour chaque produit vendu, saisissez la quantité et le prix unitaire en FCFA. Le total est calculé automatiquement.' }}</p>
+      <p style="margin:0;opacity:.75;">{{ 'Les produits déjà enregistrés sont préremplis. Vous pouvez modifier les quantités et les prix, ajouter des produits ou laisser vide une ligne à retirer.' if editing_animation else 'Renseignez uniquement les produits vendus. Les autres lignes peuvent rester entièrement vides.' }}</p>
     </div>
     <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Voir mon historique</a>
   </div>
@@ -36,7 +39,7 @@
     </div>
 
     <h2 style="font-size:1.1rem;margin-bottom:5px;">Produits vendus</h2>
-    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Vous ne devez renseigner que les produits réellement vendus. Pour chaque produit vendu, indiquez la quantité et le prix de vente réellement pratiqué en FCFA.</p>
+    <p style="margin:0 0 14px;opacity:.7;font-size:.9rem;">Pour chaque produit vendu, indiquez le prix unitaire et la quantité. Vous pouvez laisser tous les champs des autres produits vides.</p>
 
     <div class="ns-product-grid">
       {% for product in products %}
@@ -55,6 +58,8 @@
       <p>Aucun produit actif n'est disponible pour votre division pour le moment.</p>
       {% endfor %}
     </div>
+
+    <div id="animation-validation-error" class="ns-form-validation" role="alert" aria-live="assertive" hidden></div>
 
     <div style="margin-top:24px;padding:18px;border-radius:12px;background:#f5faf7;border:1px solid #dcefe5;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
       <div>
@@ -98,9 +103,19 @@
     totalEl.textContent = formatFcfa(total);
   }
 
-  // La touche Entrée sert à avancer dans les champs produits, jamais à envoyer le formulaire.
   const productInputs = Array.from(form.querySelectorAll('.sale-unit-price, .sale-quantity'));
   const statusEl = document.getElementById('animation-form-status');
+  const validationEl = document.getElementById('animation-validation-error');
+
+  function showValidation(message, input) {
+    if (validationEl) {
+      validationEl.textContent = message;
+      validationEl.hidden = false;
+      validationEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (input) input.focus();
+  }
+
   productInputs.forEach(function (input, index) {
     input.addEventListener('keydown', function (event) {
       if (event.key !== 'Enter') return;
@@ -117,14 +132,46 @@
     });
   });
 
-  form.addEventListener('submit', function () {
+  form.addEventListener('submit', function (event) {
+    let selectedCount = 0;
+    for (const quantityInput of form.querySelectorAll('.sale-quantity')) {
+      const rawQuantity = quantityInput.value.trim();
+      if (!rawQuantity || Number(rawQuantity) === 0) continue;
+      const priceInput = document.getElementById(quantityInput.dataset.priceInput);
+      selectedCount += 1;
+      if (!Number.isInteger(Number(rawQuantity)) || Number(rawQuantity) < 0) {
+        event.preventDefault();
+        showValidation('La quantité doit être un nombre entier positif.', quantityInput);
+        return;
+      }
+      if (!priceInput || priceInput.value.trim() === '' || !Number.isFinite(Number(priceInput.value)) || Number(priceInput.value) < 0) {
+        event.preventDefault();
+        showValidation('Renseignez un prix unitaire valide pour chaque produit dont la quantité est indiquée.', priceInput);
+        return;
+      }
+    }
+    if (selectedCount === 0) {
+      event.preventDefault();
+      showValidation('Renseignez au moins un produit : son prix unitaire et sa quantité. Les autres produits peuvent rester vides.');
+      return;
+    }
+    if (validationEl) validationEl.hidden = true;
     if (statusEl) statusEl.textContent = "Enregistrement des ventes en cours…";
   });
 
   form.querySelectorAll('.sale-quantity, .sale-unit-price').forEach(function (input) {
-    input.addEventListener('input', updateTotal);
+    input.addEventListener('input', function () {
+      if (validationEl) validationEl.hidden = true;
+      updateTotal();
+    });
     input.addEventListener('change', updateTotal);
   });
+
+  // Les messages serveur (validation ou erreur technique) sont affichés au-dessus du formulaire.
+  const flashMessages = document.querySelector('.flash-messages');
+  if (flashMessages && flashMessages.textContent.trim()) {
+    flashMessages.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   updateTotal();
 })();
