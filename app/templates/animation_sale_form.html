@@ -64,6 +64,8 @@
       <div style="font-size:.85rem;opacity:.7;">Total = quantité × prix de vente unitaire (FCFA)</div>
     </div>
 
+    <p id="animation-form-status" role="status" aria-live="polite" style="margin:20px 0 0;color:#17643f;font-size:.9rem;"></p>
+
     <div class="ns-form-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:28px;">
       <a class="btn btn-secondary" href="{{ url_for('animation_sales.my_history') }}">Annuler</a>
       <button class="btn btn-primary" type="submit">{{ '✓ Enregistrer les modifications' if editing_animation else '✓ Enregistrer les ventes' }}</button>
@@ -95,6 +97,29 @@
     });
     totalEl.textContent = formatFcfa(total);
   }
+
+  // La touche Entrée sert à avancer dans les champs produits, jamais à envoyer le formulaire.
+  const productInputs = Array.from(form.querySelectorAll('.sale-unit-price, .sale-quantity'));
+  const statusEl = document.getElementById('animation-form-status');
+  productInputs.forEach(function (input, index) {
+    input.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const nextInput = productInputs[index + 1];
+      if (nextInput) {
+        nextInput.focus();
+        if (typeof nextInput.select === 'function') nextInput.select();
+      } else {
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.focus();
+        if (statusEl) statusEl.textContent = "Saisie terminée. Cliquez sur « Enregistrer les ventes » pour valider.";
+      }
+    });
+  });
+
+  form.addEventListener('submit', function () {
+    if (statusEl) statusEl.textContent = "Enregistrement des ventes en cours…";
+  });
 
   form.querySelectorAll('.sale-quantity, .sale-unit-price').forEach(function (input) {
     input.addEventListener('input', updateTotal);
