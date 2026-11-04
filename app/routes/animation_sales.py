@@ -127,10 +127,9 @@ def new_animation_sale():
             raw_quantity = request.form.get(f"quantity__{product_name}")
             raw_price = request.form.get(f"unit_price__{product_name}")
             if not (raw_quantity or "").strip():
-                if not (raw_price or "").strip():
-                    continue
-                invalid_product = product_name
-                break
+                # Le prix est prérempli par défaut : sans quantité, la ligne
+                # n'est pas une vente et doit être ignorée.
+                continue
             quantity = _parse_non_negative_quantity(raw_quantity)
             if quantity is None:
                 invalid_product = product_name
@@ -279,9 +278,8 @@ def edit_full_animation(sale_id):
                 raw_quantity = (request.form.get(f"quantity__{product_name}") or "").strip()
                 raw_price = (request.form.get(f"unit_price__{product_name}") or "").strip()
                 if not raw_quantity:
-                    if raw_price:
-                        invalid_product = product_name
-                        break
+                    # Un prix peut être prérempli : sans quantité, la ligne
+                    # n'est pas une vente et doit être ignorée.
                     continue
                 quantity = _parse_non_negative_quantity(raw_quantity)
                 if quantity is None:
