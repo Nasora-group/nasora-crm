@@ -121,7 +121,15 @@ def _planned_visit_days(commercial_id=None, start=None, end=None):
     if end is not None:
         query = query.filter(Planning.date >= end - timedelta(days=7))
     rows = query.all()
-    fields = (("lundi", 0), ("mardi", 1), ("mercredi", 2), ("jeudi", 3), ("vendredi", 4))
+    fields = (
+        ("lundi", 0),
+        ("mardi", 1),
+        ("mercredi", 2),
+        ("jeudi", 3),
+        ("vendredi", 4),
+        ("samedi", 5),
+        ("dimanche", 6),
+    )
     total = 0
     for row in rows:
         for field, offset in fields:
@@ -160,7 +168,9 @@ def _planning_realization_detail(commercial_id, start, end):
     rows = Planning.query.filter(
         Planning.commercial_id == commercial_id,
         Planning.date < end,
-        Planning.date >= start - timedelta(days=4),
+        # Un planning est daté du lundi : remonter jusqu'à six jours
+        # inclut la semaine qui contient un début de période dominical.
+        Planning.date >= start - timedelta(days=6),
     ).order_by(Planning.date.asc()).all()
 
     weekday_fields = (
@@ -169,6 +179,8 @@ def _planning_realization_detail(commercial_id, start, end):
         ("mercredi", 2),
         ("jeudi", 3),
         ("vendredi", 4),
+        ("samedi", 5),
+        ("dimanche", 6),
     )
     planned_by_day = {}
     for row in rows:
