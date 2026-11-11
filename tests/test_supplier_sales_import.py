@@ -112,3 +112,35 @@ def test_import_rejects_unknown_products_and_duplicate_rows():
 
 def test_product_normalization_ignores_accents_and_spacing():
     assert _normalize("Spécial Kid - Calcium") == _normalize("special kid calcium")
+
+
+
+def test_eric_favre_template_maps_commercial_nutri_label_to_active_crm_product():
+    product = SimpleNamespace(
+        id=7, name="Special kid nutri+", reference=None, default_price="3.00"
+    )
+    rows = _template_rows("eric_favre", [product])
+    nutri_row = rows[6]
+    assert nutri_row["product_id"] == 7
+    assert nutri_row["product"] == "Special kid nutri+"
+    assert nutri_row["price_ht"] == "3.00"
+
+
+def test_eric_favre_import_accepts_legacy_commercial_nutri_label():
+    product = SimpleNamespace(
+        id=7, name="Special kid nutri+", reference=None, default_price="3.00"
+    )
+    model = SimpleNamespace(query=FakeQuery([product]))
+    sales = _validated_sales(
+        "eric_favre",
+        {"product_model": model},
+        [(8, {
+            "product": "Special Kid appetit nutri+",
+            "quantity": "12",
+            "price_ht": "3.00",
+        })],
+    )
+    assert len(sales) == 1
+    assert sales[0][0] is product
+    assert sales[0][1] == 12
+    assert str(sales[0][2]) == "3.00"
