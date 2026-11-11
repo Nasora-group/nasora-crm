@@ -91,7 +91,7 @@ def _template_rows(slug, products):
                 "product_id": product.id,
                 "reference": product.reference or "",
                 "product": product.name,
-                "price_ht": str(product.default_price or Decimal("0.00")),
+                "price_ht": str(Decimal(str(product.default_price or "0.00")).quantize(Decimal("0.01"))),
                 "quantity": "",
             }
             for product in products
