@@ -68,7 +68,7 @@ CATALOGS = {"eric_favre": ERIC_FAVRE_CATALOG, "trois_chene": TROIS_CHENES_CATALO
 # Keep aliases scoped to their supplier to avoid cross-laboratory matches.
 PRODUCT_NAME_ALIASES = {
     "eric_favre": {
-        _normalize("Special Kid appetit nutri+"): _normalize("Special kid nutri+"),
+        "specialkidappetitnutri": "specialkidnutri",
     },
 }
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
