@@ -46,9 +46,13 @@ def test_template_rows_for_gilbert_use_active_database_products_and_prices():
 def test_fixed_catalog_template_keeps_chronology_and_matches_product_ids():
     product = SimpleNamespace(id=12, name="Chronoerect", reference="CHR", default_price=0)
     rows = _template_rows("eric_favre", [product])
-    assert rows[0]["product_id"] == 12
-    assert rows[0]["price_ht"] == "3.58"
-    assert rows[1]["product"] == "Special Kid calcium"
+    assert rows == [{
+        "product_id": 12,
+        "reference": "CHR",
+        "product": "Chronoerect",
+        "price_ht": "3.58",
+        "quantity": "",
+    }]
 
 
 def test_csv_upload_reads_french_semicolon_template():
@@ -114,14 +118,12 @@ def test_product_normalization_ignores_accents_and_spacing():
     assert _normalize("Spécial Kid - Calcium") == _normalize("special kid calcium")
 
 
-
 def test_eric_favre_template_maps_commercial_nutri_label_to_active_crm_product():
     product = SimpleNamespace(
         id=7, name="Special kid nutri+", reference=None, default_price="3.00"
     )
     rows = _template_rows("eric_favre", [product])
-    nutri_row = rows[6]
-    assert nutri_row["product_id"] == 7
+    nutri_row = next(row for row in rows if row["product_id"] == 7)
     assert nutri_row["product"] == "Special kid nutri+"
     assert nutri_row["price_ht"] == "3.00"
 
@@ -144,3 +146,27 @@ def test_eric_favre_import_accepts_legacy_commercial_nutri_label():
     assert sales[0][0] is product
     assert sales[0][1] == 12
     assert str(sales[0][2]) == "3.00"
+
+
+def test_fixed_catalog_template_excludes_unmatched_labels_and_includes_all_active_products():
+    products = [
+        SimpleNamespace(id=21, name="Appetit Boost sirop", reference="AB", default_price="3.00"),
+        SimpleNamespace(id=22, name="Special kid nutri+", reference="SKN", default_price="3.00"),
+    ]
+    rows = _template_rows("eric_favre", products)
+    assert all(row["product_id"] for row in rows)
+    assert {row["product_id"] for row in rows} == {21, 22}
+    assert next(row for row in rows if row["product_id"] == 22)["price_ht"] == "3.00"
+    assert next(row for row in rows if row["product_id"] == 21)["price_ht"] == "3.00"
+
+
+def test_import_matches_unique_product_name_with_packaging_suffix():
+    product = SimpleNamespace(id=21, name="Appetit Boost sirop", reference="AB", default_price="3.00")
+    model = SimpleNamespace(query=FakeQuery([product]))
+    sales = _validated_sales(
+        "eric_favre",
+        {"product_model": model},
+        [(18, {"product": "Appetit boost", "quantity": "4", "price_ht": "3.00"})],
+    )
+    assert len(sales) == 1
+    assert sales[0][0] is product
