@@ -111,7 +111,7 @@ def _register_blueprints(app):
     from app.routes.activity_reporting import activity_reporting_bp
     from app.routes.planning import planning_bp
     from app.routes.sales import sales_bp
-from app.routes.sales_import import sales_import_bp
+    from app.routes.sales_import import sales_import_bp
     from app.routes.animation_sales import animation_sales_bp
     from app.routes.revenue import revenue_bp
     from app.routes.admin import admin_bp
