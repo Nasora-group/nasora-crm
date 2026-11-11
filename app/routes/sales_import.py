@@ -69,6 +69,9 @@ CATALOGS = {"eric_favre": ERIC_FAVRE_CATALOG, "trois_chene": TROIS_CHENES_CATALO
 PRODUCT_NAME_ALIASES = {
     "eric_favre": {
         "specialkidappetitnutri": "specialkidnutri",
+        # The live Eric Favre catalog stores this commercial reference as
+        # "Apti boost Gel B30". Keep the commercial template label unchanged.
+        "appetitboost": "aptiboostgelb30",
     },
 }
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
