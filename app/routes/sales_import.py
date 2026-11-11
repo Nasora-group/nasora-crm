@@ -75,6 +75,11 @@ PRODUCT_NAME_ALIASES = {
         # The 90-tablet commercial label is stored in CRM as "Artiroxine".
         "artiroxynebtesde90": "artiroxine",
     },
+    "trois_chene": {
+        # Commercial MY CARE labels correspond to active Myocalm catalog products.
+        "mycarerollon50ml": "myocalmrollon50ml",
+        "mycarespray100ml": "myocalmspray100ml",
+    },
 }
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 1000

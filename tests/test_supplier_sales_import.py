@@ -218,6 +218,26 @@ def test_eric_favre_artiroxyne_90_maps_to_live_artiroxine_product():
     assert str(sales[0][2]) == "13.50"
 
 
+
+def test_trois_chenes_my_care_commercial_labels_map_to_active_myocalm_products():
+    roll_on = SimpleNamespace(
+        id=20, name="MYOCALM ROLL ON 50ML", reference=None, default_price="4.10"
+    )
+    spray = SimpleNamespace(
+        id=21, name="MYOCALM SPRAY 100ML", reference=None, default_price="4.40"
+    )
+    model = SimpleNamespace(query=FakeQuery([roll_on, spray]))
+    rows = [
+        (22, {"product": "MY CARE ROLL ON 50ML", "quantity": "2", "price_ht": "4.10"}),
+        (23, {"product": "MY CARE SPRAY 100ML", "quantity": "3", "price_ht": "4.40"}),
+    ]
+    sales = _validated_sales("trois_chene", {"product_model": model}, rows)
+    assert [(sale[0], sale[1], str(sale[2])) for sale in sales] == [
+        (roll_on, 2, "4.10"),
+        (spray, 3, "4.40"),
+    ]
+
+
 def test_import_matches_unique_product_name_with_packaging_suffix():
     product = SimpleNamespace(id=21, name="Appetit Boost sirop", reference="AB", default_price="3.00")
     model = SimpleNamespace(query=FakeQuery([product]))
