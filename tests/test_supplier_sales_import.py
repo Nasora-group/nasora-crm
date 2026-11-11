@@ -170,7 +170,6 @@ def test_fixed_catalog_template_preserves_exact_list_and_maps_available_products
     assert next(row for row in rows if row["product"] == "Appetit boost")["price_ht"] == "3.00"
 
 
-
 def test_eric_favre_appetit_boost_maps_to_live_catalog_product_name():
     product = SimpleNamespace(
         id=15, name="Apti boost Gel B30", reference=None, default_price="3.00"
@@ -191,6 +190,32 @@ def test_eric_favre_appetit_boost_maps_to_live_catalog_product_name():
     assert len(sales) == 1
     assert sales[0][0] is product
     assert sales[0][1] == 4
+
+
+def test_eric_favre_artiroxyne_90_maps_to_live_artiroxine_product():
+    artiroxine = SimpleNamespace(
+        id=22, name="Artiroxine", reference=None, default_price="13.50"
+    )
+    artiroxyne_15 = SimpleNamespace(
+        id=25, name="Artiroxyne Btes de 15", reference=None, default_price="3.89"
+    )
+    model = SimpleNamespace(query=FakeQuery([artiroxine, artiroxyne_15]))
+    rows = _template_rows("eric_favre", [artiroxine, artiroxyne_15])
+    row_90 = next(row for row in rows if row["product"] == "Artiroxyne Btes de 90")
+    assert row_90["product_id"] == 22
+    sales = _validated_sales(
+        "eric_favre",
+        {"product_model": model},
+        [(26, {
+            "product": "Artiroxyne Btes de 90",
+            "quantity": "6",
+            "price_ht": "13.50",
+        })],
+    )
+    assert len(sales) == 1
+    assert sales[0][0] is artiroxine
+    assert sales[0][1] == 6
+    assert str(sales[0][2]) == "13.50"
 
 
 def test_import_matches_unique_product_name_with_packaging_suffix():
