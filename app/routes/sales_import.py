@@ -63,6 +63,14 @@ TROIS_CHENES_CATALOG = [
     ("LYMPHAVEINE CPR B30", "3.70"), ("LYMPHAVEINE H CPR BT15", "2.55"),
 ]
 CATALOGS = {"eric_favre": ERIC_FAVRE_CATALOG, "trois_chene": TROIS_CHENES_CATALOG}
+
+# Names used in commercial templates may differ from the canonical CRM label.
+# Keep aliases scoped to their supplier to avoid cross-laboratory matches.
+PRODUCT_NAME_ALIASES = {
+    "eric_favre": {
+        _normalize("Special Kid appetit nutri+"): _normalize("Special kid nutri+"),
+    },
+}
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 1000
 
@@ -71,6 +79,15 @@ def _normalize(value):
     value = unicodedata.normalize("NFKD", str(value or ""))
     value = "".join(char for char in value if not unicodedata.combining(char))
     return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def _find_product_by_name(slug, by_name, label):
+    normalized = _normalize(label)
+    product = by_name.get(normalized)
+    if product is not None:
+        return product
+    canonical_name = PRODUCT_NAME_ALIASES.get(slug, {}).get(normalized)
+    return by_name.get(canonical_name) if canonical_name else None
 
 
 def _supplier_or_404(slug):
@@ -99,7 +116,7 @@ def _template_rows(slug, products):
 
     rows = []
     for label, price in catalog:
-        product = by_name.get(_normalize(label))
+        product = _find_product_by_name(slug, by_name, label)
         # Keep the requested product order and prices. Product ID/reference, when
         # available, make the file resilient to later product-label changes.
         rows.append({
@@ -187,7 +204,7 @@ def _validated_sales(slug, supplier, records):
         if product is None and row.get("reference"):
             product = by_reference.get(_normalize(row["reference"]))
         if product is None and row.get("product"):
-            product = by_name.get(_normalize(row["product"]))
+            product = _find_product_by_name(slug, by_name, row["product"])
         if product is None:
             label = row.get("product") or row.get("reference") or row.get("product_id") or "non renseigné"
             raise ValueError(f"Ligne {row_number} : produit « {label} » introuvable ou inactif dans ce laboratoire.")
