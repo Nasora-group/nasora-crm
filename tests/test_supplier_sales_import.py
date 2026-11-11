@@ -170,6 +170,29 @@ def test_fixed_catalog_template_preserves_exact_list_and_maps_available_products
     assert next(row for row in rows if row["product"] == "Appetit boost")["price_ht"] == "3.00"
 
 
+
+def test_eric_favre_appetit_boost_maps_to_live_catalog_product_name():
+    product = SimpleNamespace(
+        id=15, name="Apti boost Gel B30", reference=None, default_price="3.00"
+    )
+    model = SimpleNamespace(query=FakeQuery([product]))
+    rows = _template_rows("eric_favre", [product])
+    boost_row = next(row for row in rows if row["product"] == "Appetit boost")
+    assert boost_row["product_id"] == 15
+    sales = _validated_sales(
+        "eric_favre",
+        {"product_model": model},
+        [(18, {
+            "product": "Appetit boost",
+            "quantity": "4",
+            "price_ht": "3.00",
+        })],
+    )
+    assert len(sales) == 1
+    assert sales[0][0] is product
+    assert sales[0][1] == 4
+
+
 def test_import_matches_unique_product_name_with_packaging_suffix():
     product = SimpleNamespace(id=21, name="Appetit Boost sirop", reference="AB", default_price="3.00")
     model = SimpleNamespace(query=FakeQuery([product]))
