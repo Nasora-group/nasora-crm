@@ -82,12 +82,31 @@ def _normalize(value):
 
 
 def _find_product_by_name(slug, by_name, label):
+    """Resolve only exact or unambiguous close names among active supplier products."""
     normalized = _normalize(label)
     product = by_name.get(normalized)
     if product is not None:
         return product
+
     canonical_name = PRODUCT_NAME_ALIASES.get(slug, {}).get(normalized)
-    return by_name.get(canonical_name) if canonical_name else None
+    if canonical_name:
+        product = by_name.get(canonical_name)
+        if product is not None:
+            return product
+
+    # Accept harmless suffix/prefix differences (e.g. pack size) only when
+    # exactly one active product contains all meaningful label tokens.
+    tokens = set(re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", str(label or "")).lower()))
+    tokens = {token for token in tokens if token not in {"de", "du", "la", "le", "et"}}
+    if not tokens:
+        return None
+    candidates = []
+    for candidate_name, candidate in by_name.items():
+        candidate_tokens = set(re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", str(candidate.name or "")).lower()))
+        candidate_tokens = {token for token in candidate_tokens if token not in {"de", "du", "la", "le", "et"}}
+        if tokens <= candidate_tokens or candidate_tokens <= tokens:
+            candidates.append(candidate)
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def _supplier_or_404(slug):
@@ -114,16 +133,33 @@ def _template_rows(slug, products):
             for product in products
         ]
 
+    # Build templates from the supplier's active CRM catalog, never from
+    # unmatched static labels. This prevents blank IDs and impossible imports.
     rows = []
-    for label, price in catalog:
+    included_ids = set()
+    for label, reference_price in catalog:
         product = _find_product_by_name(slug, by_name, label)
-        # Keep the requested product order and prices. Product ID/reference, when
-        # available, make the file resilient to later product-label changes.
+        if product is None or product.id in included_ids:
+            continue
+        included_ids.add(product.id)
         rows.append({
-            "product_id": product.id if product else "",
-            "reference": (product.reference or "") if product else "",
-            "product": product.name if product else label,
-            "price_ht": price,
+            "product_id": product.id,
+            "reference": product.reference or "",
+            "product": product.name,
+            "price_ht": reference_price,
+            "quantity": "",
+        })
+
+    # Include any other active supplier products not present in the commercial
+    # reference list, so the template remains complete as the CRM evolves.
+    for product in products:
+        if product.id in included_ids:
+            continue
+        rows.append({
+            "product_id": product.id,
+            "reference": product.reference or "",
+            "product": product.name,
+            "price_ht": str(Decimal(str(product.default_price or "0.00")).quantize(Decimal("0.01"))),
             "quantity": "",
         })
     return rows
