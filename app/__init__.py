@@ -111,6 +111,7 @@ def _register_blueprints(app):
     from app.routes.activity_reporting import activity_reporting_bp
     from app.routes.planning import planning_bp
     from app.routes.sales import sales_bp
+from app.routes.sales_import import sales_import_bp
     from app.routes.animation_sales import animation_sales_bp
     from app.routes.revenue import revenue_bp
     from app.routes.admin import admin_bp
@@ -128,7 +129,7 @@ def _register_blueprints(app):
     from app.routes.legal import legal_bp
     from app.routes.admin_notifications import admin_notifications_bp
     from app.routes.seo import seo_bp
-    app.register_blueprint(auth_bp); app.register_blueprint(admin_notifications_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(activity_reporting_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
+    app.register_blueprint(auth_bp); app.register_blueprint(admin_notifications_bp); app.register_blueprint(terrain_bp); app.register_blueprint(dashboard_bp); app.register_blueprint(manager_cockpit_bp); app.register_blueprint(activity_reporting_bp); app.register_blueprint(planning_bp); app.register_blueprint(sales_bp); app.register_blueprint(sales_import_bp); app.register_blueprint(animation_sales_bp); app.register_blueprint(revenue_bp); app.register_blueprint(admin_bp); app.register_blueprint(users_bp); app.register_blueprint(products_bp); app.register_blueprint(objectives_bp); app.register_blueprint(evaluations_bp); app.register_blueprint(commercial_evaluations_bp); app.register_blueprint(clients_bp); app.register_blueprint(clients_export_bp); app.register_blueprint(prospections_export_bp); app.register_blueprint(vm_cockpit_bp); app.register_blueprint(stock_bp); app.register_blueprint(visit_targets_bp); app.register_blueprint(legal_bp); app.register_blueprint(seo_bp)
 
 def _register_error_handlers(app):
     @app.errorhandler(404)
