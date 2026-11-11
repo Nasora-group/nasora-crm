@@ -68,17 +68,17 @@ CATALOGS = {"eric_favre": ERIC_FAVRE_CATALOG, "trois_chene": TROIS_CHENES_CATALO
 # Keep aliases scoped to their supplier to avoid cross-laboratory matches.
 PRODUCT_NAME_ALIASES = {
     "eric_favre": {
-    },
-    "trois_chene": {
-        # Le modèle commercial « MY CARE » correspond aux références Myocalm du catalogue actif.
-        "mycarerollon50ml": "myocalmrollon50ml",
-        "mycarespray100ml": "myocalmspray100ml",
         "specialkidappetitnutri": "specialkidnutri",
         # The live Eric Favre catalog stores this commercial reference as
         # "Apti boost Gel B30". Keep the commercial template label unchanged.
         "appetitboost": "aptiboostgelb30",
         # The 90-tablet commercial label is stored in CRM as "Artiroxine".
         "artiroxynebtesde90": "artiroxine",
+    },
+    "trois_chene": {
+        # Commercial MY CARE labels correspond to active Myocalm catalog products.
+        "mycarerollon50ml": "myocalmrollon50ml",
+        "mycarespray100ml": "myocalmspray100ml",
     },
 }
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
