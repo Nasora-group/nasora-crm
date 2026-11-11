@@ -297,7 +297,6 @@ def import_sales(slug):
             except Exception:
                 db.session.rollback()
                 logger.exception("Échec import ventes %s", supplier["label"])
-                flash("Import non enregistré. Vérifie le fichier ou contacte l'administrateur.")
                 flash("Import non enregistré. Vérifie le fichier ou contacte l'administrateur.", "error")
 
     return render_template("supplier_sales_import.html", supplier=supplier, slug=slug, form=form)
