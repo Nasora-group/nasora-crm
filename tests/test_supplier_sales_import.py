@@ -46,13 +46,22 @@ def test_template_rows_for_gilbert_use_active_database_products_and_prices():
 def test_fixed_catalog_template_keeps_chronology_and_matches_product_ids():
     product = SimpleNamespace(id=12, name="Chronoerect", reference="CHR", default_price=0)
     rows = _template_rows("eric_favre", [product])
-    assert rows == [{
+    assert rows[0] == {
         "product_id": 12,
         "reference": "CHR",
         "product": "Chronoerect",
         "price_ht": "3.58",
         "quantity": "",
-    }]
+    }
+    assert [(row["product"], row["price_ht"]) for row in rows] == ERIC_FAVRE_CATALOG
+    assert len(rows) == 26
+
+
+def test_eric_favre_template_keeps_all_26_labels_even_when_crm_products_are_missing():
+    rows = _template_rows("eric_favre", [])
+    assert [(row["product"], row["price_ht"]) for row in rows] == ERIC_FAVRE_CATALOG
+    assert len(rows) == 26
+    assert all(row["product_id"] == "" for row in rows)
 
 
 def test_csv_upload_reads_french_semicolon_template():
@@ -124,7 +133,7 @@ def test_eric_favre_template_maps_commercial_nutri_label_to_active_crm_product()
     )
     rows = _template_rows("eric_favre", [product])
     nutri_row = next(row for row in rows if row["product_id"] == 7)
-    assert nutri_row["product"] == "Special kid nutri+"
+    assert nutri_row["product"] == "Special Kid appetit nutri+"
     assert nutri_row["price_ht"] == "3.00"
 
 
@@ -148,16 +157,17 @@ def test_eric_favre_import_accepts_legacy_commercial_nutri_label():
     assert str(sales[0][2]) == "3.00"
 
 
-def test_fixed_catalog_template_excludes_unmatched_labels_and_includes_all_active_products():
+def test_fixed_catalog_template_preserves_exact_list_and_maps_available_products():
     products = [
         SimpleNamespace(id=21, name="Appetit Boost sirop", reference="AB", default_price="3.00"),
         SimpleNamespace(id=22, name="Special kid nutri+", reference="SKN", default_price="3.00"),
     ]
     rows = _template_rows("eric_favre", products)
-    assert all(row["product_id"] for row in rows)
-    assert {row["product_id"] for row in rows} == {21, 22}
-    assert next(row for row in rows if row["product_id"] == 22)["price_ht"] == "3.00"
-    assert next(row for row in rows if row["product_id"] == 21)["price_ht"] == "3.00"
+    assert [(row["product"], row["price_ht"]) for row in rows] == ERIC_FAVRE_CATALOG
+    assert len(rows) == 26
+    assert next(row for row in rows if row["product_id"] == 22)["product"] == "Special Kid appetit nutri+"
+    assert next(row for row in rows if row["product_id"] == 21)["product"] == "Appetit boost"
+    assert next(row for row in rows if row["product"] == "Appetit boost")["price_ht"] == "3.00"
 
 
 def test_import_matches_unique_product_name_with_packaging_suffix():

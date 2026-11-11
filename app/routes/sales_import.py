@@ -133,33 +133,18 @@ def _template_rows(slug, products):
             for product in products
         ]
 
-    # Build templates from the supplier's active CRM catalog, never from
-    # unmatched static labels. This prevents blank IDs and impossible imports.
+    # Fixed supplier templates must preserve the commercial catalog exactly:
+    # same 26 labels, same order, and same reference prices. Keep unmatched
+    # labels visible with an empty product_id; import validation will resolve
+    # by label or report the specific inactive/missing product if quantity is entered.
     rows = []
-    included_ids = set()
     for label, reference_price in catalog:
         product = _find_product_by_name(slug, by_name, label)
-        if product is None or product.id in included_ids:
-            continue
-        included_ids.add(product.id)
         rows.append({
-            "product_id": product.id,
-            "reference": product.reference or "",
-            "product": product.name,
+            "product_id": product.id if product is not None else "",
+            "reference": (product.reference or "") if product is not None else "",
+            "product": label,
             "price_ht": reference_price,
-            "quantity": "",
-        })
-
-    # Include any other active supplier products not present in the commercial
-    # reference list, so the template remains complete as the CRM evolves.
-    for product in products:
-        if product.id in included_ids:
-            continue
-        rows.append({
-            "product_id": product.id,
-            "reference": product.reference or "",
-            "product": product.name,
-            "price_ht": str(Decimal(str(product.default_price or "0.00")).quantize(Decimal("0.01"))),
             "quantity": "",
         })
     return rows
