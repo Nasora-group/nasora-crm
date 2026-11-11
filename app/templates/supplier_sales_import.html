@@ -1,0 +1,36 @@
+<!doctype html>
+{% extends "base.html" %}
+{% block title %}Import des ventes — {{ supplier.label }}{% endblock %}
+{% block content %}
+<div class="sales-import-page">
+  <section class="sales-import-hero">
+    <p class="sales-import-eyebrow">Suivi commercial · Import de fichier</p>
+    <h1>{{ supplier.label }}</h1>
+    <p>Importe les quantités vendues depuis un fichier Excel ou CSV. Les stocks grossistes ne sont pas modifiés.</p>
+  </section>
+  <section class="sales-import-card">
+    <h2>1. Télécharger le modèle</h2>
+    <p>Le modèle respecte l'ordre des produits et les prix de référence fournis. Pour Gilbert, il reprend automatiquement les produits actifs et leurs prix enregistrés dans le CRM.</p>
+    <div class="sales-import-links">
+      <a class="btn btn-outline" href="{{ url_for('sales_import.download_sales_template', slug=slug, format_name='xlsx') }}">Télécharger le modèle Excel (.xlsx)</a>
+      <a class="btn btn-outline" href="{{ url_for('sales_import.download_sales_template', slug=slug, format_name='csv') }}">Télécharger l'exemple CSV (.csv)</a>
+    </div>
+  </section>
+  <section class="sales-import-card">
+    <h2>2. Importer les ventes</h2>
+    <form method="POST" enctype="multipart/form-data">
+      {{ form.hidden_tag() }}
+      <label for="sale_date">Date des ventes</label>
+      {{ form.sale_date(class="form-input", required=true) }}
+      <label for="sales_file">Fichier Excel ou CSV</label>
+      <input id="sales_file" name="sales_file" type="file" accept=".xlsx,.csv" required>
+      <p class="sales-import-help">Colonnes : product_id, reference, product, price_ht, quantity. La quantité vide ou égale à 0 est ignorée. Le prix vide reprend le prix enregistré dans le CRM.</p>
+      <button class="btn-submit" type="submit">Vérifier et importer</button>
+    </form>
+  </section>
+  <a class="sales-import-back" href="{{ url_for('sales.' ~ slug) }}">← Retour à la saisie des ventes</a>
+</div>
+<style>
+.sales-import-page{display:flex;flex-direction:column;gap:18px;max-width:900px}.sales-import-hero,.sales-import-card{padding:22px;border:1px solid #dfe8df;border-radius:15px;background:#fff}.sales-import-hero{background:#f6f8f4}.sales-import-eyebrow{margin:0 0 7px;color:#66834e;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.sales-import-hero h1{margin:0}.sales-import-hero p:last-child,.sales-import-card p{color:#68766d}.sales-import-card h2{margin:0 0 10px;font-size:1.05rem}.sales-import-links{display:flex;gap:10px;flex-wrap:wrap}.sales-import-card form{display:grid;gap:10px;max-width:560px}.sales-import-card label{font-size:.82rem;font-weight:750;color:#526158}.sales-import-card input[type=file]{padding:12px;border:1px solid #d9e3d8;border-radius:8px;background:#fbfcfb}.sales-import-help{font-size:.82rem}.btn-submit{min-height:44px;padding:0 20px;border:0;border-radius:9px;background:#3f704a;color:#fff;font-weight:750;cursor:pointer}.sales-import-back{color:#3f704a;font-weight:700;text-decoration:none}@media(max-width:650px){.sales-import-hero,.sales-import-card{padding:16px}.sales-import-links{flex-direction:column}.sales-import-links a{text-align:center}}
+</style>
+{% endblock %}
