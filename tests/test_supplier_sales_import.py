@@ -86,14 +86,14 @@ def test_import_validates_all_sales_and_uses_default_price_when_blank():
     product = SimpleNamespace(id=1, name="Produit A", reference="REF1", default_price="5.20")
     model = SimpleNamespace(query=FakeQuery([product]))
     rows = [
-        (2, {"product": "Produit A", "quantity": "3", "price_ht": "2,50"}),
+        (2, {"product": "Produit A", "quantity": "3", "price_ht": ""}),
         (3, {"product": "Produit A", "quantity": "0", "price_ht": ""}),
     ]
     sales = _validated_sales("gilbert", {"product_model": model}, rows)
     assert len(sales) == 1
     assert sales[0][0] is product
     assert sales[0][1] == 3
-    assert str(sales[0][2]) == "2.50"
+    assert str(sales[0][2]) == "5.20"
 
 
 def test_import_rejects_unknown_products_and_duplicate_rows():
