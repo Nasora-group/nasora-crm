@@ -6,6 +6,7 @@
   <div class="sales-hero-copy"><p class="sales-eyebrow">Suivi commercial · Ventes</p><h1>{{ supplier.label }}</h1><p>Enregistrez les ventes et mettez à jour les stocks des grossistes depuis un seul écran.</p></div>
   {% if not read_only %}<div class="sales-hero-actions"><a href="{{ url_for('sales.sales_history', slug=slug) }}" class="btn btn-outline">Voir l’historique</a></div>{% endif %}
 </section>
+<div class="sales-import-entry"><a class="btn btn-outline" href="{{ url_for('sales_import.import_sales', slug=slug) }}">Importer depuis Excel / CSV</a></div>
 {% if read_only %}<div class="sales-readonly">Mode consultation : la saisie des ventes est réservée à l’administrateur.</div>{% endif %}
 <form method="POST">
 {{ form.hidden_tag() }}
