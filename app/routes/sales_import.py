@@ -276,8 +276,13 @@ def import_sales(slug):
                 validated = _validated_sales(slug, supplier, records)
                 sale_date = form.sale_date.data
                 sale_model = supplier["sale_model"]
-                sales = [
-                    sale_model(
+                current_product = None
+                saved_count = 0
+                # Flush each row inside the same transaction: this pinpoints the
+                # failing product while preserving all-or-nothing import behavior.
+                for product, quantity, price in validated:
+                    current_product = product
+                    sale = sale_model(
                         product_id=product.id,
                         quantity=quantity,
                         price=price,
@@ -285,19 +290,34 @@ def import_sales(slug):
                         commercial_id=current_user.id,
                         project=supplier["division"],
                     )
-                    for product, quantity, price in validated
-                ]
-                db.session.add_all(sales)
+                    db.session.add(sale)
+                    db.session.flush()
+                    saved_count += 1
+
                 db.session.commit()
-                flash(f"Import réussi : {len(sales)} produit(s) enregistré(s) pour {supplier['label']}. Les stocks grossistes n'ont pas été modifiés.", "success")
+                flash(f"Import réussi : {saved_count} produit(s) enregistré(s) pour {supplier['label']}. Les stocks grossistes n'ont pas été modifiés.", "success")
                 return redirect(url_for(f"sales.{slug}"))
             except ValueError as exc:
                 db.session.rollback()
                 flash(str(exc), "error")
-            except Exception:
+            except Exception as exc:
                 db.session.rollback()
-                logger.exception("Échec import ventes %s", supplier["label"])
-                flash("Import non enregistré. Vérifie le fichier ou contacte l'administrateur.", "error")
+                product_id = getattr(current_product, "id", None) if "current_product" in locals() else None
+                product_name = getattr(current_product, "name", None) if "current_product" in locals() else None
+                logger.exception(
+                    "Échec import ventes %s | modèle=%s | produit_id=%s | produit=%s | erreur=%s",
+                    supplier["label"],
+                    getattr(supplier.get("sale_model"), "__name__", "inconnu"),
+                    product_id,
+                    product_name,
+                    type(exc).__name__,
+                )
+                flash(
+                    f"Import non enregistré : erreur technique {type(exc).__name__}. "
+                    "Aucune ligne n'a été conservée. L'administrateur peut identifier "
+                    "le produit concerné dans les journaux.",
+                    "error",
+                )
 
     return render_template("supplier_sales_import.html", supplier=supplier, slug=slug, form=form)
 
