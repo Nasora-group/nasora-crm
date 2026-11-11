@@ -46,13 +46,22 @@ def test_template_rows_for_gilbert_use_active_database_products_and_prices():
 def test_fixed_catalog_template_keeps_chronology_and_matches_product_ids():
     product = SimpleNamespace(id=12, name="Chronoerect", reference="CHR", default_price=0)
     rows = _template_rows("eric_favre", [product])
-    assert rows == [{
+    assert rows[0] == {
         "product_id": 12,
         "reference": "CHR",
         "product": "Chronoerect",
         "price_ht": "3.58",
         "quantity": "",
-    }]
+    }
+    assert [(row["product"], row["price_ht"]) for row in rows] == ERIC_FAVRE_CATALOG
+    assert len(rows) == 26
+
+
+def test_eric_favre_template_keeps_all_26_labels_even_when_crm_products_are_missing():
+    rows = _template_rows("eric_favre", [])
+    assert [(row["product"], row["price_ht"]) for row in rows] == ERIC_FAVRE_CATALOG
+    assert len(rows) == 26
+    assert all(row["product_id"] == "" for row in rows)
 
 
 def test_csv_upload_reads_french_semicolon_template():
