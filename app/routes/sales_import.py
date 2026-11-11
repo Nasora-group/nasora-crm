@@ -3,7 +3,7 @@ import io
 import logging
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
