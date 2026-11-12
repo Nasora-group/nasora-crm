@@ -248,3 +248,47 @@ def test_import_matches_unique_product_name_with_packaging_suffix():
     )
     assert len(sales) == 1
     assert sales[0][0] is product
+
+
+
+def test_trois_chenes_patch_and_patch_b6_are_distinct_products():
+    patch = SimpleNamespace(
+        id=26, name="MYOCALM PATCH", reference=None, default_price="5.60"
+    )
+    patch_b6 = SimpleNamespace(
+        id=28, name="MYOCALM PATCH B/6", reference=None, default_price="5.60"
+    )
+    model = SimpleNamespace(query=FakeQuery([patch, patch_b6]))
+
+    rows = _template_rows("trois_chene", [patch, patch_b6])
+    patch_row = next(row for row in rows if row["product"] == "MYOCALM PATCH")
+    patch_b6_row = next(row for row in rows if row["product"] == "MYOCALM PATCH B/6")
+    assert patch_row["product_id"] == 26
+    assert patch_b6_row["product_id"] == 28
+    assert patch_row["product_id"] != patch_b6_row["product_id"]
+
+    sales = _validated_sales(
+        "trois_chene",
+        {"product_model": model},
+        [
+            (5, {"product": "MYOCALM PATCH", "quantity": "30", "price_ht": "5.60"}),
+            (6, {"product": "MYOCALM PATCH B/6", "quantity": "8", "price_ht": "5.60"}),
+        ],
+    )
+    assert [(sale[0].name, sale[1], str(sale[2])) for sale in sales] == [
+        ("MYOCALM PATCH", 30, "5.60"),
+        ("MYOCALM PATCH B/6", 8, "5.60"),
+    ]
+
+
+def test_trois_chenes_positive_quantity_without_product_still_fails():
+    patch = SimpleNamespace(
+        id=26, name="MYOCALM PATCH", reference=None, default_price="5.60"
+    )
+    model = SimpleNamespace(query=FakeQuery([patch]))
+    with pytest.raises(ValueError, match="produit « non renseigné »"):
+        _validated_sales(
+            "trois_chene",
+            {"product_model": model},
+            [(29, {"product": "", "quantity": "3", "price_ht": ""})],
+        )
