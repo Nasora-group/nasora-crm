@@ -49,7 +49,7 @@ class Planning(db.Model):
 class ProductMixin:
     id=db.Column(db.Integer,primary_key=True); name=db.Column(db.String(200),nullable=False); reference=db.Column(db.String(100),nullable=True); default_price=db.Column(db.Numeric(12,2),nullable=False,default=Decimal("0.00")); is_active=db.Column(db.Boolean,default=True,nullable=False); stock_duopharm=db.Column(db.Integer,default=0,nullable=False); stock_ubipharm=db.Column(db.Integer,default=0,nullable=False); stock_laborex=db.Column(db.Integer,default=0,nullable=False); stock_sodipharm=db.Column(db.Integer,default=0,nullable=False)
 class SaleMixin:
-    id=db.Column(db.Integer,primary_key=True); quantity=db.Column(db.Integer,nullable=False); price=db.Column(db.Numeric(12,2),nullable=False); date=db.Column(db.Date,nullable=False,index=True); project=db.Column(db.String(50),nullable=False)
+    id=db.Column(db.Integer,primary_key=True); is_imported=db.Column(db.Boolean,nullable=False,default=False,server_default=db.false(),index=True); quantity=db.Column(db.Integer,nullable=False); price=db.Column(db.Numeric(12,2),nullable=False); date=db.Column(db.Date,nullable=False,index=True); project=db.Column(db.String(50),nullable=False)
 class NovaPharmaProduct(ProductMixin,db.Model): __tablename__="nova_pharma_product"
 class GilbertProduct(ProductMixin,db.Model): __tablename__="gilbert_product"
 class EricFavreProduct(ProductMixin,db.Model): __tablename__="eric_favre_product"
