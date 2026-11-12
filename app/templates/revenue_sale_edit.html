@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Modifier une vente NASMEDIC — {{ supplier.label }}{% endblock %}
+{% block content %}
+<div class="revenue-page">
+  <section class="page-hero crm-page-hero revenue-hero"><span class="hero-eyebrow">NASORA CRM · NASMEDIC</span><h1>Modifier une vente</h1><p>{{ supplier.label }} · {{ sale.product.name }}</p><div class="revenue-actions"><a class="btn btn-outline" href="{{ url_for('revenue.monthly_revenue_detail_nasmedic', month=month, date=sale.date.isoformat()) }}">Retour au détail</a></div></section>
+  <section class="revenue-history-card" style="padding:20px">
+    <form method="POST">{{ form.hidden_tag() }}
+      <div class="sales-date-card">
+        <div><label for="{{ form.date.id }}">Date de vente</label>{{ form.date(class="form-input", required=true) }}</div>
+        <div><label for="{{ form.quantity.id }}">Quantité vendue</label>{{ form.quantity(class="form-input", min="1", required=true) }}</div>
+        <div><label for="{{ form.price.id }}">Prix HT unitaire (€)</label>{{ form.price(class="form-input", min="0", step="0.01", required=true) }}</div>
+      </div>
+      <p>Le chiffre d'affaires du laboratoire sera recalculé automatiquement après validation.</p>{{ form.submit(class="btn") }}
+    </form>
+  </section>
+</div>
+{% endblock %}
