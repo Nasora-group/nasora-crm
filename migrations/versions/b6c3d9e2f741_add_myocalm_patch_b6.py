@@ -33,18 +33,25 @@ def upgrade():
     )
 
 
-def downgrade():
-    bind = op.get_bind()
     bind.execute(
         sa.text(
             """
-            DELETE FROM trois_chene_product AS product
-            WHERE UPPER(TRIM(product.name)) = 'MYOCALM PATCH B/6'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM trois_chene_sale AS sale
-                  WHERE sale.product_id = product.id
-              )
+            INSERT INTO trois_chene_product
+                (name, reference, default_price, is_active,
+                 stock_duopharm, stock_ubipharm, stock_laborex, stock_sodipharm)
+            SELECT
+                'MY CARE GEL FRAICH 100ML', NULL, 4.40, TRUE, 0, 0, 0, 0
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM trois_chene_product
+                WHERE UPPER(TRIM(name)) = 'MY CARE GEL FRAICH 100ML'
+            )
             """
         )
     )
+
+
+def downgrade():
+    # Preserve catalog rows to avoid deleting products that may have existed
+    # before this migration or may be referenced by later sales.
+    pass
