@@ -258,14 +258,20 @@ def test_trois_chenes_patch_and_patch_b6_are_distinct_products():
     patch_b6 = SimpleNamespace(
         id=28, name="MYOCALM PATCH B/6", reference=None, default_price="5.60"
     )
-    model = SimpleNamespace(query=FakeQuery([patch, patch_b6]))
+    gel_fraich = SimpleNamespace(
+        id=29, name="MY CARE GEL FRAICH 100ML", reference=None, default_price="4.40"
+    )
+    model = SimpleNamespace(query=FakeQuery([patch, patch_b6, gel_fraich]))
 
-    rows = _template_rows("trois_chene", [patch, patch_b6])
+    rows = _template_rows("trois_chene", [patch, patch_b6, gel_fraich])
     patch_row = next(row for row in rows if row["product"] == "MYOCALM PATCH")
     patch_b6_row = next(row for row in rows if row["product"] == "MYOCALM PATCH B/6")
+    gel_row = next(row for row in rows if row["product"] == "MY CARE GEL FRAICH 100ML")
     assert patch_row["product_id"] == 26
     assert patch_b6_row["product_id"] == 28
-    assert patch_row["product_id"] != patch_b6_row["product_id"]
+    assert gel_row["product_id"] == 29
+    assert len({patch_row["product_id"], patch_b6_row["product_id"], gel_row["product_id"]}) == 3
+    assert gel_row["price_ht"] == "4.40"
 
     sales = _validated_sales(
         "trois_chene",
@@ -273,11 +279,13 @@ def test_trois_chenes_patch_and_patch_b6_are_distinct_products():
         [
             (5, {"product": "MYOCALM PATCH", "quantity": "30", "price_ht": "5.60"}),
             (6, {"product": "MYOCALM PATCH B/6", "quantity": "8", "price_ht": "5.60"}),
+            (7, {"product": "MY CARE GEL FRAICH 100ML", "quantity": "4", "price_ht": "4.40"}),
         ],
     )
     assert [(sale[0].name, sale[1], str(sale[2])) for sale in sales] == [
         ("MYOCALM PATCH", 30, "5.60"),
         ("MYOCALM PATCH B/6", 8, "5.60"),
+        ("MY CARE GEL FRAICH 100ML", 4, "4.40"),
     ]
 
 
