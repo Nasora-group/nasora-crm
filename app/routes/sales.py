@@ -143,10 +143,19 @@ def sales_history(slug):
     sale_model = supplier["sale_model"]
     product_model = supplier["product_model"]
     selected_month = (request.args.get("month") or "").strip()
+    selected_date_raw = (request.args.get("date") or "").strip()
+    selected_date = None
+    if selected_date_raw:
+        try:
+            selected_date = date.fromisoformat(selected_date_raw)
+        except ValueError:
+            abort(400)
     page = max(1, request.args.get("page", 1, type=int) or 1)
     per_page = 25
 
-    query = sale_model.query.join(product_model, sale_model.product_id == product_model.id)
+    query = sale_model.query.join(product_model, sale_model.product_id == product_model.id).filter(sale_model.is_imported.is_(True))
+    if selected_date:
+        query = query.filter(sale_model.date == selected_date)
     if selected_month:
         dialect = db.engine.dialect.name
         month_expr = (
@@ -167,7 +176,9 @@ def sales_history(slug):
     )
 
     amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
-    total_amount = db.session.query(func.coalesce(func.sum(amount_expr), 0)).select_from(sale_model)
+    total_amount = db.session.query(func.coalesce(func.sum(amount_expr), 0)).select_from(sale_model).filter(sale_model.is_imported.is_(True))
+    if selected_date:
+        total_amount = total_amount.filter(sale_model.date == selected_date)
     if selected_month:
         dialect = db.engine.dialect.name
         month_expr = (
@@ -187,7 +198,7 @@ def sales_history(slug):
     available_months = [
         month
         for (month,) in db.session.query(month_expr.label("month"))
-        .filter(sale_model.date.isnot(None))
+        .filter(sale_model.date.isnot(None), sale_model.is_imported.is_(True))
         .distinct()
         .order_by(month_expr.desc())
         .all()
@@ -201,6 +212,8 @@ def sales_history(slug):
         sales=page_items,
         available_months=available_months,
         selected_month=selected_month,
+        selected_date=selected_date_raw,
+        available_dates=[d.isoformat() for (d,) in db.session.query(sale_model.date).filter(sale_model.is_imported.is_(True)).distinct().order_by(sale_model.date.desc()).all()],
         page=page,
         total_pages=total_pages,
         total_amount=total_amount,
@@ -208,3 +221,54 @@ def sales_history(slug):
         delete_form=CSRFOnlyForm(),
         suppliers=SUPPLIERS,
     )
+
+
+@sales_bp.route("/admin/ventes/<slug>/imports/<sale_date>/delete", methods=["POST"])
+@login_required
+@roles_required("admin")
+def delete_imported_sales_for_date(slug, sale_date):
+    supplier = _get_active_supplier_or_404(slug)
+    try:
+        target_date = date.fromisoformat(sale_date)
+    except ValueError:
+        abort(400)
+    sale_model = supplier["sale_model"]
+    try:
+        deleted_count = sale_model.query.filter(
+            sale_model.is_imported.is_(True),
+            sale_model.date == target_date,
+            sale_model.project == supplier["division"],
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        flash(
+            f"{deleted_count} ligne(s) importée(s) supprimée(s) pour {supplier['label']} le {target_date.strftime('%d/%m/%Y')}.",
+            "success" if deleted_count else "info",
+        )
+    except Exception:
+        db.session.rollback()
+        logger.exception("Suppression des ventes importées impossible: %s %s", slug, sale_date)
+        flash("La suppression a échoué. Aucune modification n'a été conservée.", "error")
+    return redirect(url_for("sales.sales_history", slug=slug, date=sale_date))
+
+
+@sales_bp.route("/admin/ventes/<slug>/imports/<int:sale_id>/edit", methods=["GET", "POST"])
+@login_required
+@roles_required("admin")
+def edit_imported_sale(slug, sale_id):
+    supplier = _get_active_supplier_or_404(slug)
+    sale_model = supplier["sale_model"]
+    sale = sale_model.query.filter_by(id=sale_id, is_imported=True, project=supplier["division"]).first_or_404()
+    form = SaleEditForm(obj=sale)
+    if form.validate_on_submit():
+        sale.date = form.date.data
+        sale.quantity = form.quantity.data
+        sale.price = Decimal(str(form.price.data)).quantize(Decimal("0.01"))
+        try:
+            db.session.commit()
+            flash("Vente importée modifiée. Le CA du laboratoire a été recalculé automatiquement.", "success")
+            return redirect(url_for("sales.sales_history", slug=slug, date=sale.date.isoformat()))
+        except Exception:
+            db.session.rollback()
+            logger.exception("Modification vente importée impossible: %s/%s", slug, sale_id)
+            flash("La modification a échoué. Aucune donnée n'a été modifiée.", "error")
+    return render_template("admin_imported_sale_edit.html", supplier=supplier, slug=slug, sale=sale, form=form)
