@@ -295,6 +295,7 @@ def import_sales(slug):
                         date=sale_date,
                         commercial_id=current_user.id,
                         project=supplier["division"],
+                        is_imported=True,
                     )
                     db.session.add(sale)
                     db.session.flush()
