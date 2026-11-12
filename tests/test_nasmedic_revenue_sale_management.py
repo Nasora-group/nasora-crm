@@ -65,7 +65,7 @@ def test_admin_can_edit_individual_nasmedic_sale_and_revenue_values(client, app)
         sale_id = sale.id
     response = client.post(
         f"/monthly_revenue_detail_nasmedic/2026-10/eric_favre/{sale_id}/edit",
-        data={"date": "2026-10-7", "quantity": "8", "price": "6.25", "submit": "Enregistrer"},
+        data={"date": "2026-10-07", "quantity": "8", "price": "6.25", "submit": "Enregistrer"},
         follow_redirects=False,
     )
     assert response.status_code == 302
