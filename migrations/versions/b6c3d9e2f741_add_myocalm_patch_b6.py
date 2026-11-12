@@ -1,14 +1,14 @@
 """Add MYOCALM PATCH B/6 to the Trois Chenes catalog.
 
 Revision ID: b6c3d9e2f741
-Revises: f8c2a6d4e9b1, d1e5f7a9c3b2
+Revises: 20261111_sales_tenant_defaults
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "b6c3d9e2f741"
-down_revision = ("f8c2a6d4e9b1", "d1e5f7a9c3b2")
+down_revision = "20261111_sales_tenant_defaults"
 branch_labels = None
 depends_on = None
 
@@ -31,7 +31,6 @@ def upgrade():
             """
         )
     )
-
 
     bind.execute(
         sa.text(
