@@ -334,4 +334,4 @@ def delete_nasmedic_revenue_sale(month, slug, sale_id):
 @login_required
 @roles_required("admin", "commercial")
 def monthly_revenue_detail_nasmedic_current():
-    return _monthly_revenue_detail_route("nasmedic", date.today().strftime("%Y-%m"), "monthly_revenue_detail_nasmedic.html")
+    return _monthly_revenue_nasmedic_detail_route(date.today().strftime("%Y-%m"))
