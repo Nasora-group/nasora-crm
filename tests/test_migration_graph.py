@@ -8,4 +8,4 @@ def test_alembic_migrations_have_a_single_head():
 
     script = ScriptDirectory.from_config(config)
 
-    assert script.get_heads() == ["b6c3d9e2f741"]
+    assert script.get_heads() == ["c91e4a7b2d60"]

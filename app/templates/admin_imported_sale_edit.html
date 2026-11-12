@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Modifier une vente importée — {{ supplier.label }}{% endblock %}
+{% block content %}
+<div class="sales-page">
+  <section class="sales-hero">
+    <div class="sales-hero-copy">
+      <p class="sales-eyebrow">Suivi commercial · Import Excel / CSV</p>
+      <h1>Modifier une vente importée</h1>
+      <p>{{ supplier.label }} · {{ sale.product.name }}</p>
+    </div>
+    <div class="sales-hero-actions">
+      <a href="{{ url_for('sales.sales_history', slug=slug, date=sale.date.isoformat()) }}" class="btn btn-outline">Retour à l’historique</a>
+    </div>
+  </section>
+  <div class="sales-table-card" style="padding:20px">
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      <div class="sales-date-card">
+        <div><label for="{{ form.date.id }}">Date de vente</label>{{ form.date(class="form-input", required=true) }}</div>
+        <div><label for="{{ form.quantity.id }}">Quantité</label>{{ form.quantity(class="form-input", min="1", required=true) }}</div>
+        <div><label for="{{ form.price.id }}">Prix HT unitaire (€)</label>{{ form.price(class="form-input", min="0", step="0.01", required=true) }}</div>
+      </div>
+      <p class="sales-date-note">Le CA du laboratoire sera recalculé automatiquement après validation.</p>
+      <button type="submit" class="btn-submit">Enregistrer les modifications</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
