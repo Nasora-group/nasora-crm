@@ -45,7 +45,7 @@ def test_nasmedic_month_detail_lists_individual_sales_and_admin_actions(client):
     response = client.get("/monthly_revenue_detail_nasmedic/2026-10")
     assert response.status_code == 200
     assert b"Produit test" in response.data
-    assert b"Produit 3 ChÃ¨nes" in response.data
+    assert "Produit 3 Chênes".encode("utf-8") in response.data
     assert b"Modifier" in response.data
     assert b"Supprimer" in response.data
 
