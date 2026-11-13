@@ -55,7 +55,7 @@ def test_nasmedic_month_detail_can_filter_sales_by_date(client):
     response = client.get("/monthly_revenue_detail_nasmedic/2026-10?date=2026-10-05")
     assert response.status_code == 200
     assert b"Produit test" in response.data
-    assert b"Produit 3 ChÃ¨nes" not in response.data
+    assert "Produit 3 Chênes".encode("utf-8") not in response.data
 
 
 def test_admin_can_edit_individual_nasmedic_sale_and_revenue_values(client, app):
