@@ -2,12 +2,14 @@ import logging
 from calendar import monthrange
 from collections import namedtuple
 from datetime import date, datetime
+from decimal import Decimal
 
-from flask import Blueprint, render_template, flash, request, abort, jsonify, make_response
+from flask import Blueprint, render_template, flash, request, abort, jsonify, make_response, redirect, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, text
 
 from app.extensions import db
+from app.forms import SaleEditForm, CSRFOnlyForm
 from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
 from app.permissions import is_commercial, require_division
 from app.utils import roles_required
@@ -210,14 +212,126 @@ def _monthly_revenue_detail_route(division, month, template_name):
 def monthly_revenue_detail_nasderm(month):
     return _monthly_revenue_detail_route("nasderm", month, "monthly_revenue_detail_nasderm.html")
 
+def _monthly_revenue_nasmedic_detail_route(month):
+    _ensure_division_access("nasmedic")
+    start, end = _month_bounds(month)
+    selected_date_raw = (request.args.get("date") or "").strip()
+    selected_date = None
+    if selected_date_raw:
+        try:
+            selected_date = date.fromisoformat(selected_date_raw)
+        except ValueError:
+            abort(400)
+        if not start <= selected_date < end:
+            abort(400)
+
+    suppliers = _division_suppliers("nasmedic")
+    sales_by_supplier = {}
+    available_dates = set()
+    for slug, _label, sale_model, product_model in suppliers:
+        date_query = db.session.query(sale_model.date).filter(
+            sale_model.project == "nasmedic",
+            sale_model.date >= start,
+            sale_model.date < end,
+        ).distinct()
+        available_dates.update(row[0].isoformat() for row in date_query.all() if row[0])
+
+        query = db.session.query(sale_model, product_model.name.label("product_name")).join(
+            product_model, sale_model.product_id == product_model.id
+        ).filter(
+            sale_model.project == "nasmedic",
+            sale_model.date >= start,
+            sale_model.date < end,
+        )
+        if selected_date:
+            query = query.filter(sale_model.date == selected_date)
+        sales_by_supplier[slug] = [
+            {"sale": sale, "product_name": product_name}
+            for sale, product_name in query.order_by(sale_model.date.desc(), sale_model.id.desc()).all()
+        ]
+
+    return render_template(
+        "monthly_revenue_detail_nasmedic.html",
+        month=month,
+        suppliers=suppliers,
+        sales_by_supplier=sales_by_supplier,
+        available_dates=sorted(available_dates, reverse=True),
+        selected_date=selected_date_raw,
+        delete_form=CSRFOnlyForm(),
+    )
+
+
 @revenue_bp.route("/monthly_revenue_detail_nasmedic/<month>")
 @login_required
 @roles_required("admin", "commercial")
 def monthly_revenue_detail_nasmedic(month):
-    return _monthly_revenue_detail_route("nasmedic", month, "monthly_revenue_detail_nasmedic.html")
+    return _monthly_revenue_nasmedic_detail_route(month)
+
+
+@revenue_bp.route("/monthly_revenue_detail_nasmedic/<month>/<slug>/<int:sale_id>/edit", methods=["GET", "POST"])
+@login_required
+@roles_required("admin")
+def edit_nasmedic_revenue_sale(month, slug, sale_id):
+    supplier = SUPPLIERS.get(slug)
+    if not supplier or supplier.get("archived") or supplier.get("division") != "nasmedic":
+        abort(404)
+    start, end = _month_bounds(month)
+    sale_model = supplier["sale_model"]
+    sale = sale_model.query.filter_by(
+        id=sale_id, project="nasmedic"
+    ).filter(sale_model.date >= start, sale_model.date < end).first_or_404()
+    form = SaleEditForm(obj=sale)
+    if form.validate_on_submit():
+        sale.date = form.date.data
+        sale.quantity = form.quantity.data
+        sale.price = Decimal(str(form.price.data)).quantize(Decimal("0.01"))
+        try:
+            db.session.commit()
+            flash("Vente modifiée. Le chiffre d'affaires NASMEDIC a été recalculé automatiquement.", "success")
+            return redirect(url_for(
+                "revenue.monthly_revenue_detail_nasmedic",
+                month=sale.date.strftime("%Y-%m"),
+                date=sale.date.isoformat(),
+            ))
+        except Exception:
+            db.session.rollback()
+            logger.exception("Modification d'une vente NASMEDIC impossible: %s/%s", slug, sale_id)
+            flash("La modification a échoué. Aucune donnée n'a été modifiée.", "error")
+    return render_template(
+        "revenue_sale_edit.html", supplier=supplier, slug=slug,
+        sale=sale, form=form, month=month,
+    )
+
+
+@revenue_bp.route("/monthly_revenue_detail_nasmedic/<month>/<slug>/<int:sale_id>/delete", methods=["POST"])
+@login_required
+@roles_required("admin")
+def delete_nasmedic_revenue_sale(month, slug, sale_id):
+    supplier = SUPPLIERS.get(slug)
+    if not supplier or supplier.get("archived") or supplier.get("division") != "nasmedic":
+        abort(404)
+    start, end = _month_bounds(month)
+    sale_model = supplier["sale_model"]
+    sale = sale_model.query.filter_by(
+        id=sale_id, project="nasmedic"
+    ).filter(sale_model.date >= start, sale_model.date < end).first_or_404()
+    sale_date = sale.date
+    try:
+        db.session.delete(sale)
+        db.session.commit()
+        flash("Vente supprimée. Le chiffre d'affaires NASMEDIC a été recalculé automatiquement.", "success")
+    except Exception:
+        db.session.rollback()
+        logger.exception("Suppression d'une vente NASMEDIC impossible: %s/%s", slug, sale_id)
+        flash("La suppression a échoué. Aucune donnée n'a été supprimée.", "error")
+    return redirect(url_for(
+        "revenue.monthly_revenue_detail_nasmedic",
+        month=sale_date.strftime("%Y-%m"),
+        date=sale_date.isoformat(),
+    ))
 
 @revenue_bp.route("/monthly_revenue_detail_nasmedic")
 @login_required
 @roles_required("admin", "commercial")
 def monthly_revenue_detail_nasmedic_current():
-    return _monthly_revenue_detail_route("nasmedic", date.today().strftime("%Y-%m"), "monthly_revenue_detail_nasmedic.html")
+    return _monthly_revenue_nasmedic_detail_route(date.today().strftime("%Y-%m"))

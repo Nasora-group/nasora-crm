@@ -1,27 +1,37 @@
 {% extends "base.html" %}
-
+{% block title %}Détail du CA NASMEDIC — {{ month }}{% endblock %}
 {% block content %}
-<h1>Détail du Chiffre d'Affaire pour {{ month }}</h1>
-
-{% for slug, label, sale_model, product_model in suppliers %}
-<h2>{{ label }}</h2>
-<table class="responsive-table">
-    <thead>
-        <tr><th>Produit</th><th>Quantité Vendue</th><th>Chiffre d'Affaire</th></tr>
-    </thead>
-    <tbody>
-        {% for sale in details[slug] %}
-        <tr>
-            <td>{{ sale.name }}</td>
-            <td>{{ sale.total_quantity }}</td>
-            <td>{{ "%.2f"|format(sale.total_revenue) }} €</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3">Aucune vente ce mois-ci.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endfor %}
-
-<a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn">Retour au chiffre d'affaire mensuel</a>
+<div class="revenue-page">
+  <div class="page-hero crm-page-hero revenue-hero">
+    <span class="hero-eyebrow">NASORA CRM · NASMEDIC</span>
+    <h1>Détail des ventes · {{ month }}</h1>
+    <p>Sélectionnez une date pour afficher les ventes de chaque laboratoire. Les actions de modification et de suppression sont réservées à l'administrateur.</p>
+    <div class="revenue-actions"><a href="{{ url_for('revenue.monthly_revenue_nasmedic') }}" class="btn btn-outline">Retour au CA mensuel</a></div>
+  </div>
+  <form method="GET" class="revenue-history-card" style="padding:16px;display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+    <div><label for="sale-date">Date des ventes</label>
+      <select id="sale-date" name="date" class="form-input" onchange="this.form.submit()">
+        <option value="">Toutes les dates du mois</option>
+        {% for available_date in available_dates %}<option value="{{ available_date }}" {% if available_date == selected_date %}selected{% endif %}>{{ available_date }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if selected_date %}<a class="btn btn-outline" href="{{ url_for('revenue.monthly_revenue_detail_nasmedic', month=month) }}">Effacer le filtre</a>{% endif %}
+  </form>
+  {% for slug, label, sale_model, product_model in suppliers %}
+  <section class="revenue-history-card" style="padding:18px;margin-top:18px">
+    <div class="revenue-section-head"><div><span class="crm-overline">LABORATOIRE</span><h2>{{ label }}</h2></div><strong>{{ sales_by_supplier[slug]|length }} vente(s)</strong></div>
+    <div class="revenue-table-wrap"><table class="revenue-history-table">
+      <thead><tr><th>Date</th><th>Produit</th><th>Quantité</th><th>Prix HT</th><th>CA HT</th>{% if current_user.role == "admin" %}<th>Actions</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for item in sales_by_supplier[slug] %}{% set sale = item.sale %}
+      <tr><td>{{ sale.date.strftime('%d/%m/%Y') }}</td><td>{{ item.product_name }}</td><td>{{ sale.quantity }}</td><td>{{ "%.2f"|format(sale.price) }} €</td><td class="revenue-total">{{ "%.2f"|format(sale.quantity * sale.price) }} €</td>
+      {% if current_user.role == "admin" %}<td><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+        <a class="btn btn-outline" href="{{ url_for('revenue.edit_nasmedic_revenue_sale', month=month, slug=slug, sale_id=sale.id) }}">Modifier</a>
+        <form method="POST" action="{{ url_for('revenue.delete_nasmedic_revenue_sale', month=month, slug=slug, sale_id=sale.id) }}">{{ delete_form.hidden_tag() }}<button type="submit" class="btn btn-danger-outline" onclick="return confirm('Confirmer la suppression de cette vente de {{ label }} ?');">Supprimer</button></form>
+      </div></td>{% endif %}</tr>
+      {% else %}<tr><td colspan="{{ 6 if current_user.role == 'admin' else 5 }}" class="revenue-empty">Aucune vente pour ce laboratoire à cette date.</td></tr>{% endfor %}
+      </tbody></table></div>
+  </section>
+  {% endfor %}
+</div>
 {% endblock %}
