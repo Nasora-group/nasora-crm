@@ -338,6 +338,8 @@ def _ensure_lab_sales_access(lab):
 @roles_required("admin", "commercial")
 def sales(lab_id):
     lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
     _ensure_lab_sales_access(lab)
     products = LaboratoryProduct.query.filter_by(laboratory_id=lab.id, is_active=True).order_by(LaboratoryProduct.name).all()
     if request.method == "POST":
@@ -373,6 +375,8 @@ def sales(lab_id):
 @roles_required("admin", "commercial")
 def import_sales(lab_id):
     lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
     _ensure_lab_sales_access(lab)
     upload = request.files.get("sales_file")
     if not upload or not upload.filename:
