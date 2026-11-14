@@ -10,7 +10,7 @@ from sqlalchemy import func, text
 
 from app.extensions import db
 from app.forms import SaleEditForm, CSRFOnlyForm
-from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective, Laboratory
+from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective, Laboratory, LaboratorySale, LaboratoryProduct
 from app.permissions import is_commercial, require_division
 from app.utils import roles_required
 
@@ -229,7 +229,24 @@ def _product_sales_detail(sale_model, product_model, month, division, scope_to_c
 def _monthly_revenue_detail_route(division, month, template_name):
     _ensure_division_access(division)
     suppliers = _division_suppliers(division)
-    details = {slug: _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False) for slug, _label, sale_model, product_model in suppliers}
+    details = {}
+    start, end = _month_bounds(month)
+    for slug, _label, sale_model, product_model in suppliers:
+        if sale_model is not None:
+            details[slug] = _product_sales_detail(sale_model, product_model, month, division, scope_to_commercial=False)
+        else:
+            lab_id = int(slug.split("_", 1)[1])
+            rows = db.session.query(
+                LaboratoryProduct.name,
+                func.coalesce(func.sum(LaboratorySale.quantity), 0),
+                func.coalesce(func.sum(LaboratorySale.quantity * LaboratorySale.price), 0),
+            ).join(LaboratorySale, LaboratorySale.product_id == LaboratoryProduct.id).filter(
+                LaboratorySale.laboratory_id == lab_id,
+                LaboratorySale.project == division,
+                LaboratorySale.date >= start,
+                LaboratorySale.date < end,
+            ).group_by(LaboratoryProduct.id, LaboratoryProduct.name).order_by(LaboratoryProduct.name).all()
+            details[slug] = [ProductSaleRow(name=name, total_quantity=quantity, total_revenue=float(amount or 0)) for name, quantity, amount in rows]
     return render_template(template_name, month=month, suppliers=suppliers, details=details)
 
 
@@ -256,13 +273,36 @@ def _monthly_revenue_nasmedic_detail_route(month):
     sales_by_supplier = {}
     available_dates = set()
     for slug, _label, sale_model, product_model in suppliers:
+        if sale_model is None:
+            lab_id = int(slug.split("_", 1)[1])
+            query = db.session.query(LaboratorySale, LaboratoryProduct.name.label("product_name")).join(
+                LaboratoryProduct, LaboratorySale.product_id == LaboratoryProduct.id
+            ).filter(
+                LaboratorySale.laboratory_id == lab_id,
+                LaboratorySale.project == "nasmedic",
+                LaboratorySale.date >= start,
+                LaboratorySale.date < end,
+            )
+            date_query = db.session.query(LaboratorySale.date).filter(
+                LaboratorySale.laboratory_id == lab_id,
+                LaboratorySale.project == "nasmedic",
+                LaboratorySale.date >= start,
+                LaboratorySale.date < end,
+            ).distinct()
+            available_dates.update(row[0].isoformat() for row in date_query.all() if row[0])
+            if selected_date:
+                query = query.filter(LaboratorySale.date == selected_date)
+            sales_by_supplier[slug] = [
+                {"sale": sale, "product_name": product_name}
+                for sale, product_name in query.order_by(LaboratorySale.date.desc(), LaboratorySale.id.desc()).all()
+            ]
+            continue
         date_query = db.session.query(sale_model.date).filter(
             sale_model.project == "nasmedic",
             sale_model.date >= start,
             sale_model.date < end,
         ).distinct()
         available_dates.update(row[0].isoformat() for row in date_query.all() if row[0])
-
         query = db.session.query(sale_model, product_model.name.label("product_name")).join(
             product_model, sale_model.product_id == product_model.id
         ).filter(
