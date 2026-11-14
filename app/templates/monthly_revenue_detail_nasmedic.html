@@ -25,10 +25,10 @@
       <tbody>
       {% for item in sales_by_supplier[slug] %}{% set sale = item.sale %}
       <tr><td>{{ sale.date.strftime('%d/%m/%Y') }}</td><td>{{ item.product_name }}</td><td>{{ sale.quantity }}</td><td>{{ "%.2f"|format(sale.price) }} €</td><td class="revenue-total">{{ "%.2f"|format(sale.quantity * sale.price) }} €</td>
-      {% if current_user.role == "admin" %}<td><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+      {% if current_user.role == "admin" %}<td>{% if slug.startswith("laboratory_") %}<a class="btn btn-outline" href="{{ url_for('laboratories.sales', lab_id=slug.split('_')[1]|int) }}">Gérer les ventes</a>{% else %}<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
         <a class="btn btn-outline" href="{{ url_for('revenue.edit_nasmedic_revenue_sale', month=month, slug=slug, sale_id=sale.id) }}">Modifier</a>
         <form method="POST" action="{{ url_for('revenue.delete_nasmedic_revenue_sale', month=month, slug=slug, sale_id=sale.id) }}">{{ delete_form.hidden_tag() }}<button type="submit" class="btn btn-danger-outline" onclick="return confirm('Confirmer la suppression de cette vente de {{ label }} ?');">Supprimer</button></form>
-      </div></td>{% endif %}</tr>
+      </div>{% endif %}</td>{% endif %}</tr>
       {% else %}<tr><td colspan="{{ 6 if current_user.role == 'admin' else 5 }}" class="revenue-empty">Aucune vente pour ce laboratoire à cette date.</td></tr>{% endfor %}
       </tbody></table></div>
   </section>
