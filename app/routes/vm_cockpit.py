@@ -47,7 +47,7 @@ def _unique_visit_rows_for_commercial(commercial_id, limit=None, date_filter=Non
 
 def _commercial_laboratory_scope(commercial_id, division):
     """Catalogues visibles pour le commercial, y compris les laboratoires récents."""
-    commercial = User.query.get(commercial_id)
+    commercial = db.session.get(User, commercial_id)
     if commercial is None or (commercial.project or "").lower() != division:
         return [], []
     suppliers = [
