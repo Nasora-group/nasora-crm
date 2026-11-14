@@ -22,6 +22,7 @@ def upgrade():
         FROM laboratory l
         JOIN "user" u ON lower(u.project) = lower(l.section)
         WHERE l.is_active = TRUE
+          AND u.role <> 'admin'
           AND NOT EXISTS (
               SELECT 1 FROM laboratory_staff ls
               WHERE ls.laboratory_id = l.id AND ls.user_id = u.id
