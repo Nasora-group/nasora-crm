@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Modifier une vente · {{ laboratory.name }} — NASORA CRM{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div>
+    <span class="hero-eyebrow">{{ laboratory.section|upper }} · SUIVI COMMERCIAL</span>
+    <h1>Modifier une vente</h1>
+    <p>{{ laboratory.name }} · {{ sale.product.name }}</p>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('laboratories.sales', lab_id=laboratory.id) }}">Retour à l’historique</a>
+</section>
+<section class="crm-surface" style="padding:18px;margin:18px 0;max-width:680px">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Date de vente
+      <input type="date" name="sale_date" value="{{ sale.date.isoformat() }}" required>
+    </label>
+    <label>Produit
+      <input type="text" value="{{ sale.product.name }}" disabled>
+    </label>
+    <label>Quantité vendue
+      <input type="number" name="quantity" min="1" step="1" value="{{ sale.quantity }}" required>
+    </label>
+    <label>Prix HT unitaire ({{ laboratory.currency }})
+      <input type="number" name="price" min="0" step="0.01" value="{{ '%.2f'|format(sale.price) }}" required>
+    </label>
+    <button class="btn btn-primary" type="submit">Enregistrer les modifications</button>
+  </form>
+</section>
+{% endblock %}
