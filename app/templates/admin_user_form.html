@@ -22,7 +22,12 @@
     .user-form-btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:9px 15px;border:0;border-radius:9px;background:#198754;color:#fff!important;text-decoration:none;font-size:.84rem;font-weight:800;cursor:pointer}
     .user-form-btn:hover{text-decoration:none;filter:brightness(.96)}
     .user-form-btn.secondary{background:#eef2f5;color:#334155!important}
-    @media(max-width:700px){.user-form-grid{grid-template-columns:1fr}.user-form-group.full{grid-column:auto}.user-form-card{padding:18px}.user-form-hero{padding:20px}.user-form-actions{flex-direction:column-reverse}.user-form-btn{width:100%}}
+    .user-labs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+    .user-lab-choice{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid #dbe2e8;border-radius:10px;background:#f8fafc;cursor:pointer}
+    .user-lab-choice input{width:17px;height:17px;accent-color:#198754;flex:0 0 auto}
+    .user-lab-choice span{display:flex;flex-direction:column;gap:3px;font-size:.86rem;color:#263244}
+    .user-lab-choice small{font-size:.72rem;color:#64748b}
+    @media(max-width:700px){.user-labs-grid{grid-template-columns:1fr}.user-form-grid{grid-template-columns:1fr}.user-form-group.full{grid-column:auto}.user-form-card{padding:18px}.user-form-hero{padding:20px}.user-form-actions{flex-direction:column-reverse}.user-form-btn{width:100%}}
 </style>
 
 <div class="user-form-page">
@@ -61,6 +66,22 @@
                     {{ form.project(class="user-form-input") }}
                 </div>
 
+                <div class="user-form-group full">
+                    <label class="user-form-label" for="laboratory_ids">Laboratoires autorisés</label>
+                    <small class="user-form-help">Choisissez les laboratoires dont cet utilisateur distribuera les références. La sélection est limitée à la section choisie.</small>
+                    <div class="user-labs-grid" id="user-labs-grid">
+                        {% for lab in laboratories %}
+                        <label class="user-lab-choice" data-section="{{ lab.section }}">
+                            <input type="checkbox" name="laboratory_ids" value="{{ lab.id }}"
+                                {% if request.method == 'POST' and lab.id|string in request.form.getlist('laboratory_ids') %}checked
+                                {% elif mode == 'edit' and lab in user.laboratories %}checked{% endif %}>
+                            <span><strong>{{ lab.name }}</strong><small>{{ 'NASMEDIC' if lab.section == 'nasmedic' else 'NASDERM' }}</small></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <small class="user-form-help" id="user-labs-empty" hidden>Aucun laboratoire actif dans cette section.</small>
+                </div>
+
                 <div class="user-form-group">
                     {{ form.zone.label(class="user-form-label") }}
                     {{ form.zone(class="user-form-input", placeholder="ex : CENTRE VILLE") }}
@@ -89,4 +110,25 @@
         </form>
     </section>
 </div>
+<script>
+(function(){
+    const section = document.getElementById('project');
+    const choices = Array.from(document.querySelectorAll('.user-lab-choice'));
+    const empty = document.getElementById('user-labs-empty');
+    function filterLabs(){
+        const selected = section ? section.value : '';
+        let visible = 0;
+        choices.forEach(choice => {
+            const show = choice.dataset.section === selected;
+            choice.hidden = !show;
+            if (!show) {
+                const checkbox = choice.querySelector('input');
+                if (checkbox) checkbox.checked = false;
+            } else visible++;
+        });
+        if (empty) empty.hidden = visible > 0;
+    }
+    if(section){section.addEventListener('change',filterLabs);filterLabs();}
+})();
+</script>
 {% endblock %}
