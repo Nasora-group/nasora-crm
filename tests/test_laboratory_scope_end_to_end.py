@@ -171,10 +171,9 @@ def test_stock_catalog_and_history_only_show_assigned_laboratories(scoped_lab_ap
         assert all(entry.quantity == 5 for entry in snapshot.values())
 
 
-def _login_test_client(client, user_id):
-    with client.session_transaction() as session:
-        session["_user_id"] = str(user_id)
-        session["_fresh"] = True
+def _login_test_client(client, username):
+    response = client.post("/login", data={"username": username, "password": "secret"})
+    assert response.status_code == 302
 
 
 def test_admin_can_edit_and_delete_only_sales_of_selected_dynamic_lab(scoped_lab_app):
@@ -184,10 +183,10 @@ def test_admin_can_edit_and_delete_only_sales_of_selected_dynamic_lab(scoped_lab
         other_lab = Laboratory.query.filter_by(slug="lab-non-attribue").one()
         assigned_sale = LaboratorySale.query.filter_by(laboratory_id=assigned.id).one()
         other_sale = LaboratorySale.query.filter_by(laboratory_id=other_lab.id).one()
-        admin_id, lab_id = admin.id, assigned.id
+        lab_id = assigned.id
         assigned_sale_id, other_sale_id = assigned_sale.id, other_sale.id
     client = scoped_lab_app.test_client()
-    _login_test_client(client, admin_id)
+    _login_test_client(client, "scope_admin")
     response = client.post(
         f"/admin/laboratoires/{lab_id}/ventes/{assigned_sale_id}/modifier",
         data={"sale_date": "2026-11-13", "quantity": "7", "price": "12.50"},
@@ -219,9 +218,9 @@ def test_non_admin_cannot_edit_dynamic_laboratory_sales(scoped_lab_app):
         rep = User.query.filter_by(username="scope_rep").one()
         lab = Laboratory.query.filter_by(slug="lab-attribue").one()
         sale = LaboratorySale.query.filter_by(laboratory_id=lab.id).one()
-        rep_id, lab_id, sale_id = rep.id, lab.id, sale.id
+        lab_id, sale_id = lab.id, sale.id
     client = scoped_lab_app.test_client()
-    _login_test_client(client, rep_id)
+    _login_test_client(client, "scope_rep")
     response = client.post(
         f"/admin/laboratoires/{lab_id}/ventes/{sale_id}/modifier",
         data={"sale_date": "2026-11-13", "quantity": "7", "price": "12.50"},
@@ -233,7 +232,7 @@ def test_dynamic_laboratory_sales_import_rejects_files_over_five_mb(scoped_lab_a
     with scoped_lab_app.app_context():
         admin = User.query.filter_by(username="scope_admin").one()
         lab = Laboratory.query.filter_by(slug="lab-attribue").one()
-        admin_id, lab_id = admin.id, lab.id
+        lab_id = lab.id
         before = LaboratorySale.query.filter_by(laboratory_id=lab_id).count()
     client = scoped_lab_app.test_client()
     _login_test_client(client, admin_id)
@@ -241,10 +240,12 @@ def test_dynamic_laboratory_sales_import_rejects_files_over_five_mb(scoped_lab_a
         f"/admin/laboratoires/{lab_id}/ventes/importer",
         data={"sales_file": (io.BytesIO(b"x" * (5 * 1024 * 1024 + 1)), "ventes.csv")},
         content_type="multipart/form-data",
-        follow_redirects=True,
+        follow_redirects=False,
     )
-    assert response.status_code == 200
-    assert "ne doit pas dépasser 5 Mo" in response.get_data(as_text=True)
+    assert response.status_code == 302
+    with client.session_transaction() as session:
+        flashes = [message for _category, message in session.get("_flashes", [])]
+        assert any("ne doit pas dépasser 5 Mo" in message for message in flashes)
     with scoped_lab_app.app_context():
         assert LaboratorySale.query.filter_by(laboratory_id=lab_id).count() == before
 
