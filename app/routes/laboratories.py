@@ -121,9 +121,13 @@ def create():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         currency = request.form.get("currency", "XOF").upper()
+        section = request.form.get("section", "nasmedic").strip().lower()
         slug = _slugify(request.form.get("slug") or name)
         if not name or not slug:
             flash("Le nom du laboratoire est obligatoire.", "error")
+            return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
+        if section not in ("nasmedic", "nasderm"):
+            flash("Section invalide. Choisissez NASMEDIC ou NASDERM.", "error")
             return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
         if currency not in ALLOWED_CURRENCIES:
             flash("Devise non autorisée.", "error")
@@ -131,7 +135,7 @@ def create():
         if Laboratory.query.filter_by(slug=slug).first():
             flash("Ce code laboratoire existe déjà. Choisissez un autre code.", "error")
             return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
-        lab = Laboratory(name=name, slug=slug, currency=currency)
+        lab = Laboratory(name=name, slug=slug, currency=currency, section=section)
         try:
             _apply_form(lab)
             db.session.add(lab)
@@ -159,6 +163,9 @@ def _apply_form(lab):
     lab.email = request.form.get("email", "").strip() or None
     lab.website = request.form.get("website", "").strip() or None
     lab.currency = request.form.get("currency", "XOF").upper()
+    lab.section = request.form.get("section", "nasmedic").strip().lower()
+    if lab.section not in ("nasmedic", "nasderm"):
+        raise ValueError("Section invalide. Choisissez NASMEDIC ou NASDERM.")
     if lab.currency not in ALLOWED_CURRENCIES:
         raise ValueError("Devise non autorisée.")
     monthly = request.form.get("monthly_objective", "").strip()
