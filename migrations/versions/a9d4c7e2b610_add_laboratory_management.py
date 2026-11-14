@@ -1,14 +1,14 @@
 """Add administrator-managed laboratories and independent product catalogs.
 
 Revision ID: a9d4c7e2b610
-Revises: f8c2a6d4e9b1
+Revises: c91e4a7b2d60
 Create Date: 2026-11-14
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = "a9d4c7e2b610"
-down_revision = "f8c2a6d4e9b1"
+down_revision = "c91e4a7b2d60"
 branch_labels = None
 depends_on = None
 
@@ -36,7 +36,6 @@ def upgrade():
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.UniqueConstraint("slug", name="uq_laboratory_slug"),
     )
-    op.create_index("ix_laboratory_slug", "laboratory", ["slug"], unique=True)
     op.create_table(
         "laboratory_staff",
         sa.Column("laboratory_id", sa.Integer(), sa.ForeignKey("laboratory.id", ondelete="CASCADE"), primary_key=True),
@@ -61,5 +60,4 @@ def downgrade():
     op.drop_index("ix_laboratory_product_laboratory_id", table_name="laboratory_product")
     op.drop_table("laboratory_product")
     op.drop_table("laboratory_staff")
-    op.drop_index("ix_laboratory_slug", table_name="laboratory")
     op.drop_table("laboratory")
