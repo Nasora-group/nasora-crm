@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Laboratory, User
+from app.models import Laboratory, LaboratoryProduct, User, get_active_products_for_division
 
 
 @pytest.fixture()
@@ -89,3 +89,37 @@ def test_dynamic_laboratory_sales_require_explicit_assignment(user_assignment_cl
     response = user_assignment_client.post("/login", data={"username": "vm_no_lab", "password": "password123"})
     assert response.status_code == 302
     assert user_assignment_client.get("/admin/laboratoires/1/ventes").status_code == 403
+
+
+
+def test_product_choices_only_include_assigned_laboratories(user_assignment_client):
+    _login(user_assignment_client)
+    user_assignment_client.post(
+        "/admin/utilisateurs/nouveau",
+        data={
+            "username": "vm_product_scope",
+            "password": "password123",
+            "role": "commercial",
+            "project": "nasmedic",
+            "is_active_account": "y",
+            "laboratory_ids": ["1"],
+        },
+        follow_redirects=True,
+    )
+    with user_assignment_client.application.app_context():
+        assigned = Laboratory.query.filter_by(slug="lab-medic").one()
+        unassigned = Laboratory(name="Other Medic", slug="other-medic", section="nasmedic", currency="XOF", is_active=True)
+        db.session.add(unassigned)
+        db.session.flush()
+        db.session.add_all([
+            LaboratoryProduct(laboratory_id=assigned.id, name="Produit autorisé", reference="A1", price_ht=10, is_active=True),
+            LaboratoryProduct(laboratory_id=unassigned.id, name="Produit interdit", reference="B1", price_ht=20, is_active=True),
+        ])
+        db.session.commit()
+        user = User.query.filter_by(username="vm_product_scope").one()
+        from flask_login import login_user
+        with user_assignment_client.application.test_request_context("/"):
+            login_user(user)
+            products = get_active_products_for_division("nasmedic")
+            assert "Produit autorisé" in products
+            assert "Produit interdit" not in products
