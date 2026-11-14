@@ -21,7 +21,7 @@ ProductSaleRow = namedtuple("ProductSaleRow", ["name", "total_quantity", "total_
 
 
 def _division_suppliers(division):
-    legacy = [(slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"]) for slug in DIVISION_SUPPLIERS.get(division, [])]\n    dynamic = [(f"laboratory_{lab.id}", lab.name, None, None) for lab in Laboratory.query.filter_by(section=division, is_active=True).order_by(Laboratory.name).all()]\n    return legacy + dynamic
+    legacy = [(slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"]) for slug in DIVISION_SUPPLIERS.get(division, [])]\n    dynamic = [(f"laboratory_{lab.id}", lab.name, None, None) for lab in Laboratory.query.filter_by(section=division, is_active=True, legacy_supplier_slug=None).order_by(Laboratory.name).all()]\n    return legacy + dynamic
 
 
 def _ensure_division_access(division):
@@ -64,7 +64,7 @@ def _monthly_revenue_for_division(division, scope_to_commercial=True):
                 combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
 
 
-    dynamic_labs = Laboratory.query.filter_by(section=division, is_active=True).all()
+    dynamic_labs = Laboratory.query.filter_by(section=division, is_active=True, legacy_supplier_slug=None).all()
     for lab in dynamic_labs:
         conditions = ["laboratory_id = :lab_id", "project = :division"]
         params = {"lab_id": lab.id, "division": division}
