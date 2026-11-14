@@ -12,7 +12,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.forms import SupplierSalesForm
-from app.models import SUPPLIERS
+from app.models import SUPPLIERS, Laboratory
 from app.permissions import division_matches
 from app.utils import roles_required
 
@@ -126,6 +126,10 @@ def _supplier_or_404(slug):
         abort(404)
     if not division_matches(current_user, supplier["division"]):
         abort(403)
+    if current_user.role != "admin":
+        linked_lab = Laboratory.query.filter_by(legacy_supplier_slug=slug).first()
+        if linked_lab is not None and linked_lab not in current_user.laboratories:
+            abort(403)
     return supplier
 
 

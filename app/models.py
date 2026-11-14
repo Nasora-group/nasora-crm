@@ -102,18 +102,75 @@ SUPPLIERS={"nova_pharma":{"label":"Nova Pharma","division":"nasderm","product_mo
 DIVISION_SUPPLIERS={"nasderm":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasderm" and not s["archived"]],"nasmedic":[slug for slug,s in SUPPLIERS.items() if s["division"]=="nasmedic" and not s["archived"]]}
 class SalesObjective(db.Model):
     __tablename__="sales_objective"; id=db.Column(db.Integer,primary_key=True); division=db.Column(db.String(50),nullable=False); year=db.Column(db.Integer,nullable=False); month=db.Column(db.Integer,nullable=True); target_amount=db.Column(db.Numeric(12,2),nullable=False,default=Decimal("0.00")); __table_args__=(db.UniqueConstraint("division","year","month",name="uq_objective_division_year_month"),)
-def get_active_products_for_division(division):
-    names=set()
-    for slug in DIVISION_SUPPLIERS.get(division,[]):
-        model=SUPPLIERS[slug]["product_model"]
-        for (name,) in model.query.filter_by(is_active=True).with_entities(model.name).all(): names.add(name)
+def _visible_laboratory_ids(division, user=None):
+    """IDs of active laboratories visible to a user; None means unrestricted admin."""
+    if user is None:
+        from flask_login import current_user
+        user = current_user
+    if getattr(user, "is_authenticated", False) and getattr(user, "role", None) == "admin":
+        return None
+    if not getattr(user, "is_authenticated", False) or (getattr(user, "project", "") or "").lower() != (division or "").lower():
+        return set()
+    return {
+        lab.id for lab in getattr(user, "laboratories", [])
+        if lab.is_active and lab.section == division
+    }
+
+
+def _visible_supplier_slugs(division, user=None):
+    """Legacy catalogs linked to a lab follow that lab's assignment."""
+    allowed_ids = _visible_laboratory_ids(division, user)
+    slugs = []
+    for slug in DIVISION_SUPPLIERS.get(division, []):
+        if allowed_ids is None:
+            slugs.append(slug)
+            continue
+        linked = Laboratory.query.filter_by(legacy_supplier_slug=slug).first()
+        # Keep legacy suppliers not yet migrated into the directory on their
+        # historical division permissions; linked suppliers require assignment.
+        if linked is None or linked.id in allowed_ids:
+            slugs.append(slug)
+    return slugs
+
+
+def get_active_products_for_division(division, user=None):
+    names = set()
+    for slug in _visible_supplier_slugs(division, user):
+        model = SUPPLIERS[slug]["product_model"]
+        for (name,) in model.query.filter_by(is_active=True).with_entities(model.name).all():
+            names.add(name)
+    allowed_ids = _visible_laboratory_ids(division, user)
+    dynamic_query = LaboratoryProduct.query.join(Laboratory).filter(
+        Laboratory.section == division,
+        Laboratory.is_active.is_(True),
+        LaboratoryProduct.is_active.is_(True),
+    )
+    if allowed_ids is not None:
+        if not allowed_ids:
+            return sorted(names)
+        dynamic_query = dynamic_query.filter(LaboratoryProduct.laboratory_id.in_(allowed_ids))
+    names.update(name for (name,) in dynamic_query.with_entities(LaboratoryProduct.name).all())
     return sorted(names)
-def get_active_product_prices_for_division(division):
-    prices={}
-    for slug in DIVISION_SUPPLIERS.get(division,[]):
-        model=SUPPLIERS[slug]["product_model"]
+
+
+def get_active_product_prices_for_division(division, user=None):
+    prices = {}
+    for slug in _visible_supplier_slugs(division, user):
+        model = SUPPLIERS[slug]["product_model"]
         for product in model.query.filter_by(is_active=True).all():
             prices.setdefault(product.name, product.default_price or Decimal("0.00"))
+    allowed_ids = _visible_laboratory_ids(division, user)
+    dynamic_query = LaboratoryProduct.query.join(Laboratory).filter(
+        Laboratory.section == division,
+        Laboratory.is_active.is_(True),
+        LaboratoryProduct.is_active.is_(True),
+    )
+    if allowed_ids is not None:
+        if not allowed_ids:
+            return prices
+        dynamic_query = dynamic_query.filter(LaboratoryProduct.laboratory_id.in_(allowed_ids))
+    for product in dynamic_query.all():
+        prices.setdefault(product.name, product.price_ht or Decimal("0.00"))
     return prices
 EVALUATION_SECTIONS=[("1. Performance commerciale & objectifs",40,[("score_ca","Atteinte de l'objectif de Chiffre d'Affaires (CA)",20,["< 60%","60-75%","75-90%","> 90%"]),("score_gamme_asthe","Gamme stratégique — Asthe 1000",2,["0 pt","0.5 pt","1 pt","2 pts"]),("score_gamme_myocalm","Gamme stratégique — Myocalm",2,["0 pt","0.5 pt","1 pt","2 pts"]),("score_gamme_bumbum","Gamme stratégique — Bum Bum",1,["0 pt","0.25 pt","0.5 pt","1 pt"]),("score_gamme_flatupklexin","Gamme stratégique — Flatupklexin",2,["0 pt","0.5 pt","1 pt","2 pts"]),("score_gamme_somniplex","Gamme stratégique — Somniplex",1,["0 pt","0.25 pt","0.5 pt","1 pt"]),("score_gamme_ostheophytum","Gamme stratégique — Ostheophytum",1,["0 pt","0.25 pt","0.5 pt","1 pt"]),("score_gamme_specialkid","Gamme stratégique — Spécial Kid",1,["0 pt","0.25 pt","0.5 pt","1 pt"]),("score_reporting","Qualité du reporting & nombre de visites",10,["< 50%","50-70%","70-85%","> 85%"])],),("2. Qualité des visites et exécution terrain",35,[("score_plan_visite","Respect du plan de visite & ciblage",10,["Irrégulier","Partiel","Bon","Parfait"]),("score_argumentaire","Qualité de l'argumentaire scientifique",10,["Faible","Moyen","Maîtrisé","Persuasif"]),("score_prescriptions","Capacité à générer des prescriptions",10,["Faible","Moyen","Fort","Excellent"]),("score_organisation","Organisation, discipline & gestion matériel",5,["À revoir","Acceptable","Soigné","Irréprochable"])],),("3. Comportement professionnel",25,[("score_ponctualite","Ponctualité, assiduité et présence",10,["> 3 retards","1-2 retards","Régulier","Exemplaire"]),("score_consignes","Respect des consignes & directives",10,["Non-respect","Partiel","Conforme","Exemplaire"]),("score_esprit_equipe","Esprit d'équipe, proactivité & attitude",5,["Passif","Correct","Actif","Moteur"])],)]
 EVALUATION_FIELDS=[item for _,_,items in EVALUATION_SECTIONS for item in items]; EVALUATION_MAX_TOTAL=sum(max_pts for _,_,max_pts,_ in EVALUATION_FIELDS)

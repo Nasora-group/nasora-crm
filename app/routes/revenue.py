@@ -10,7 +10,7 @@ from sqlalchemy import func, text
 
 from app.extensions import db
 from app.forms import SaleEditForm, CSRFOnlyForm
-from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective, Laboratory, LaboratorySale, LaboratoryProduct
+from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective, Laboratory, LaboratorySale, LaboratoryProduct, _visible_laboratory_ids, _visible_supplier_slugs
 from app.permissions import is_commercial, require_division
 from app.utils import roles_required
 
@@ -23,13 +23,19 @@ ProductSaleRow = namedtuple("ProductSaleRow", ["name", "total_quantity", "total_
 def _division_suppliers(division):
     legacy = [
         (slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"])
-        for slug in DIVISION_SUPPLIERS.get(division, [])
+        for slug in _visible_supplier_slugs(division, current_user)
     ]
+    allowed_ids = _visible_laboratory_ids(division, current_user)
+    dynamic_query = Laboratory.query.filter_by(
+        section=division, is_active=True, legacy_supplier_slug=None
+    )
+    if allowed_ids is not None:
+        if not allowed_ids:
+            return legacy
+        dynamic_query = dynamic_query.filter(Laboratory.id.in_(allowed_ids))
     dynamic = [
         (f"laboratory_{lab.id}", lab.name, None, None)
-        for lab in Laboratory.query.filter_by(
-            section=division, is_active=True, legacy_supplier_slug=None
-        ).order_by(Laboratory.name).all()
+        for lab in dynamic_query.order_by(Laboratory.name).all()
     ]
     return legacy + dynamic
 
