@@ -141,6 +141,20 @@ def test_management_cockpit_includes_new_laboratory_sales(scoped_lab_app):
         assert suppliers["Laboratoire non attribué"] == 200.0
 
 
+def test_stock_hides_ambiguous_duplicate_laboratory_names(scoped_lab_app):
+    from app.routes.stock import _snapshot
+
+    with scoped_lab_app.test_request_context("/"):
+        rep = User.query.filter_by(username="scope_rep").one()
+        login_user(rep)
+        db.session.add(Laboratory(
+            name="Laboratoire attribué", slug="lab-duplicate-name",
+            section="nasmedic", currency="XOF", is_active=True,
+        ))
+        db.session.commit()
+        assert _snapshot(date(2026, 11, 9)) == {}
+
+
 def test_stock_catalog_and_history_only_show_assigned_laboratories(scoped_lab_app):
     from app.routes.stock import _catalog, _snapshot
 
