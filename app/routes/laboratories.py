@@ -1,4 +1,3 @@
-import csv
 import io
 import logging
 import re
@@ -147,7 +146,11 @@ def create():
 
 def _apply_form(lab):
     lab.name = request.form.get("name", "").strip()
+    if not lab.name:
+        raise ValueError("Le nom du laboratoire est obligatoire.")
     lab.slug = _slugify(request.form.get("slug") or lab.name)
+    if not lab.slug:
+        raise ValueError("Le code du laboratoire est invalide.")
     lab.description = request.form.get("description", "").strip() or None
     lab.address = request.form.get("address", "").strip() or None
     lab.city = request.form.get("city", "").strip() or None
@@ -257,6 +260,11 @@ def import_products(lab_id):
         flash("Sélectionnez un fichier CSV ou Excel.", "error")
         return redirect(url_for("laboratories.detail", lab_id=lab.id))
     try:
+        upload.stream.seek(0, 2)
+        file_size = upload.stream.tell()
+        upload.stream.seek(0)
+        if file_size > 10 * 1024 * 1024:
+            raise ValueError("Le fichier catalogue ne doit pas dépasser 10 Mo.")
         rows = _read_catalog(upload)
         inserted = updated = 0
         for row in rows:
