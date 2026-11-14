@@ -191,6 +191,10 @@ def _apply_form(lab):
     lab.section = request.form.get("section", "nasmedic").strip().lower()
     if lab.section not in ("nasmedic", "nasderm"):
         raise ValueError("Section invalide. Choisissez NASMEDIC ou NASDERM.")
+    if lab.legacy_supplier_slug:
+        expected_section = SUPPLIERS[lab.legacy_supplier_slug]["division"]
+        if lab.section != expected_section:
+            raise ValueError("La section de ce laboratoire historique est liée à ses ventes existantes et ne peut pas être changée ici.")
     if lab.currency not in ALLOWED_CURRENCIES:
         raise ValueError("Devise non autorisée.")
     monthly = request.form.get("monthly_objective", "").strip()
