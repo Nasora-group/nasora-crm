@@ -57,7 +57,7 @@ def _handle_supplier_sales(slug, template_name):
         abort(403)
     if current_user.role != "admin":
         linked_lab = Laboratory.query.filter_by(legacy_supplier_slug=slug).first()
-        if linked_lab is None or linked_lab not in current_user.laboratories:
+        if linked_lab is not None and linked_lab not in current_user.laboratories:
             abort(403)
 
     form = SupplierSalesForm()
