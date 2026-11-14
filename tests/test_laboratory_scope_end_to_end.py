@@ -235,7 +235,7 @@ def test_dynamic_laboratory_sales_import_rejects_files_over_five_mb(scoped_lab_a
         lab_id = lab.id
         before = LaboratorySale.query.filter_by(laboratory_id=lab_id).count()
     client = scoped_lab_app.test_client()
-    _login_test_client(client, admin_id)
+    _login_test_client(client, "scope_admin")
     response = client.post(
         f"/admin/laboratoires/{lab_id}/ventes/importer",
         data={"sales_file": (io.BytesIO(b"x" * (5 * 1024 * 1024 + 1)), "ventes.csv")},
