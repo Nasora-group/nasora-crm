@@ -3,6 +3,7 @@ import logging
 import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
+from datetime import date
 
 import pandas as pd
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
@@ -10,7 +11,7 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Laboratory, LaboratoryProduct, User
+from app.models import Laboratory, LaboratoryProduct, LaboratorySale, User
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -324,6 +325,98 @@ def export_products(lab_id, format_name):
         mimetype, extension = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
     output.seek(0)
     return send_file(output, mimetype=mimetype, as_attachment=True, download_name=f"catalogue_{lab.slug}.{extension}")
+
+
+
+def _ensure_lab_sales_access(lab):
+    if current_user.role != "admin" and current_user.project != lab.section:
+        abort(403)
+
+
+@laboratories_bp.route("/<int:lab_id>/ventes", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "commercial")
+def sales(lab_id):
+    lab = _get_lab_or_404(lab_id)
+    _ensure_lab_sales_access(lab)
+    products = LaboratoryProduct.query.filter_by(laboratory_id=lab.id, is_active=True).order_by(LaboratoryProduct.name).all()
+    if request.method == "POST":
+        try:
+            sale_date = date.fromisoformat(request.form.get("sale_date", ""))
+            count = 0
+            for product in products:
+                raw_qty = (request.form.get("quantity_" + str(product.id)) or "").strip()
+                if not raw_qty:
+                    continue
+                quantity = int(raw_qty)
+                if quantity <= 0:
+                    raise ValueError("Les quantités vendues doivent être supérieures à zéro.")
+                raw_price = (request.form.get("price_" + str(product.id)) or "").strip()
+                price = _parse_price(raw_price) if raw_price else product.price_ht
+                db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=current_user.id, quantity=quantity, price=price, date=sale_date, project=lab.section))
+                count += 1
+            if not count:
+                raise ValueError("Saisissez au moins une quantité vendue.")
+            db.session.commit()
+            flash(str(count) + " ligne(s) de vente enregistrée(s).", "success")
+            return redirect(url_for("laboratories.sales", lab_id=lab.id))
+        except (ValueError, TypeError) as exc:
+            db.session.rollback()
+            flash("Saisie annulée : " + str(exc), "error")
+    history = LaboratorySale.query.filter_by(laboratory_id=lab.id).order_by(LaboratorySale.date.desc(), LaboratorySale.id.desc()).limit(100).all()
+    total = db.session.query(db.func.coalesce(db.func.sum(LaboratorySale.quantity * LaboratorySale.price), 0)).filter_by(laboratory_id=lab.id).scalar()
+    return render_template("admin_laboratory_sales.html", laboratory=lab, products=products, history=history, total=total, today=date.today())
+
+
+@laboratories_bp.route("/<int:lab_id>/ventes/importer", methods=["POST"])
+@login_required
+@roles_required("admin", "commercial")
+def import_sales(lab_id):
+    lab = _get_lab_or_404(lab_id)
+    _ensure_lab_sales_access(lab)
+    upload = request.files.get("sales_file")
+    if not upload or not upload.filename:
+        flash("Sélectionnez un fichier CSV ou Excel.", "error")
+        return redirect(url_for("laboratories.sales", lab_id=lab.id))
+    try:
+        if upload.filename.lower().endswith(".csv"):
+            frame = pd.read_csv(upload, dtype=str).fillna("")
+        elif upload.filename.lower().endswith(".xlsx"):
+            frame = pd.read_excel(upload, dtype=str).fillna("")
+        else:
+            raise ValueError("Format accepté : CSV ou XLSX.")
+        frame.columns = [str(col).strip().lower() for col in frame.columns]
+        aliases = {"produit": "name", "reference produit": "reference", "référence": "reference", "quantite": "quantity", "quantité": "quantity", "prix": "price", "prix ht": "price", "date vente": "date"}
+        frame = frame.rename(columns={key: value for key, value in aliases.items() if key in frame.columns})
+        required = {"date", "quantity"}
+        if not required.issubset(frame.columns) or not ({"reference", "name"} & set(frame.columns)):
+            raise ValueError("Colonnes obligatoires : date, reference ou name, quantity. price est facultatif.")
+        if len(frame) > 5000:
+            raise ValueError("Maximum 5 000 lignes par import.")
+        created = 0
+        for line_no, row in frame.iterrows():
+            reference = str(row.get("reference", "")).strip()
+            name = str(row.get("name", "")).strip()
+            product_query = LaboratoryProduct.query.filter_by(laboratory_id=lab.id)
+            product = product_query.filter_by(reference=reference).first() if reference else None
+            if product is None and name:
+                product = product_query.filter(db.func.lower(LaboratoryProduct.name) == name.lower()).first()
+            if product is None or not product.is_active:
+                raise ValueError("Ligne " + str(line_no + 2) + " : produit introuvable ou inactif.")
+            quantity = int(str(row.get("quantity", "")).strip())
+            if quantity <= 0:
+                raise ValueError("Ligne " + str(line_no + 2) + " : quantité invalide.")
+            sale_date = date.fromisoformat(str(row.get("date", "")).strip()[:10])
+            raw_price = str(row.get("price", "")).strip()
+            price = _parse_price(raw_price) if raw_price else product.price_ht
+            db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=current_user.id, quantity=quantity, price=price, date=sale_date, project=lab.section, is_imported=True))
+            created += 1
+        db.session.commit()
+        flash(str(created) + " ligne(s) importée(s).", "success")
+    except Exception as exc:
+        db.session.rollback()
+        flash("Import annulé : " + str(exc), "error")
+    return redirect(url_for("laboratories.sales", lab_id=lab.id))
 
 
 @laboratories_bp.route("/modele/<format_name>")
