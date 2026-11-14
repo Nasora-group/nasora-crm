@@ -68,25 +68,32 @@ def _visible_laboratory_names():
             names.add(SUPPLIERS[slug]["label"])
         allowed_ids = _visible_laboratory_ids(division, current_user)
         query = Laboratory.query.filter_by(section=division, is_active=True)
+        labs = query.all()
         if allowed_ids is None:
-            labs = query.all()
-        else:
-            labs = query.all()
-            assigned_ids = set(allowed_ids)
             for lab in labs:
-                if lab.id in assigned_ids:
-                    if lab.legacy_supplier_slug:
-                        supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
-                        if supplier:
-                            names.add(supplier["label"])
-                    else:
-                        names.add(lab.name)
-                elif lab.legacy_supplier_slug:
+                if lab.legacy_supplier_slug:
                     supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
                     if supplier:
-                        hidden_names.add(supplier["label"])
+                        names.add(supplier["label"])
                 else:
-                    hidden_names.add(lab.name)
+                    names.add(lab.name)
+            continue
+
+        assigned_ids = set(allowed_ids)
+        for lab in labs:
+            if lab.id in assigned_ids:
+                if lab.legacy_supplier_slug:
+                    supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
+                    if supplier:
+                        names.add(supplier["label"])
+                else:
+                    names.add(lab.name)
+            elif lab.legacy_supplier_slug:
+                supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
+                if supplier:
+                    hidden_names.add(supplier["label"])
+            else:
+                hidden_names.add(lab.name)
     # StockEntry stores the laboratory label rather than its ID. If two
     # laboratories share a label, hide that ambiguous label for non-admins
     # rather than risk exposing another laboratory's historical stock.
