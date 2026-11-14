@@ -45,6 +45,8 @@ def _monthly_revenue_for_division(division, scope_to_commercial=True):
     combined = {}
     month_expression = _month_sql_expression()
     for slug, _label, sale_model, _product_model in _division_suppliers(division):
+        if sale_model is None:
+            continue
         table_name = sale_model.__tablename__
         conditions = ["project = :division"]
         params = {"division": division}
