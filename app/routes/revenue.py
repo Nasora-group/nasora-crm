@@ -10,7 +10,7 @@ from sqlalchemy import func, text
 
 from app.extensions import db
 from app.forms import SaleEditForm, CSRFOnlyForm
-from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective
+from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS, SalesObjective, Laboratory
 from app.permissions import is_commercial, require_division
 from app.utils import roles_required
 
@@ -21,7 +21,7 @@ ProductSaleRow = namedtuple("ProductSaleRow", ["name", "total_quantity", "total_
 
 
 def _division_suppliers(division):
-    return [(slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"]) for slug in DIVISION_SUPPLIERS.get(division, [])]
+    legacy = [(slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"]) for slug in DIVISION_SUPPLIERS.get(division, [])]\n    dynamic = [(f"laboratory_{lab.id}", lab.name, None, None) for lab in Laboratory.query.filter_by(section=division, is_active=True).order_by(Laboratory.name).all()]\n    return legacy + dynamic
 
 
 def _ensure_division_access(division):
@@ -62,6 +62,22 @@ def _monthly_revenue_for_division(division, scope_to_commercial=True):
             month = row["month"]
             if month:
                 combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
+
+
+    dynamic_labs = Laboratory.query.filter_by(section=division, is_active=True).all()
+    for lab in dynamic_labs:
+        conditions = ["laboratory_id = :lab_id", "project = :division"]
+        params = {"lab_id": lab.id, "division": division}
+        if scope_to_commercial and _commercial_only_scope():
+            conditions.append("commercial_id = :commercial_id")
+            params["commercial_id"] = current_user.id
+        sql = text(
+            f"SELECT {month_expression} AS month, COALESCE(SUM(COALESCE(quantity, 0) * COALESCE(price, 0)), 0) AS revenue "
+            f"FROM laboratory_sale WHERE {' AND '.join(conditions)} GROUP BY {month_expression} ORDER BY {month_expression}"
+        )
+        for row in db.session.execute(sql, params).mappings().all():
+            if row["month"]:
+                combined.setdefault(row["month"], {})[f"laboratory_{lab.id}"] = float(row["revenue"] or 0)
 
     labels = sorted(combined.keys())
     totals = [sum(combined[month].values()) for month in labels]
