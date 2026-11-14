@@ -8,7 +8,10 @@ from sqlalchemy import false
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import DIVISION_SUPPLIERS, SUPPLIERS
+from app.models import (
+    DIVISION_SUPPLIERS, SUPPLIERS, Laboratory, LaboratoryProduct,
+    _visible_laboratory_ids, _visible_supplier_slugs,
+)
 from app.models_stock import StockEntry
 from app.utils import roles_required
 
@@ -30,18 +33,47 @@ def _allowed_divisions():
 def _catalog():
     catalog = []
     for division in _allowed_divisions():
-        for slug in DIVISION_SUPPLIERS.get(division, []):
-            # NASDERM est exploité avec Gilbert. Cette règle doit être
-            # appliquée côté serveur et pas seulement par l'interface afin
-            # qu'un fournisseur NASDERM archivé/non autorisé ne puisse jamais
-            # réapparaître dans une nouvelle saisie de stock.
-            if division == "nasderm" and slug != "gilbert":
-                continue
+        for slug in _visible_supplier_slugs(division, current_user):
             supplier = SUPPLIERS[slug]
             model = supplier["product_model"]
             for product in model.query.filter_by(is_active=True).order_by(model.name).all():
                 catalog.append({"division": division, "laboratory": supplier["label"], "product": product.name})
+
+        allowed_ids = _visible_laboratory_ids(division, current_user)
+        dynamic_query = LaboratoryProduct.query.join(Laboratory).filter(
+            Laboratory.section == division,
+            Laboratory.is_active.is_(True),
+            Laboratory.legacy_supplier_slug.is_(None),
+            LaboratoryProduct.is_active.is_(True),
+        )
+        if allowed_ids is not None:
+            if not allowed_ids:
+                continue
+            dynamic_query = dynamic_query.filter(LaboratoryProduct.laboratory_id.in_(allowed_ids))
+        for product in dynamic_query.order_by(Laboratory.name, LaboratoryProduct.name).all():
+            catalog.append({
+                "division": division,
+                "laboratory": product.laboratory.name,
+                "product": product.name,
+            })
     return catalog
+
+
+def _visible_laboratory_names():
+    names = set()
+    for division in _allowed_divisions():
+        for slug in _visible_supplier_slugs(division, current_user):
+            names.add(SUPPLIERS[slug]["label"])
+        allowed_ids = _visible_laboratory_ids(division, current_user)
+        query = Laboratory.query.filter_by(
+            section=division, is_active=True, legacy_supplier_slug=None
+        )
+        if allowed_ids is not None:
+            if not allowed_ids:
+                continue
+            query = query.filter(Laboratory.id.in_(allowed_ids))
+        names.update(lab.name for lab in query.all())
+    return names
 
 
 def _status(quantity):
@@ -56,6 +88,8 @@ def _snapshot(week_start):
     query = StockEntry.query.filter_by(week_start=week_start)
     allowed = _allowed_divisions()
     query = query.filter(StockEntry.division.in_(allowed)) if allowed else query.filter(false())
+    visible_names = _visible_laboratory_names()
+    query = query.filter(StockEntry.laboratory.in_(visible_names)) if visible_names else query.filter(false())
     return {(e.division, e.laboratory, e.wholesaler, e.product_name): e for e in query.all()}
 
 
