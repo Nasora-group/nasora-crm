@@ -1,4 +1,5 @@
 from datetime import date
+import io
 from werkzeug.security import generate_password_hash
 
 import pytest
@@ -168,3 +169,85 @@ def test_stock_catalog_and_history_only_show_assigned_laboratories(scoped_lab_ap
         assert all(item["product"] == "Produit autorisé" for item in catalog)
         assert {key[1] for key in snapshot} == {"Laboratoire attribué"}
         assert all(entry.quantity == 5 for entry in snapshot.values())
+
+
+def _login_test_client(client, user_id):
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+
+def test_admin_can_edit_and_delete_only_sales_of_selected_dynamic_lab(scoped_lab_app):
+    with scoped_lab_app.app_context():
+        admin = User.query.filter_by(username="scope_admin").one()
+        assigned = Laboratory.query.filter_by(slug="lab-attribue").one()
+        other_lab = Laboratory.query.filter_by(slug="lab-non-attribue").one()
+        assigned_sale = LaboratorySale.query.filter_by(laboratory_id=assigned.id).one()
+        other_sale = LaboratorySale.query.filter_by(laboratory_id=other_lab.id).one()
+        admin_id, lab_id = admin.id, assigned.id
+        assigned_sale_id, other_sale_id = assigned_sale.id, other_sale.id
+    client = scoped_lab_app.test_client()
+    _login_test_client(client, admin_id)
+    response = client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/{assigned_sale_id}/modifier",
+        data={"sale_date": "2026-11-13", "quantity": "7", "price": "12.50"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    with scoped_lab_app.app_context():
+        updated = db.session.get(LaboratorySale, assigned_sale_id)
+        assert updated.date == date(2026, 11, 13)
+        assert updated.quantity == 7
+        assert str(updated.price) == "12.50"
+    cross_lab = client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/{other_sale_id}/supprimer",
+        follow_redirects=False,
+    )
+    assert cross_lab.status_code == 404
+    deleted = client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/{assigned_sale_id}/supprimer",
+        follow_redirects=True,
+    )
+    assert deleted.status_code == 200
+    with scoped_lab_app.app_context():
+        assert db.session.get(LaboratorySale, assigned_sale_id) is None
+        assert db.session.get(LaboratorySale, other_sale_id) is not None
+
+
+def test_non_admin_cannot_edit_dynamic_laboratory_sales(scoped_lab_app):
+    with scoped_lab_app.app_context():
+        rep = User.query.filter_by(username="scope_rep").one()
+        lab = Laboratory.query.filter_by(slug="lab-attribue").one()
+        sale = LaboratorySale.query.filter_by(laboratory_id=lab.id).one()
+        rep_id, lab_id, sale_id = rep.id, lab.id, sale.id
+    client = scoped_lab_app.test_client()
+    _login_test_client(client, rep_id)
+    response = client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/{sale_id}/modifier",
+        data={"sale_date": "2026-11-13", "quantity": "7", "price": "12.50"},
+    )
+    assert response.status_code == 403
+
+
+def test_dynamic_laboratory_sales_import_rejects_files_over_five_mb(scoped_lab_app):
+    with scoped_lab_app.app_context():
+        admin = User.query.filter_by(username="scope_admin").one()
+        lab = Laboratory.query.filter_by(slug="lab-attribue").one()
+        admin_id, lab_id = admin.id, lab.id
+        before = LaboratorySale.query.filter_by(laboratory_id=lab_id).count()
+    client = scoped_lab_app.test_client()
+    _login_test_client(client, admin_id)
+    response = client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/importer",
+        data={"sales_file": (io.BytesIO(b"x" * (5 * 1024 * 1024 + 1)), "ventes.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "ne doit pas dépasser 5 Mo" in response.get_data(as_text=True)
+    with scoped_lab_app.app_context():
+        assert LaboratorySale.query.filter_by(laboratory_id=lab_id).count() == before
+
+
+def test_global_request_size_limit_is_configured(scoped_lab_app):
+    assert scoped_lab_app.config["MAX_CONTENT_LENGTH"] == 12 * 1024 * 1024

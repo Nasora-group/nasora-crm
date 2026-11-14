@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 laboratories_bp = Blueprint("laboratories", __name__, url_prefix="/admin/laboratoires")
 ALLOWED_CURRENCIES = ("XOF", "XAF", "EUR", "USD", "GBP", "MAD", "GHS", "NGN")
 MAX_LOGO_BYTES = 2 * 1024 * 1024
+MAX_SALES_IMPORT_BYTES = 5 * 1024 * 1024
 CATALOG_COLUMNS = ("reference", "name", "price_ht")
 
 
@@ -410,6 +411,53 @@ def sales(lab_id):
     return render_template("admin_laboratory_sales.html", laboratory=lab, products=products, history=history, total=total, today=date.today())
 
 
+@laboratories_bp.route("/<int:lab_id>/ventes/<int:sale_id>/modifier", methods=["GET", "POST"])
+@login_required
+@roles_required("admin")
+def edit_sale(lab_id, sale_id):
+    lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
+    sale = LaboratorySale.query.filter_by(id=sale_id, laboratory_id=lab.id).first_or_404()
+    if request.method == "POST":
+        try:
+            sale_date = date.fromisoformat(request.form.get("sale_date", ""))
+            quantity = int(request.form.get("quantity", ""))
+            if quantity <= 0:
+                raise ValueError("La quantité doit être supérieure à zéro.")
+            price = _parse_price(request.form.get("price", ""))
+            sale.date = sale_date
+            sale.quantity = quantity
+            sale.price = price
+            db.session.commit()
+            flash("Vente modifiée. Le chiffre d’affaires est recalculé automatiquement.", "success")
+            return redirect(url_for("laboratories.sales", lab_id=lab.id))
+        except (ValueError, TypeError) as exc:
+            db.session.rollback()
+            flash("Modification annulée : " + str(exc), "error")
+            sale = LaboratorySale.query.filter_by(id=sale_id, laboratory_id=lab.id).first_or_404()
+    return render_template("admin_laboratory_sale_edit.html", laboratory=lab, sale=sale)
+
+
+@laboratories_bp.route("/<int:lab_id>/ventes/<int:sale_id>/supprimer", methods=["POST"])
+@login_required
+@roles_required("admin")
+def delete_sale(lab_id, sale_id):
+    lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
+    sale = LaboratorySale.query.filter_by(id=sale_id, laboratory_id=lab.id).first_or_404()
+    try:
+        db.session.delete(sale)
+        db.session.commit()
+        flash("Vente supprimée. Le chiffre d’affaires est recalculé automatiquement.", "success")
+    except Exception:
+        db.session.rollback()
+        logger.exception("Suppression vente laboratoire impossible: %s/%s", lab_id, sale_id)
+        flash("La suppression a échoué. Aucune donnée n'a été modifiée.", "error")
+    return redirect(url_for("laboratories.sales", lab_id=lab.id))
+
+
 @laboratories_bp.route("/<int:lab_id>/ventes/importer", methods=["POST"])
 @login_required
 @roles_required("admin", "commercial")
@@ -423,6 +471,11 @@ def import_sales(lab_id):
         flash("Sélectionnez un fichier CSV ou Excel.", "error")
         return redirect(url_for("laboratories.sales", lab_id=lab.id))
     try:
+        upload.stream.seek(0, 2)
+        file_size = upload.stream.tell()
+        upload.stream.seek(0)
+        if file_size > MAX_SALES_IMPORT_BYTES:
+            raise ValueError("Le fichier de ventes ne doit pas dépasser 5 Mo.")
         if upload.filename.lower().endswith(".csv"):
             frame = pd.read_csv(upload, dtype=str).fillna("")
         elif upload.filename.lower().endswith(".xlsx"):
