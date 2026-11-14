@@ -65,13 +65,15 @@ def _read_catalog(upload):
             frame = pd.read_csv(io.BytesIO(raw), dtype=str, keep_default_na=False, sep=None, engine="python", encoding="utf-8-sig")
         except UnicodeDecodeError:
             frame = pd.read_csv(io.BytesIO(raw), dtype=str, keep_default_na=False, sep=None, engine="python", encoding="latin-1")
-    elif filename.endswith((".xlsx", ".xls")):
+    elif filename.endswith(".xlsx"):
         frame = pd.read_excel(upload, dtype=str).fillna("")
     else:
         raise ValueError("Format non accepté. Utilisez un fichier CSV ou Excel (.xlsx).")
     frame.columns = [str(column).strip().lower() for column in frame.columns]
     aliases = {"reference produit": "reference", "référence": "reference", "ref": "reference", "produit": "name", "nom": "name", "prix ht": "price_ht", "prix": "price_ht"}
     frame = frame.rename(columns={column: aliases.get(column, column) for column in frame.columns})
+    if set(frame.columns) & {"quantity", "quantite", "quantité", "stock", "qty"}:
+        raise ValueError("Le catalogue ne doit contenir aucune colonne de quantité ou de stock.")
     missing = [column for column in CATALOG_COLUMNS if column not in frame.columns]
     if missing:
         raise ValueError("Colonnes obligatoires manquantes : " + ", ".join(missing) + ". Le modèle ne contient aucune quantité.")
