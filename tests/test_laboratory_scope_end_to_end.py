@@ -30,6 +30,20 @@ def scoped_lab_app():
         db.session.add_all([admin, rep])
         db.session.flush()
 
+        legacy_labs = [
+            Laboratory(
+                name="Eric Favre", slug="legacy-eric-favre", legacy_supplier_slug="eric_favre",
+                section="nasmedic", currency="EUR", is_active=True,
+            ),
+            Laboratory(
+                name="3 Chênes Pharma", slug="legacy-trois-chenes", legacy_supplier_slug="trois_chene",
+                section="nasmedic", currency="EUR", is_active=True,
+            ),
+            Laboratory(
+                name="Gilbert", slug="legacy-gilbert", legacy_supplier_slug="gilbert",
+                section="nasderm", currency="XOF", is_active=True,
+            ),
+        ]
         assigned = Laboratory(
             name="Laboratoire attribué", slug="lab-attribue",
             section="nasmedic", currency="XOF", is_active=True,
@@ -39,7 +53,7 @@ def scoped_lab_app():
             section="nasmedic", currency="XOF", is_active=True,
         )
         assigned.staff.append(rep)
-        db.session.add_all([assigned, unassigned])
+        db.session.add_all([*legacy_labs, assigned, unassigned])
         db.session.flush()
 
         allowed_product = LaboratoryProduct(
