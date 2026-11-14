@@ -180,6 +180,25 @@ laboratory_staff = db.Table(
 )
 
 
+class LaboratorySale(db.Model):
+    """Sales lines for laboratories created in the unified laboratory directory."""
+    __tablename__ = "laboratory_sale"
+    id = db.Column(db.Integer, primary_key=True)
+    laboratory_id = db.Column(db.Integer, db.ForeignKey("laboratory.id", ondelete="RESTRICT"), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("laboratory_product.id", ondelete="RESTRICT"), nullable=False, index=True)
+    commercial_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Numeric(12, 2), nullable=False)
+    date = db.Column(db.Date, nullable=False, index=True)
+    project = db.Column(db.String(20), nullable=False, index=True)
+    is_imported = db.Column(db.Boolean, nullable=False, default=False, server_default="false", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    laboratory = db.relationship("Laboratory")
+    product = db.relationship("LaboratoryProduct")
+    commercial = db.relationship("User")
+    __table_args__ = (db.CheckConstraint("quantity > 0", name="ck_laboratory_sale_quantity_positive"),)
+
+
 class LaboratoryProduct(db.Model):
     """Catalog item: deliberately excludes stock/quantity."""
     __tablename__ = "laboratory_product"
