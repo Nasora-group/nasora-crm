@@ -11,7 +11,7 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Laboratory, LaboratoryProduct, LaboratorySale, User
+from app.models import Laboratory, LaboratoryProduct, LaboratorySale, User, SUPPLIERS
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -105,6 +105,30 @@ def _read_catalog(upload):
     if errors:
         raise ValueError("Import annulé. " + " | ".join(errors[:12]))
     return rows
+
+
+
+def _sync_legacy_product(lab, product):
+    """Keep the historical supplier product table aligned with the unified catalog."""
+    if not lab.legacy_supplier_slug:
+        return
+    supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
+    if not supplier:
+        raise ValueError("Le lien avec le catalogue historique est invalide.")
+    model = supplier["product_model"]
+    legacy = None
+    if product.reference:
+        legacy = model.query.filter_by(reference=product.reference).first()
+    if legacy is None:
+        legacy = model.query.filter(db.func.lower(model.name) == product.name.lower()).first()
+    if legacy is None:
+        legacy = model(name=product.name, reference=product.reference, default_price=product.price_ht, is_active=product.is_active)
+        db.session.add(legacy)
+    else:
+        legacy.name = product.name
+        legacy.reference = product.reference
+        legacy.default_price = product.price_ht
+        legacy.is_active = product.is_active
 
 
 @laboratories_bp.route("/", methods=["GET"])
@@ -228,6 +252,8 @@ def add_product(lab_id):
             raise ValueError("Le nom du produit est obligatoire.")
         product = LaboratoryProduct(laboratory_id=lab.id, name=name, reference=reference, price_ht=price)
         db.session.add(product)
+        db.session.flush()
+        _sync_legacy_product(lab, product)
         db.session.commit()
         flash("Produit ajouté au catalogue.", "success")
     except (ValueError, IntegrityError) as exc:
@@ -250,6 +276,7 @@ def edit_product(lab_id, product_id):
         product.reference = request.form.get("reference", "").strip() or None
         product.price_ht = _parse_price(request.form.get("price_ht", ""))
         product.is_active = request.form.get("is_active") == "on"
+        _sync_legacy_product(lab, product)
         db.session.commit()
         flash("Produit mis à jour.", "success")
     except (ValueError, IntegrityError) as exc:
@@ -289,9 +316,13 @@ def import_products(lab_id):
                 product.reference = row["reference"]
                 product.price_ht = row["price_ht"]
                 product.is_active = True
+                _sync_legacy_product(lab, product)
                 updated += 1
             else:
-                db.session.add(LaboratoryProduct(laboratory_id=lab.id, **row))
+                product = LaboratoryProduct(laboratory_id=lab.id, **row)
+                db.session.add(product)
+                db.session.flush()
+                _sync_legacy_product(lab, product)
                 inserted += 1
         db.session.commit()
         flash(f"Import terminé : {inserted} produit(s) ajouté(s), {updated} mis à jour. Aucun stock ni historique de vente modifié.", "success")
