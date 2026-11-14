@@ -151,7 +151,7 @@ class Laboratory(db.Model):
     __tablename__ = "laboratory"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(180), nullable=False)
-    slug = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    slug = db.Column(db.String(80), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     address = db.Column(db.String(255), nullable=True)
     city = db.Column(db.String(120), nullable=True)
