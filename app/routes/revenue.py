@@ -81,8 +81,14 @@ def _monthly_revenue_for_division(division, scope_to_commercial=True):
                 combined.setdefault(month, {})[slug] = float(row["revenue"] or 0)
 
 
-    dynamic_labs = Laboratory.query.filter_by(section=division, is_active=True, legacy_supplier_slug=None).all()
-    for lab in dynamic_labs:
+    allowed_ids = _visible_laboratory_ids(division, current_user)
+    dynamic_query = Laboratory.query.filter_by(section=division, is_active=True, legacy_supplier_slug=None)
+    if allowed_ids is not None:
+        if not allowed_ids:
+            dynamic_query = dynamic_query.filter(Laboratory.id == -1)
+        else:
+            dynamic_query = dynamic_query.filter(Laboratory.id.in_(allowed_ids))
+    for lab in dynamic_query.all():
         conditions = ["laboratory_id = :lab_id", "project = :division"]
         params = {"lab_id": lab.id, "division": division}
         if scope_to_commercial and _commercial_only_scope():
