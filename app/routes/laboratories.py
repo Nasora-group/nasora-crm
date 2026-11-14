@@ -286,6 +286,31 @@ def import_products(lab_id):
     return redirect(url_for("laboratories.detail", lab_id=lab.id))
 
 
+
+@laboratories_bp.route("/<int:lab_id>/produits/exporter/<format_name>")
+@login_required
+@roles_required("admin")
+def export_products(lab_id, format_name):
+    lab = _get_lab_or_404(lab_id)
+    if format_name not in ("csv", "xlsx"):
+        abort(404)
+    products = LaboratoryProduct.query.filter_by(laboratory_id=lab.id).order_by(LaboratoryProduct.name.asc()).all()
+    frame = pd.DataFrame([
+        {"reference": product.reference or "", "name": product.name, "price_ht": str(product.price_ht)}
+        for product in products
+    ], columns=list(CATALOG_COLUMNS))
+    output = io.BytesIO()
+    if format_name == "csv":
+        output.write(frame.to_csv(index=False).encode("utf-8-sig"))
+        mimetype, extension = "text/csv", "csv"
+    else:
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            frame.to_excel(writer, index=False, sheet_name="Produits")
+        mimetype, extension = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
+    output.seek(0)
+    return send_file(output, mimetype=mimetype, as_attachment=True, download_name=f"catalogue_{lab.slug}.{extension}")
+
+
 @laboratories_bp.route("/modele/<format_name>")
 @login_required
 @roles_required("admin")
