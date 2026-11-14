@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Nouveau laboratoire' if not laboratory else 'Modifier ' ~ laboratory.name }} — NASORA CRM{% endblock %}
+{% block content %}
+<section class="page-hero"><div><span class="hero-eyebrow">ADMINISTRATION · RÉFÉRENTIEL</span><h1>{{ 'Créer un laboratoire' if not laboratory else 'Modifier la fiche laboratoire' }}</h1><p>Identité, coordonnées, devise, objectifs et équipe affectée.</p></div></section>
+<form method="post" enctype="multipart/form-data" class="crm-surface" style="padding:22px;max-width:1100px;margin:20px auto">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="lab-form-grid">
+<label>Nom du laboratoire *<input name="name" required maxlength="180" value="{{ laboratory.name if laboratory else request.form.get('name','') }}"></label>
+<label>Code / identifiant<input name="slug" maxlength="80" placeholder="ex. laboratoire-alpha" value="{{ laboratory.slug if laboratory else request.form.get('slug','') }}"><small>Généré automatiquement à partir du nom si laissé vide.</small></label>
+<label>Devise *<select name="currency" required>{% for currency in currencies %}<option value="{{ currency }}" {% if (laboratory.currency if laboratory else request.form.get('currency','XOF')) == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}</select></label>
+<label>Téléphone<input name="phone" value="{{ laboratory.phone if laboratory else request.form.get('phone','') }}"></label>
+<label>E-mail<input type="email" name="email" value="{{ laboratory.email if laboratory else request.form.get('email','') }}"></label>
+<label>Site web<input name="website" type="url" placeholder="https://" value="{{ laboratory.website if laboratory else request.form.get('website','') }}"></label>
+<label>Adresse<input name="address" value="{{ laboratory.address if laboratory else request.form.get('address','') }}"></label>
+<label>Ville<input name="city" value="{{ laboratory.city if laboratory else request.form.get('city','') }}"></label>
+<label>Pays<input name="country" value="{{ laboratory.country if laboratory else request.form.get('country','Sénégal') }}"></label>
+<label>Objectif mensuel HT<input type="number" min="0" step="0.01" name="monthly_objective" value="{{ laboratory.monthly_objective if laboratory and laboratory.monthly_objective is not none else '' }}"></label>
+<label>Objectif annuel HT<input type="number" min="0" step="0.01" name="annual_objective" value="{{ laboratory.annual_objective if laboratory and laboratory.annual_objective is not none else '' }}"></label>
+<label>Logo (PNG, JPG, WEBP · 2 Mo max)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp">{% if laboratory and laboratory.logo_data %}<img src="{{ url_for('laboratories.logo',lab_id=laboratory.id) }}" alt="Logo actuel" style="max-width:110px;max-height:70px;object-fit:contain;margin-top:8px">{% endif %}</label>
+<label class="lab-full">Description<textarea name="description" rows="3">{{ laboratory.description if laboratory else request.form.get('description','') }}</textarea></label>
+<div class="lab-full"><strong>Personnel affecté</strong><p class="muted">Sélectionnez les comptes utilisateurs qui travaillent pour ce laboratoire.</p><div class="lab-staff-grid">{% for user in users %}<label class="lab-staff-choice"><input type="checkbox" name="staff_ids" value="{{ user.id }}" {% if laboratory and user in laboratory.staff %}checked{% elif not laboratory and user.id|string in request.form.getlist('staff_ids') %}checked{% endif %}><span>{{ user.username }} <small>{{ 'Administrateur' if user.role == 'admin' else ('Animateur' if user.role == 'animateur' else 'Visiteur médical') }}</small></span></label>{% endfor %}</div></div>
+<label class="lab-full lab-active"><input type="checkbox" name="is_active" {% if not laboratory or laboratory.is_active %}checked{% endif %}> Laboratoire actif</label>
+</div>
+<div class="lab-form-actions"><a class="btn btn-outline" href="{{ url_for('laboratories.detail',lab_id=laboratory.id) if laboratory else url_for('laboratories.index') }}">Annuler</a><button class="btn btn-primary" type="submit">Enregistrer la fiche</button></div>
+</form>
+<style>
+.lab-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.lab-form-grid>label{display:flex;flex-direction:column;gap:7px;font-weight:600}.lab-form-grid input:not([type=checkbox]),.lab-form-grid select,.lab-form-grid textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--border-color,#d7e0da);border-radius:9px;background:var(--surface,#fff);color:inherit}.lab-form-grid small,.lab-staff-choice small{display:block;font-size:.8rem;color:var(--text-muted,#718078);font-weight:400}.lab-full{grid-column:1/-1}.lab-staff-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.lab-staff-choice{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--border-color,#d7e0da);border-radius:9px}.lab-active{flex-direction:row!important;align-items:center}.lab-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+@media(max-width:680px){.lab-form-grid{grid-template-columns:1fr}.lab-full{grid-column:auto}.lab-staff-grid{grid-template-columns:1fr}.lab-form-actions{display:grid;grid-template-columns:1fr}.lab-form-actions .btn{width:100%}}
+</style>
+{% endblock %}

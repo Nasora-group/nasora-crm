@@ -144,3 +144,52 @@ class AdminNotification(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     admin = db.relationship("User", foreign_keys=[admin_id])
     actor = db.relationship("User", foreign_keys=[actor_id])
+
+
+class Laboratory(db.Model):
+    """Laboratory master record managed by administrators."""
+    __tablename__ = "laboratory"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(180), nullable=False)
+    slug = db.Column(db.String(80), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    country = db.Column(db.String(120), nullable=True, default="Sénégal")
+    phone = db.Column(db.String(40), nullable=True)
+    email = db.Column(db.String(254), nullable=True)
+    website = db.Column(db.String(255), nullable=True)
+    currency = db.Column(db.String(3), nullable=False, default="XOF")
+    monthly_objective = db.Column(db.Numeric(14, 2), nullable=True)
+    annual_objective = db.Column(db.Numeric(14, 2), nullable=True)
+    logo_data = db.Column(db.LargeBinary, nullable=True)
+    logo_mime_type = db.Column(db.String(40), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default="true")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    staff = db.relationship("User", secondary="laboratory_staff", backref=db.backref("laboratories", lazy="select"))
+    products = db.relationship("LaboratoryProduct", back_populates="laboratory", cascade="all, delete-orphan", order_by="LaboratoryProduct.name")
+
+
+laboratory_staff = db.Table(
+    "laboratory_staff",
+    db.Column("laboratory_id", db.Integer, db.ForeignKey("laboratory.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("user_id", db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class LaboratoryProduct(db.Model):
+    """Catalog item: deliberately excludes stock/quantity."""
+    __tablename__ = "laboratory_product"
+    id = db.Column(db.Integer, primary_key=True)
+    laboratory_id = db.Column(db.Integer, db.ForeignKey("laboratory.id", ondelete="CASCADE"), nullable=False, index=True)
+    reference = db.Column(db.String(100), nullable=True)
+    name = db.Column(db.String(200), nullable=False)
+    price_ht = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal("0.00"))
+    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default="true")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    laboratory = db.relationship("Laboratory", back_populates="products")
+    __table_args__ = (
+        db.UniqueConstraint("laboratory_id", "reference", name="uq_laboratory_product_reference"),
+    )
