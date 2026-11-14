@@ -6,7 +6,10 @@ from flask_login import login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import AnimationSale, Evaluation, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS, User, Planning, Prospection
+from app.models import (
+    AnimationSale, Evaluation, SalesObjective, SUPPLIERS, DIVISION_SUPPLIERS,
+    User, Planning, Prospection, Laboratory, LaboratorySale, LaboratoryProduct,
+)
 from app.models_clients import Client, ClientVisit
 from app.utils import decode_planning_slot
 from app.utils import roles_required
@@ -41,6 +44,36 @@ def _revenue_for_range(division, start, end, commercial_id=None):
             product_counter[product_name] += int(quantity or 0)
         supplier_totals[supplier["label"]] = supplier_total
         total += supplier_total
+
+    dynamic_labs = Laboratory.query.filter_by(
+        section=division, is_active=True, legacy_supplier_slug=None
+    ).order_by(Laboratory.name).all()
+    for lab in dynamic_labs:
+        amount_expr = func.coalesce(LaboratorySale.quantity, 0) * func.coalesce(LaboratorySale.price, 0)
+        query = (
+            db.session.query(
+                LaboratoryProduct.name,
+                func.coalesce(func.sum(LaboratorySale.quantity), 0),
+                func.coalesce(func.sum(amount_expr), 0),
+            )
+            .join(LaboratorySale, LaboratorySale.product_id == LaboratoryProduct.id)
+            .filter(
+                LaboratorySale.laboratory_id == lab.id,
+                LaboratorySale.project == division,
+                LaboratorySale.date >= start,
+                LaboratorySale.date < end,
+            )
+        )
+        if commercial_id is not None:
+            query = query.filter(LaboratorySale.commercial_id == commercial_id)
+        rows = query.group_by(LaboratoryProduct.id, LaboratoryProduct.name).all()
+        lab_total = 0.0
+        for product_name, quantity, amount in rows:
+            amount_value = float(amount or 0)
+            lab_total += amount_value
+            product_counter[product_name] += int(quantity or 0)
+        supplier_totals[lab.name] = lab_total
+        total += lab_total
     return total, product_counter, supplier_totals
 
 
