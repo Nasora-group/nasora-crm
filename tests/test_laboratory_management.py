@@ -162,7 +162,7 @@ def test_laboratory_sales_import_is_atomic(laboratory_client):
         db.session.add(LaboratoryProduct(laboratory_id=lab.id, reference="R1", name="Produit 1", price_ht="10"))
         db.session.commit()
         lab_id = lab.id
-    csv_data = "date,reference,quantity,price\\n2026-11-14,R1,2,12.50\\n"
+    csv_data = "date,reference,quantity,price\n2026-11-14,R1,2,12.50\n"
     response = laboratory_client.post(
         f"/admin/laboratoires/{lab_id}/ventes/importer",
         data={"sales_file": (io.BytesIO(csv_data.encode()), "ventes.csv")},
