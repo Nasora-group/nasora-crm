@@ -3,6 +3,7 @@ import logging
 import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
+from datetime import date
 
 import pandas as pd
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
@@ -10,7 +11,7 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Laboratory, LaboratoryProduct, User
+from app.models import Laboratory, LaboratoryProduct, LaboratorySale, User, SUPPLIERS
 from app.utils import roles_required
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,30 @@ def _read_catalog(upload):
     return rows
 
 
+
+def _sync_legacy_product(lab, product):
+    """Keep the historical supplier product table aligned with the unified catalog."""
+    if not lab.legacy_supplier_slug:
+        return
+    supplier = SUPPLIERS.get(lab.legacy_supplier_slug)
+    if not supplier:
+        raise ValueError("Le lien avec le catalogue historique est invalide.")
+    model = supplier["product_model"]
+    legacy = None
+    if product.reference:
+        legacy = model.query.filter_by(reference=product.reference).first()
+    if legacy is None:
+        legacy = model.query.filter(db.func.lower(model.name) == product.name.lower()).first()
+    if legacy is None:
+        legacy = model(name=product.name, reference=product.reference, default_price=product.price_ht, is_active=product.is_active)
+        db.session.add(legacy)
+    else:
+        legacy.name = product.name
+        legacy.reference = product.reference
+        legacy.default_price = product.price_ht
+        legacy.is_active = product.is_active
+
+
 @laboratories_bp.route("/", methods=["GET"])
 @login_required
 @roles_required("admin")
@@ -121,9 +146,13 @@ def create():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         currency = request.form.get("currency", "XOF").upper()
+        section = request.form.get("section", "nasmedic").strip().lower()
         slug = _slugify(request.form.get("slug") or name)
         if not name or not slug:
             flash("Le nom du laboratoire est obligatoire.", "error")
+            return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
+        if section not in ("nasmedic", "nasderm"):
+            flash("Section invalide. Choisissez NASMEDIC ou NASDERM.", "error")
             return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
         if currency not in ALLOWED_CURRENCIES:
             flash("Devise non autorisée.", "error")
@@ -131,7 +160,7 @@ def create():
         if Laboratory.query.filter_by(slug=slug).first():
             flash("Ce code laboratoire existe déjà. Choisissez un autre code.", "error")
             return render_template("admin_laboratory_form.html", laboratory=None, users=User.query.filter_by(is_active_account=True).order_by(User.username).all(), currencies=ALLOWED_CURRENCIES)
-        lab = Laboratory(name=name, slug=slug, currency=currency)
+        lab = Laboratory(name=name, slug=slug, currency=currency, section=section)
         try:
             _apply_form(lab)
             db.session.add(lab)
@@ -159,8 +188,18 @@ def _apply_form(lab):
     lab.email = request.form.get("email", "").strip() or None
     lab.website = request.form.get("website", "").strip() or None
     lab.currency = request.form.get("currency", "XOF").upper()
+    lab.section = request.form.get("section", "nasmedic").strip().lower()
+    if lab.section not in ("nasmedic", "nasderm"):
+        raise ValueError("Section invalide. Choisissez NASMEDIC ou NASDERM.")
+    if lab.legacy_supplier_slug:
+        expected_section = SUPPLIERS[lab.legacy_supplier_slug]["division"]
+        if lab.section != expected_section:
+            raise ValueError("La section de ce laboratoire historique est liée à ses ventes existantes et ne peut pas être changée ici.")
     if lab.currency not in ALLOWED_CURRENCIES:
         raise ValueError("Devise non autorisée.")
+    other_labs = Laboratory.query.filter_by(section=lab.section, is_active=True).filter(Laboratory.id != (lab.id or 0)).all()
+    if other_labs and any(other.currency != lab.currency for other in other_labs):
+        raise ValueError("Pour consolider correctement le chiffre d’affaires, tous les laboratoires d’une même section doivent utiliser la même devise.")
     monthly = request.form.get("monthly_objective", "").strip()
     annual = request.form.get("annual_objective", "").strip()
     lab.monthly_objective = _parse_price(monthly) if monthly else None
@@ -220,6 +259,8 @@ def add_product(lab_id):
             raise ValueError("Le nom du produit est obligatoire.")
         product = LaboratoryProduct(laboratory_id=lab.id, name=name, reference=reference, price_ht=price)
         db.session.add(product)
+        db.session.flush()
+        _sync_legacy_product(lab, product)
         db.session.commit()
         flash("Produit ajouté au catalogue.", "success")
     except (ValueError, IntegrityError) as exc:
@@ -242,6 +283,7 @@ def edit_product(lab_id, product_id):
         product.reference = request.form.get("reference", "").strip() or None
         product.price_ht = _parse_price(request.form.get("price_ht", ""))
         product.is_active = request.form.get("is_active") == "on"
+        _sync_legacy_product(lab, product)
         db.session.commit()
         flash("Produit mis à jour.", "success")
     except (ValueError, IntegrityError) as exc:
@@ -281,9 +323,13 @@ def import_products(lab_id):
                 product.reference = row["reference"]
                 product.price_ht = row["price_ht"]
                 product.is_active = True
+                _sync_legacy_product(lab, product)
                 updated += 1
             else:
-                db.session.add(LaboratoryProduct(laboratory_id=lab.id, **row))
+                product = LaboratoryProduct(laboratory_id=lab.id, **row)
+                db.session.add(product)
+                db.session.flush()
+                _sync_legacy_product(lab, product)
                 inserted += 1
         db.session.commit()
         flash(f"Import terminé : {inserted} produit(s) ajouté(s), {updated} mis à jour. Aucun stock ni historique de vente modifié.", "success")
@@ -317,6 +363,102 @@ def export_products(lab_id, format_name):
         mimetype, extension = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
     output.seek(0)
     return send_file(output, mimetype=mimetype, as_attachment=True, download_name=f"catalogue_{lab.slug}.{extension}")
+
+
+
+def _ensure_lab_sales_access(lab):
+    if current_user.role != "admin" and current_user.project != lab.section:
+        abort(403)
+
+
+@laboratories_bp.route("/<int:lab_id>/ventes", methods=["GET", "POST"])
+@login_required
+@roles_required("admin", "commercial")
+def sales(lab_id):
+    lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
+    _ensure_lab_sales_access(lab)
+    products = LaboratoryProduct.query.filter_by(laboratory_id=lab.id, is_active=True).order_by(LaboratoryProduct.name).all()
+    if request.method == "POST":
+        try:
+            sale_date = date.fromisoformat(request.form.get("sale_date", ""))
+            count = 0
+            for product in products:
+                raw_qty = (request.form.get("quantity_" + str(product.id)) or "").strip()
+                if not raw_qty:
+                    continue
+                quantity = int(raw_qty)
+                if quantity <= 0:
+                    raise ValueError("Les quantités vendues doivent être supérieures à zéro.")
+                raw_price = (request.form.get("price_" + str(product.id)) or "").strip()
+                price = _parse_price(raw_price) if raw_price else product.price_ht
+                db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=current_user.id, quantity=quantity, price=price, date=sale_date, project=lab.section))
+                count += 1
+            if not count:
+                raise ValueError("Saisissez au moins une quantité vendue.")
+            db.session.commit()
+            flash(str(count) + " ligne(s) de vente enregistrée(s).", "success")
+            return redirect(url_for("laboratories.sales", lab_id=lab.id))
+        except (ValueError, TypeError) as exc:
+            db.session.rollback()
+            flash("Saisie annulée : " + str(exc), "error")
+    history = LaboratorySale.query.filter_by(laboratory_id=lab.id).order_by(LaboratorySale.date.desc(), LaboratorySale.id.desc()).limit(100).all()
+    total = db.session.query(db.func.coalesce(db.func.sum(LaboratorySale.quantity * LaboratorySale.price), 0)).filter_by(laboratory_id=lab.id).scalar()
+    return render_template("admin_laboratory_sales.html", laboratory=lab, products=products, history=history, total=total, today=date.today())
+
+
+@laboratories_bp.route("/<int:lab_id>/ventes/importer", methods=["POST"])
+@login_required
+@roles_required("admin", "commercial")
+def import_sales(lab_id):
+    lab = _get_lab_or_404(lab_id)
+    if lab.legacy_supplier_slug:
+        abort(404)
+    _ensure_lab_sales_access(lab)
+    upload = request.files.get("sales_file")
+    if not upload or not upload.filename:
+        flash("Sélectionnez un fichier CSV ou Excel.", "error")
+        return redirect(url_for("laboratories.sales", lab_id=lab.id))
+    try:
+        if upload.filename.lower().endswith(".csv"):
+            frame = pd.read_csv(upload, dtype=str).fillna("")
+        elif upload.filename.lower().endswith(".xlsx"):
+            frame = pd.read_excel(upload, dtype=str).fillna("")
+        else:
+            raise ValueError("Format accepté : CSV ou XLSX.")
+        frame.columns = [str(col).strip().lower() for col in frame.columns]
+        aliases = {"produit": "name", "reference produit": "reference", "référence": "reference", "quantite": "quantity", "quantité": "quantity", "prix": "price", "prix ht": "price", "date vente": "date"}
+        frame = frame.rename(columns={key: value for key, value in aliases.items() if key in frame.columns})
+        required = {"date", "quantity"}
+        if not required.issubset(frame.columns) or not ({"reference", "name"} & set(frame.columns)):
+            raise ValueError("Colonnes obligatoires : date, reference ou name, quantity. price est facultatif.")
+        if len(frame) > 5000:
+            raise ValueError("Maximum 5 000 lignes par import.")
+        created = 0
+        for line_no, row in frame.iterrows():
+            reference = str(row.get("reference", "")).strip()
+            name = str(row.get("name", "")).strip()
+            product_query = LaboratoryProduct.query.filter_by(laboratory_id=lab.id)
+            product = product_query.filter_by(reference=reference).first() if reference else None
+            if product is None and name:
+                product = product_query.filter(db.func.lower(LaboratoryProduct.name) == name.lower()).first()
+            if product is None or not product.is_active:
+                raise ValueError("Ligne " + str(line_no + 2) + " : produit introuvable ou inactif.")
+            quantity = int(str(row.get("quantity", "")).strip())
+            if quantity <= 0:
+                raise ValueError("Ligne " + str(line_no + 2) + " : quantité invalide.")
+            sale_date = date.fromisoformat(str(row.get("date", "")).strip()[:10])
+            raw_price = str(row.get("price", "")).strip()
+            price = _parse_price(raw_price) if raw_price else product.price_ht
+            db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=current_user.id, quantity=quantity, price=price, date=sale_date, project=lab.section, is_imported=True))
+            created += 1
+        db.session.commit()
+        flash(str(created) + " ligne(s) importée(s).", "success")
+    except Exception as exc:
+        db.session.rollback()
+        flash("Import annulé : " + str(exc), "error")
+    return redirect(url_for("laboratories.sales", lab_id=lab.id))
 
 
 @laboratories_bp.route("/modele/<format_name>")

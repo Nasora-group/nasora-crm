@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Laboratory, LaboratoryProduct, User
+from app.models import Laboratory, LaboratoryProduct, LaboratorySale, User
 
 
 @pytest.fixture()
@@ -43,6 +43,7 @@ def test_admin_can_create_laboratory_with_staff_and_objectives(laboratory_client
             "name": "Laboratoire Démo",
             "slug": "laboratoire-demo",
             "currency": "XOF",
+            "section": "nasderm",
             "address": "Dakar Plateau",
             "monthly_objective": "1500000",
             "annual_objective": "18000000",
@@ -57,6 +58,7 @@ def test_admin_can_create_laboratory_with_staff_and_objectives(laboratory_client
         lab = Laboratory.query.one()
         assert lab.slug == "laboratoire-demo"
         assert lab.currency == "XOF"
+        assert lab.section == "nasderm"
         assert str(lab.monthly_objective) == "1500000.00"
         assert [user.username for user in lab.staff] == ["lab_staff"]
 
@@ -124,3 +126,66 @@ def test_non_admin_cannot_download_laboratory_logo(laboratory_client):
     laboratory_client.post("/logout", follow_redirects=True)
     login(laboratory_client, "lab_staff")
     assert laboratory_client.get(f"/admin/laboratoires/{lab_id}/logo").status_code == 403
+
+def test_dynamic_laboratory_sales_are_saved_and_counted(laboratory_client):
+    login(laboratory_client)
+    laboratory_client.post(
+        "/admin/laboratoires/nouveau",
+        data={"name": "Nouveau laboratoire", "currency": "XOF", "section": "nasderm", "is_active": "on"},
+        follow_redirects=True,
+    )
+    with laboratory_client.application.app_context():
+        lab = Laboratory.query.one()
+        product = LaboratoryProduct(laboratory_id=lab.id, reference="N-01", name="Produit test", price_ht="2500")
+        db.session.add(product)
+        db.session.commit()
+        lab_id, product_id = lab.id, product.id
+    response = laboratory_client.post(
+        f"/admin/laboratoires/{lab_id}/ventes",
+        data={"sale_date": "2026-11-14", f"quantity_{product_id}": "3"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    with laboratory_client.application.app_context():
+        sale = LaboratorySale.query.one()
+        assert sale.laboratory_id == lab_id
+        assert sale.quantity == 3
+        assert str(sale.price) == "2500.00"
+        assert sale.project == "nasderm"
+
+
+def test_laboratory_sales_import_is_atomic(laboratory_client):
+    login(laboratory_client)
+    laboratory_client.post("/admin/laboratoires/nouveau", data={"name": "Import Lab", "is_active": "on"}, follow_redirects=True)
+    with laboratory_client.application.app_context():
+        lab = Laboratory.query.one()
+        db.session.add(LaboratoryProduct(laboratory_id=lab.id, reference="R1", name="Produit 1", price_ht="10"))
+        db.session.commit()
+        lab_id = lab.id
+    csv_data = "date,reference,quantity,price\n2026-11-14,R1,2,12.50\n"
+    response = laboratory_client.post(
+        f"/admin/laboratoires/{lab_id}/ventes/importer",
+        data={"sales_file": (io.BytesIO(csv_data.encode()), "ventes.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    with laboratory_client.application.app_context():
+        sale = LaboratorySale.query.one()
+        assert sale.is_imported is True
+        assert sale.quantity == 2
+        assert str(sale.price) == "12.50"
+
+def test_new_laboratory_sales_are_visible_in_section_revenue(laboratory_client):
+    login(laboratory_client)
+    laboratory_client.post("/admin/laboratoires/nouveau", data={"name": "Lab CA", "currency": "EUR", "section": "nasderm", "is_active": "on"}, follow_redirects=True)
+    with laboratory_client.application.app_context():
+        lab = Laboratory.query.one()
+        product = LaboratoryProduct(laboratory_id=lab.id, name="Produit CA", price_ht="15")
+        db.session.add(product)
+        db.session.flush()
+        db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=1, quantity=4, price="15", date=__import__("datetime").date(2026, 11, 14), project="nasderm"))
+        db.session.commit()
+    response = laboratory_client.get("/monthly_revenue_nasderm")
+    assert response.status_code == 200
+    assert b"Lab CA" in response.data

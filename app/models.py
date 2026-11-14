@@ -152,6 +152,8 @@ class Laboratory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(180), nullable=False)
     slug = db.Column(db.String(80), nullable=False, unique=True)
+    section = db.Column(db.String(20), nullable=False, default="nasmedic", index=True)
+    legacy_supplier_slug = db.Column(db.String(80), nullable=True, unique=True, index=True)
     description = db.Column(db.Text, nullable=True)
     address = db.Column(db.String(255), nullable=True)
     city = db.Column(db.String(120), nullable=True)
@@ -176,6 +178,25 @@ laboratory_staff = db.Table(
     db.Column("laboratory_id", db.Integer, db.ForeignKey("laboratory.id", ondelete="CASCADE"), primary_key=True),
     db.Column("user_id", db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
 )
+
+
+class LaboratorySale(db.Model):
+    """Sales lines for laboratories created in the unified laboratory directory."""
+    __tablename__ = "laboratory_sale"
+    id = db.Column(db.Integer, primary_key=True)
+    laboratory_id = db.Column(db.Integer, db.ForeignKey("laboratory.id", ondelete="RESTRICT"), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("laboratory_product.id", ondelete="RESTRICT"), nullable=False, index=True)
+    commercial_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Numeric(12, 2), nullable=False)
+    date = db.Column(db.Date, nullable=False, index=True)
+    project = db.Column(db.String(20), nullable=False, index=True)
+    is_imported = db.Column(db.Boolean, nullable=False, default=False, server_default="false", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    laboratory = db.relationship("Laboratory")
+    product = db.relationship("LaboratoryProduct")
+    commercial = db.relationship("User")
+    __table_args__ = (db.CheckConstraint("quantity > 0", name="ck_laboratory_sale_quantity_positive"),)
 
 
 class LaboratoryProduct(db.Model):
