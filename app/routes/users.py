@@ -123,6 +123,9 @@ def create_user():
                 )
                 logger.info("Compte créé par %s : %s (%s/%s)", current_user.username, user.username, user.role, user.project)
                 return redirect(url_for("users.list_users"))
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
             except Exception:
                 db.session.rollback()
                 logger.exception("Erreur lors de la création du compte")
@@ -197,6 +200,9 @@ def edit_user(user_id):
                 )
                 logger.info("Compte modifié par %s : %s", current_user.username, user.username)
                 return redirect(url_for("users.list_users"))
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
             except Exception:
                 db.session.rollback()
                 logger.exception("Erreur lors de la modification du compte")
