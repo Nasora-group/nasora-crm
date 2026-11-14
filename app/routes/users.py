@@ -7,13 +7,32 @@ from werkzeug.security import generate_password_hash
 
 from app.extensions import db
 from app.forms import UserForm, CSRFOnlyForm
-from app.models import User
+from app.models import User, Laboratory
 from app.utils import roles_required
 from app.audit_log import audit
 
 logger = logging.getLogger(__name__)
 
 users_bp = Blueprint("users", __name__, url_prefix="/admin/utilisateurs")
+
+
+
+def _selected_laboratories(project):
+    raw_ids = request.form.getlist("laboratory_ids")
+    ids = set()
+    for value in raw_ids:
+        try:
+            ids.add(int(value))
+        except (TypeError, ValueError):
+            raise ValueError("Sélection de laboratoire invalide.")
+    labs = Laboratory.query.filter(
+        Laboratory.id.in_(ids),
+        Laboratory.section == project,
+        Laboratory.is_active.is_(True),
+    ).all() if ids else []
+    if len(labs) != len(ids):
+        raise ValueError("Un ou plusieurs laboratoires ne correspondent pas à la section sélectionnée ou sont inactifs.")
+    return labs
 
 
 def _would_remove_last_admin(user, new_role=None, new_active=None):
@@ -93,6 +112,7 @@ def create_user():
                     zone=form.zone.data or None,
                     is_active_account=form.is_active_account.data,
                 )
+                user.laboratories = _selected_laboratories(form.project.data)
                 db.session.add(user)
                 db.session.commit()
                 flash(f"Compte « {user.username} » créé avec succès.", "success")
@@ -103,12 +123,15 @@ def create_user():
                 )
                 logger.info("Compte créé par %s : %s (%s/%s)", current_user.username, user.username, user.role, user.project)
                 return redirect(url_for("users.list_users"))
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
             except Exception:
                 db.session.rollback()
                 logger.exception("Erreur lors de la création du compte")
                 flash("Erreur lors de la création du compte.", "error")
 
-    return render_template("admin_user_form.html", form=form, mode="create", user=None)
+    return render_template("admin_user_form.html", form=form, mode="create", user=None, laboratories=Laboratory.query.filter_by(is_active=True).order_by(Laboratory.section, Laboratory.name).all())
 
 
 @users_bp.route("/<int:user_id>/modifier", methods=["GET", "POST"])
@@ -140,6 +163,7 @@ def edit_user(user_id):
                 old_project = user.project
                 old_zone = user.zone
                 old_active = user.is_active_account
+                old_laboratory_ids = sorted(lab.id for lab in user.laboratories)
                 password_changed = bool(form.password.data)
 
                 user.username = new_username
@@ -147,6 +171,7 @@ def edit_user(user_id):
                 user.project = form.project.data
                 user.zone = form.zone.data or None
                 user.is_active_account = form.is_active_account.data
+                user.laboratories = _selected_laboratories(form.project.data)
                 if password_changed:
                     user.password = generate_password_hash(form.password.data, method="pbkdf2:sha256")
                 db.session.commit()
@@ -163,6 +188,8 @@ def edit_user(user_id):
                     changes.append("zone")
                 if old_active != user.is_active_account:
                     changes.append(f"active:{old_active}->{user.is_active_account}")
+                if old_laboratory_ids != sorted(lab.id for lab in user.laboratories):
+                    changes.append("laboratories_updated")
                 if password_changed:
                     changes.append("password_changed")
 
@@ -173,12 +200,15 @@ def edit_user(user_id):
                 )
                 logger.info("Compte modifié par %s : %s", current_user.username, user.username)
                 return redirect(url_for("users.list_users"))
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
             except Exception:
                 db.session.rollback()
                 logger.exception("Erreur lors de la modification du compte")
                 flash("Erreur lors de la mise à jour du compte.", "error")
 
-    return render_template("admin_user_form.html", form=form, mode="edit", user=user)
+    return render_template("admin_user_form.html", form=form, mode="edit", user=user, laboratories=Laboratory.query.filter_by(is_active=True).order_by(Laboratory.section, Laboratory.name).all())
 
 
 @users_bp.route("/<int:user_id>/basculer-statut", methods=["POST"])

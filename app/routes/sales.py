@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.forms import SupplierSalesForm, SaleEditForm, CSRFOnlyForm
-from app.models import SUPPLIERS
+from app.models import SUPPLIERS, Laboratory
 from app.permissions import division_matches
 from app.utils import roles_required
 
@@ -55,6 +55,10 @@ def _handle_supplier_sales(slug, template_name):
 
     if not division_matches(current_user, division):
         abort(403)
+    if current_user.role != "admin":
+        linked_lab = Laboratory.query.filter_by(legacy_supplier_slug=slug).first()
+        if linked_lab is not None and linked_lab not in current_user.laboratories:
+            abort(403)
 
     form = SupplierSalesForm()
     if request.method == "GET" and form.sale_date.data is None:
