@@ -175,3 +175,17 @@ def test_laboratory_sales_import_is_atomic(laboratory_client):
         assert sale.is_imported is True
         assert sale.quantity == 2
         assert str(sale.price) == "12.50"
+
+def test_new_laboratory_sales_are_visible_in_section_revenue(laboratory_client):
+    login(laboratory_client)
+    laboratory_client.post("/admin/laboratoires/nouveau", data={"name": "Lab CA", "currency": "EUR", "section": "nasderm", "is_active": "on"}, follow_redirects=True)
+    with laboratory_client.application.app_context():
+        lab = Laboratory.query.one()
+        product = LaboratoryProduct(laboratory_id=lab.id, name="Produit CA", price_ht="15")
+        db.session.add(product)
+        db.session.flush()
+        db.session.add(LaboratorySale(laboratory_id=lab.id, product_id=product.id, commercial_id=1, quantity=4, price="15", date=__import__("datetime").date(2026, 11, 14), project="nasderm"))
+        db.session.commit()
+    response = laboratory_client.get("/monthly_revenue_nasderm")
+    assert response.status_code == 200
+    assert b"Lab CA" in response.data
