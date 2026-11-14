@@ -197,6 +197,9 @@ def _apply_form(lab):
             raise ValueError("La section de ce laboratoire historique est liée à ses ventes existantes et ne peut pas être changée ici.")
     if lab.currency not in ALLOWED_CURRENCIES:
         raise ValueError("Devise non autorisée.")
+    other_labs = Laboratory.query.filter_by(section=lab.section, is_active=True).filter(Laboratory.id != (lab.id or 0)).all()
+    if other_labs and any(other.currency != lab.currency for other in other_labs):
+        raise ValueError("Pour consolider correctement le chiffre d’affaires, tous les laboratoires d’une même section doivent utiliser la même devise.")
     monthly = request.form.get("monthly_objective", "").strip()
     annual = request.form.get("annual_objective", "").strip()
     lab.monthly_objective = _parse_price(monthly) if monthly else None
