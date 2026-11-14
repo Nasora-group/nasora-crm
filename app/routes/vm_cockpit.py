@@ -7,7 +7,11 @@ from flask_login import login_required, current_user
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS
+from app.models import (
+    User, Prospection, SUPPLIERS, DIVISION_SUPPLIERS,
+    Laboratory, LaboratorySale, LaboratoryProduct,
+    _visible_laboratory_ids, _visible_supplier_slugs,
+)
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.permissions import is_commercial
@@ -41,11 +45,31 @@ def _unique_visit_rows_for_commercial(commercial_id, limit=None, date_filter=Non
     return query.all()
 
 
+def _commercial_laboratory_scope(commercial_id, division):
+    """Catalogues visibles pour le commercial, y compris les laboratoires récents."""
+    commercial = User.query.get(commercial_id)
+    if commercial is None or (commercial.project or "").lower() != division:
+        return [], []
+    suppliers = [
+        (slug, SUPPLIERS[slug]["label"], SUPPLIERS[slug]["sale_model"], SUPPLIERS[slug]["product_model"])
+        for slug in _visible_supplier_slugs(division, commercial)
+    ]
+    allowed_ids = _visible_laboratory_ids(division, commercial)
+    query = Laboratory.query.filter_by(
+        section=division, is_active=True, legacy_supplier_slug=None
+    )
+    if allowed_ids is not None:
+        if not allowed_ids:
+            return suppliers, []
+        query = query.filter(Laboratory.id.in_(allowed_ids))
+    return suppliers, query.order_by(Laboratory.name).all()
+
+
 def _commercial_revenue(commercial_id, division):
     """Retourne le CA mensuel du commercial, limité à sa division/projet."""
     combined = {}
-    for slug in DIVISION_SUPPLIERS.get(division, []):
-        sale_model = SUPPLIERS[slug]["sale_model"]
+    suppliers, dynamic_labs = _commercial_laboratory_scope(commercial_id, division)
+    for slug, _label, sale_model, _product_model in suppliers:
         month_expr = func.strftime("%Y-%m", sale_model.date) if db.engine.dialect.name == "sqlite" else func.to_char(sale_model.date, "YYYY-MM")
         amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
         rows = (
@@ -65,17 +89,31 @@ def _commercial_revenue(commercial_id, division):
             if month is not None:
                 combined.setdefault(str(month)[:7], 0.0)
                 combined[str(month)[:7]] += float(revenue or 0)
+
+    for lab in dynamic_labs:
+        month_expr = func.strftime("%Y-%m", LaboratorySale.date) if db.engine.dialect.name == "sqlite" else func.to_char(LaboratorySale.date, "YYYY-MM")
+        amount_expr = func.coalesce(LaboratorySale.quantity, 0) * func.coalesce(LaboratorySale.price, 0)
+        rows = db.session.query(
+            month_expr.label("month"),
+            func.coalesce(func.sum(amount_expr), 0).label("revenue"),
+        ).filter(
+            LaboratorySale.laboratory_id == lab.id,
+            LaboratorySale.project == division,
+            LaboratorySale.commercial_id == commercial_id,
+        ).group_by(month_expr).order_by(month_expr).all()
+        for month, revenue in rows:
+            if month is not None:
+                key = str(month)[:7]
+                combined[key] = combined.get(key, 0.0) + float(revenue or 0)
     return sorted(combined.items())
 
 
 def _commercial_revenue_rows(commercial_id, division):
     """Même structure d'affichage que la page CA mensuel, mais filtrée au commercial."""
     combined = {}
-    suppliers = []
-    for slug in DIVISION_SUPPLIERS.get(division, []):
+    suppliers, dynamic_labs = _commercial_laboratory_scope(commercial_id, division)
+    for slug, _label, sale_model, _product_model in suppliers:
         supplier = SUPPLIERS[slug]
-        sale_model = supplier["sale_model"]
-        suppliers.append((slug, supplier["label"], sale_model, supplier["product_model"]))
         month_expr = func.strftime("%Y-%m", sale_model.date) if db.engine.dialect.name == "sqlite" else func.to_char(sale_model.date, "YYYY-MM")
         amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
         rows = (
@@ -95,6 +133,23 @@ def _commercial_revenue_rows(commercial_id, division):
             if month is not None:
                 month = str(month)[:7]
                 combined.setdefault(month, {})[slug] = float(revenue or 0)
+
+    for lab in dynamic_labs:
+        slug = f"laboratory_{lab.id}"
+        suppliers.append((slug, lab.name, None, None))
+        month_expr = func.strftime("%Y-%m", LaboratorySale.date) if db.engine.dialect.name == "sqlite" else func.to_char(LaboratorySale.date, "YYYY-MM")
+        amount_expr = func.coalesce(LaboratorySale.quantity, 0) * func.coalesce(LaboratorySale.price, 0)
+        rows = db.session.query(
+            month_expr.label("month"),
+            func.coalesce(func.sum(amount_expr), 0).label("revenue"),
+        ).filter(
+            LaboratorySale.laboratory_id == lab.id,
+            LaboratorySale.project == division,
+            LaboratorySale.commercial_id == commercial_id,
+        ).group_by(month_expr).order_by(month_expr).all()
+        for month, revenue in rows:
+            if month is not None:
+                combined.setdefault(str(month)[:7], {})[slug] = float(revenue or 0)
 
     labels = sorted(combined.keys())
     rows = [
@@ -152,10 +207,9 @@ def _commercial_revenue_detail(commercial_id, division, month):
     start = date(parsed.year, parsed.month, 1)
     end = date(parsed.year + 1, 1, 1) if parsed.month == 12 else date(parsed.year, parsed.month + 1, 1)
     rows = []
-    for slug in DIVISION_SUPPLIERS.get(division, []):
-        supplier = SUPPLIERS[slug]
-        sale_model = supplier["sale_model"]
-        product_model = supplier["product_model"]
+    suppliers, dynamic_labs = _commercial_laboratory_scope(commercial_id, division)
+    for slug, supplier_label, sale_model, product_model in suppliers:
+        supplier = {"label": supplier_label}
         amount_expr = func.coalesce(sale_model.quantity, 0) * func.coalesce(sale_model.price, 0)
         query_rows = (
             db.session.query(
@@ -183,6 +237,32 @@ def _commercial_revenue_detail(commercial_id, division, month):
                     "revenue": float(revenue or 0),
                 }
             )
+    for lab in dynamic_labs:
+        query_rows = (
+            db.session.query(
+                LaboratoryProduct.name,
+                func.coalesce(func.sum(LaboratorySale.quantity), 0).label("quantity"),
+                func.coalesce(func.sum(LaboratorySale.quantity * LaboratorySale.price), 0).label("revenue"),
+            )
+            .join(LaboratorySale, LaboratorySale.product_id == LaboratoryProduct.id)
+            .filter(
+                LaboratorySale.laboratory_id == lab.id,
+                LaboratorySale.project == division,
+                LaboratorySale.commercial_id == commercial_id,
+                LaboratorySale.date >= start,
+                LaboratorySale.date < end,
+            )
+            .group_by(LaboratoryProduct.id, LaboratoryProduct.name)
+            .order_by(LaboratoryProduct.name.asc())
+            .all()
+        )
+        for product_name, quantity, revenue in query_rows:
+            rows.append({
+                "supplier": lab.name,
+                "product": product_name,
+                "quantity": int(quantity or 0),
+                "revenue": float(revenue or 0),
+            })
     rows.sort(key=lambda row: (-row["revenue"], row["supplier"], row["product"]))
     return rows
 
