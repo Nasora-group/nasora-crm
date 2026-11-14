@@ -367,7 +367,9 @@ def export_products(lab_id, format_name):
 
 
 def _ensure_lab_sales_access(lab):
-    if current_user.role != "admin" and current_user.project != lab.section:
+    if current_user.role != "admin" and (
+        current_user.project != lab.section or lab not in current_user.laboratories
+    ):
         abort(403)
 
 
