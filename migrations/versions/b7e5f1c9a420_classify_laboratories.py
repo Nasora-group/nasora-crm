@@ -62,10 +62,6 @@ def upgrade():
 
 
 def downgrade():
-    for column in ("is_imported", "project", "date", "commercial_id", "product_id", "laboratory_id"):
-        op.drop_index("ix_laboratory_sale_" + column, table_name="laboratory_sale")
-    op.drop_table("laboratory_sale")
-    op.drop_index("ix_laboratory_legacy_supplier_slug", table_name="laboratory")
-    op.drop_index("ix_laboratory_section", table_name="laboratory")
-    op.drop_column("laboratory", "legacy_supplier_slug")
-    op.drop_column("laboratory", "section")
+    # Intentionally retain the new registry, section links, sales and catalog data.
+    # This project uses additive, non-destructive migrations to protect business history.
+    pass
