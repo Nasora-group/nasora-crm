@@ -81,6 +81,11 @@
     return draftKey(form) + ":pending-sync";
   }
 
+  function setNotice(notice, message) {
+    if (notice.firstChild && notice.firstChild.nodeType === 3) notice.firstChild.textContent = message;
+    else notice.textContent = message;
+  }
+
   function field(form, name) {
     const item = form.elements.namedItem(name);
     return item ? item.value : "";
@@ -177,7 +182,7 @@
 
   async function send(form, notice, pending) {
     if (!navigator.onLine) {
-      notice.textContent = "Saisie enregistrée en attente. Elle sera synchronisée automatiquement au retour du réseau.";
+      setNotice(notice, "Saisie enregistrée en attente. Elle sera synchronisée automatiquement au retour du réseau.");
       return;
     }
     const csrf = form.querySelector('input[name="csrf_token"]');
@@ -190,20 +195,20 @@
       });
       const contentType = response.headers.get("content-type") || "";
       if (response.redirected || !contentType.includes("application/json")) {
-        notice.textContent = "Votre session a peut-être expiré. Reconnectez-vous pour reprendre la synchronisation.";
+        setNotice(notice, "Votre session a peut-être expiré. Reconnectez-vous pour reprendre la synchronisation.");
         return;
       }
       const result = await response.json();
       if (response.ok && result.status === "synced") {
         await removeKeys([draftKey(form), queueKey(form)]);
-        notice.textContent = "Synchronisation terminée. Vos données sont enregistrées dans NASORA CRM.";
+        setNotice(notice, "Synchronisation terminée. Vos données sont enregistrées dans NASORA CRM.");
         window.location.assign(pending.redirect);
         return;
       }
       if (response.status >= 400 && response.status < 500) await removeKeys([queueKey(form)]);
-      notice.textContent = result.message || "Synchronisation impossible. Votre brouillon reste conservé sur cet appareil.";
+      setNotice(notice, result.message || "Synchronisation impossible. Votre brouillon reste conservé sur cet appareil.");
     } catch (_) {
-      notice.textContent = "Connexion interrompue. La saisie reste chiffrée sur cet appareil et sera réessayée.";
+      setNotice(notice, "Connexion interrompue. La saisie reste chiffrée sur cet appareil et sera réessayée.");
     }
   }
 
@@ -219,13 +224,22 @@
         form.parentNode.insertBefore(notice, form);
       }
       form.addEventListener("submit", async event => {
+        if (form.dataset.offlineDraft === "animation-sales") {
+          const photo = form.querySelector('input[type="file"][name="animation_evidence"]');
+          if (photo && photo.files && photo.files.length && navigator.onLine) return;
+          if (photo && photo.files && photo.files.length && !navigator.onLine) {
+            event.preventDefault();
+            setNotice(notice, "La photo justificative nécessite une connexion. Retirez la photo pour mettre les ventes en attente, puis ajoutez-la depuis l’historique après reconnexion.");
+            return;
+          }
+        }
         event.preventDefault();
-        notice.textContent = "Préparation de la synchronisation sécurisée…";
+        setNotice(notice, "Préparation de la synchronisation sécurisée…");
         try {
           const pending = await pendingFor(form, submission(form));
           await send(form, notice, pending);
         } catch (_) {
-          notice.textContent = "Impossible de préparer la synchronisation. Le brouillon local reste disponible.";
+          setNotice(notice, "Impossible de préparer la synchronisation. Le brouillon local reste disponible.");
         }
       });
       window.addEventListener("online", async () => {
@@ -233,7 +247,7 @@
           const stored = await get(queueKey(form));
           if (stored) await send(form, notice, await decrypt(stored));
         } catch (_) {
-          notice.textContent = "La synchronisation sera réessayée. Votre saisie locale est conservée.";
+          setNotice(notice, "La synchronisation sera réessayée. Votre saisie locale est conservée.");
         }
       });
       get(queueKey(form)).then(async stored => {
