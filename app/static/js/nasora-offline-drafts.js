@@ -138,7 +138,7 @@
       notice.className = "nasora-offline-draft-notice";
       notice.setAttribute("role", "status");
       notice.style.cssText = "margin:10px 0;padding:10px 12px;border:1px solid #d5e5db;border-radius:8px;background:#f4faf6;color:#24543a;font-size:.9rem";
-      notice.textContent = "Brouillon chiffré enregistré sur cet appareil. Les photos ne sont pas sauvegardées et aucun envoi automatique n'est effectué.";
+      notice.textContent = "Les modifications seront conservées localement sur cet appareil. Les photos ne sont pas sauvegardées et aucun envoi automatique n'est effectué.";
       const clear = document.createElement("button");
       clear.type = "button";
       clear.textContent = "Effacer le brouillon local";
@@ -151,6 +151,8 @@
         clearTimeout(timer);
         timer = setTimeout(() => save(form).catch(() => {}), 350);
       };
+      form.addEventListener("nasora:draft-saved", () => { notice.firstChild.textContent = "Brouillon chiffré enregistré sur cet appareil. Photos exclues, aucun envoi automatique."; });
+      form.addEventListener("nasora:draft-restored", () => { notice.firstChild.textContent = "Brouillon local restauré. Vérifiez les informations avant de soumettre."; });
       form.addEventListener("input", scheduleSave);
       form.addEventListener("change", scheduleSave);
       restore(form).catch(() => {});
