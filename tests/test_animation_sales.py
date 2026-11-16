@@ -77,4 +77,4 @@ def test_animation_sales_csv_export_handles_empty_history():
 
     assert content.startswith(chr(65279))
     assert "Date;Division;Animatrice;Pharmacie;Produit" in content
-    assert content.count("\\n") == 1
+    assert content.count(chr(10)) == 1
