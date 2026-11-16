@@ -470,8 +470,8 @@ def my_history():
 def _build_animation_sales_csv(sales):
     """Build a spreadsheet-friendly CSV export from already scoped sales."""
     output = StringIO()
-    output.write("\\ufeff")
-    writer = csv.writer(output, delimiter=";", lineterminator="\\r\\n")
+    output.write(chr(65279))
+    writer = csv.writer(output, delimiter=";")
     writer.writerow([
         "Date", "Division", "Animatrice", "Pharmacie", "Produit",
         "Prix unitaire (FCFA)", "Quantité", "Montant total (FCFA)",
