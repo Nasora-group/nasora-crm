@@ -8,4 +8,4 @@ def test_alembic_migrations_have_a_single_head():
 
     script = ScriptDirectory.from_config(config)
 
-    assert script.get_heads() == ["c8f6a2d9e410"]
+    assert script.get_heads() == ["20261116_offline_sync_receipts"]

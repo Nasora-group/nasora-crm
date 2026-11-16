@@ -1,12 +1,14 @@
 from datetime import date, timedelta
 import logging
+import json
+import uuid
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, jsonify
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.forms import PlanningForm, CSRFOnlyForm
-from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS
+from app.models import Planning, Prospection, User, JOURS, STRUCTURE_SLUGS, STRUCTURES, OfflineSyncReceipt
 from app.services.planning_ai import PlanningCandidate, generate_two_weeks, planning_entries_for_week
 from app.permissions import owns_record, is_commercial
 from app.utils import roles_required, encode_planning_slot, decode_planning_slot
@@ -436,3 +438,110 @@ def admin_planning_generate(commercial_id):
 
     flash(f"Cycle de 4 semaines généré pour {commercial.username} : S1/S2 créées, S3=S1 et S4=S2.", "success")
     return redirect(url_for("planning.admin_planning_detail", commercial_id=commercial.id))
+
+@planning_bp.route("/api/offline-sync/planning", methods=["POST"])
+@login_required
+@roles_required("commercial")
+def sync_offline_planning():
+    """Idempotently synchronize one encrypted offline planning draft.
+
+    The authenticated account is always the owner; user IDs supplied by the
+    browser are deliberately ignored. The planning and its receipt commit in
+    the same transaction so a retry cannot create a second planning row.
+    """
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Corps JSON invalide."}), 400
+
+    try:
+        submission_id = str(uuid.UUID(str(payload.get("submission_id", ""))))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({"status": "error", "message": "Identifiant de synchronisation invalide."}), 400
+
+    previous = OfflineSyncReceipt.query.filter_by(
+        user_id=current_user.id,
+        submission_id=submission_id,
+    ).first()
+    if previous is not None:
+        response_data = json.loads(previous.response_json)
+        response_data["duplicate"] = True
+        return jsonify(response_data), 200
+
+    try:
+        planning_date = date.fromisoformat(str(payload.get("date", "")))
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "Date de planning invalide."}), 400
+    if not _valid_week_start(planning_date):
+        return jsonify({"status": "error", "message": "La date du planning doit être un lundi."}), 400
+
+    slots = payload.get("slots")
+    if not isinstance(slots, dict) or set(slots) != set(JOURS):
+        return jsonify({"status": "error", "message": "Les sept jours du planning sont obligatoires."}), 400
+
+    allowed_structures = {value for value, _label in STRUCTURES}
+    encoded_slots = {}
+    for day in JOURS:
+        entries = slots.get(day)
+        if not isinstance(entries, list) or len(entries) > 40:
+            return jsonify({"status": "error", "message": "Format de journée invalide."}), 400
+        normalized = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                return jsonify({"status": "error", "message": "Créneau invalide."}), 400
+            structure = entry.get("structure")
+            name = entry.get("name")
+            if (
+                not isinstance(structure, str)
+                or structure not in allowed_structures
+                or not isinstance(name, str)
+                or not name.strip()
+                or len(name.strip()) > 200
+            ):
+                return jsonify({"status": "error", "message": "Structure ou établissement invalide."}), 400
+            normalized.append((structure, name.strip()))
+
+        encoded_slots[day] = encode_planning_slot(normalized)
+
+    try:
+        planning = Planning.query.filter_by(
+            commercial_id=current_user.id,
+            date=planning_date,
+        ).first()
+        if planning is None:
+            planning = Planning(commercial_id=current_user.id, date=planning_date)
+            db.session.add(planning)
+        for day, value in encoded_slots.items():
+            setattr(planning, day, value)
+        db.session.flush()
+
+        response_data = {
+            "status": "synced",
+            "entity": "planning",
+            "entity_id": planning.id,
+            "date": planning_date.isoformat(),
+            "duplicate": False,
+        }
+        receipt = OfflineSyncReceipt(
+            user_id=current_user.id,
+            submission_id=submission_id,
+            entity_type="planning",
+            entity_id=planning.id,
+            response_json=json.dumps(response_data, ensure_ascii=False),
+        )
+        db.session.add(receipt)
+        db.session.commit()
+        return jsonify(response_data), 201
+    except Exception:
+        db.session.rollback()
+        # If two retries raced, the unique receipt wins and the caller gets
+        # the original acknowledgement rather than creating a duplicate.
+        receipt = OfflineSyncReceipt.query.filter_by(
+            user_id=current_user.id,
+            submission_id=submission_id,
+        ).first()
+        if receipt is not None:
+            response_data = json.loads(receipt.response_json)
+            response_data["duplicate"] = True
+            return jsonify(response_data), 200
+        logger.exception("Échec de synchronisation hors ligne du planning user_id=%s", current_user.id)
+        return jsonify({"status": "error", "message": "Synchronisation impossible. Le brouillon reste à réessayer."}), 503

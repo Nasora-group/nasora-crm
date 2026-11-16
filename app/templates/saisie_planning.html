@@ -11,7 +11,7 @@
 </div>
 {% endif %}
 
-<form method="POST" id="planning-form">
+<form method="POST" id="planning-form" data-offline-draft="planning-week" data-user-id="{{ current_user.id }}">
     {{ formulaire.hidden_tag() }}
     <div class="form-group" style="max-width:280px;">
         {{ formulaire.date.label(class="form-label") }}

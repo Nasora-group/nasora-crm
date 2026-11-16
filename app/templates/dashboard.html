@@ -118,7 +118,7 @@
 </section>
 
 <div id="nouvelle-prospection" class="form-container prospection-panel crm-surface"><div class="panel-heading"><div><span class="crm-overline">SAISIE TERRAIN</span><h2>Nouvelle prospection</h2><p>Quelques informations suffisent pour conserver une trace claire et utile de la visite.</p></div></div>
-<form method="POST" class="prospection-form">{{ form.hidden_tag() }}
+<form method="POST" class="prospection-form" data-offline-draft="prospection-create" data-user-id="{{ current_user.id }}">{{ form.hidden_tag() }}
 <div class="form-group">{{ form.date.label(class="form-label") }}{{ form.date(class="form-input", id="prospection-date", autocomplete="off", onchange="if(this.value){window.location.href='?date='+encodeURIComponent(this.value)+'#nouvelle-prospection';}") }}<small class="form-help">Choisir le jour exact de la visite. Le planning de ce jour s'affiche automatiquement.</small>{% for error in form.date.errors %}<small class="form-error">{{ error }}</small>{% endfor %}</div>
 
 {% if planning_context and planning_context.planning %}

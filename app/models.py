@@ -271,3 +271,17 @@ class LaboratoryProduct(db.Model):
     __table_args__ = (
         db.UniqueConstraint("laboratory_id", "reference", name="uq_laboratory_product_reference"),
     )
+
+class OfflineSyncReceipt(db.Model):
+    """Idempotency receipt for an offline submission made by an authenticated user."""
+    __tablename__ = "offline_sync_receipt"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    submission_id = db.Column(db.String(36), nullable=False)
+    entity_type = db.Column(db.String(30), nullable=False)
+    entity_id = db.Column(db.Integer, nullable=True)
+    response_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "submission_id", name="uq_offline_sync_user_submission"),
+    )
