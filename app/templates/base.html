@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#176b45">
+<link rel="manifest" href="{{ url_for('pwa_manifest') }}">
 <title>{% block title %}NASORA CRM{% endblock %}</title>
 <meta name="description" content="NASORA CRM : plateforme professionnelle de gestion commerciale, prospections, planning, performances, stocks et activité terrain.">
 <script type="application/ld+json">
@@ -71,7 +73,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/forge-inspired-layout.css', v='20261016-1') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/user-profile.css', v='20261016-1') }}">
 <style>
-.cookie-banner{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:9999;display:none;max-width:900px;margin:auto;padding:1rem 1.15rem;border:1px solid #d9e5df;border-radius:14px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);color:#17352a}.cookie-banner.is-visible{display:block}.cookie-banner p{margin:0 0 .75rem;line-height:1.5}.cookie-actions{display:flex;gap:.6rem;flex-wrap:wrap}.cookie-actions button{border:0;border-radius:8px;padding:.65rem 1rem;font-weight:700;cursor:pointer}.cookie-accept{background:#0b7a4b;color:#fff}.cookie-reject{background:#eef3f0;color:#17352a}.cookie-link{color:#0b7a4b;font-weight:700}
+.cookie-banner{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:9999;display:none;max-width:900px;margin:auto;padding:1rem 1.15rem;border:1px solid #d9e5df;border-radius:14px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);color:#17352a}.cookie-banner.is-visible{display:block}.cookie-banner p{margin:0 0 .75rem;line-height:1.5}.cookie-actions{display:flex;gap:.6rem;flex-wrap:wrap}.cookie-actions button{border:0;border-radius:8px;padding:.65rem 1rem;font-weight:700;cursor:pointer}.cookie-accept{background:#0b7a4b;color:#fff}.cookie-reject{background:#eef3f0;color:#17352a}.cookie-link{color:#0b7a4b;font-weight:700}.nasora-connectivity{position:fixed;left:12px;right:12px;bottom:12px;z-index:10000;margin:auto;max-width:760px;padding:12px 16px;border:1px solid #e7c77d;border-radius:10px;background:#fff7e8;color:#694b16;box-shadow:0 8px 28px rgba(0,0,0,.14);font-size:.9rem;font-weight:600}.nasora-connectivity[hidden]{display:none}
 </style>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 {% if ga_measurement_id %}
@@ -94,6 +96,7 @@
 <script>(function(){try{if(localStorage.getItem('nasora_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}})();</script>
 </head>
 <body>
+<div id="nasora-connectivity" class="nasora-connectivity" role="status" aria-live="polite" hidden></div>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
 <div class="nasora-app-shell">
 <header class="nasora-topbar">
@@ -168,4 +171,5 @@ document.addEventListener('DOMContentLoaded',function(){
   if(toggle&&sidebar){toggle.addEventListener('click',function(){const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});}
 });
 </script><script src="{{ url_for('static', filename='js/nasora-dark-mode.js', v='20261018-2') }}" defer></script>
+<script src="{{ url_for('static', filename='js/nasora-pwa.js', v='20261116-1') }}" defer></script>
 </body></html>

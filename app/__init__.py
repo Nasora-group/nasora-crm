@@ -1,7 +1,7 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, send_from_directory
 from flask_login import current_user
 from dotenv import load_dotenv
 from app.config import get_config
@@ -30,6 +30,21 @@ def create_app(config_object=None):
     def load_user(user_id):
         user = db.session.get(User, int(user_id))
         return user if user and user.is_active_account else None
+    @app.get("/manifest.webmanifest")
+    def pwa_manifest():
+        return send_from_directory(app.static_folder, "manifest.webmanifest", mimetype="application/manifest+json")
+
+    @app.get("/sw.js")
+    def pwa_service_worker():
+        response = send_from_directory(app.static_folder, "js/nasora-sw.js", mimetype="application/javascript")
+        response.headers["Service-Worker-Allowed"] = "/"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+    @app.get("/hors-ligne")
+    def pwa_offline_page():
+        return render_template("offline.html")
+
     @app.get("/health")
     def health_check():
         from sqlalchemy import text
