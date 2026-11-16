@@ -1,13 +1,13 @@
 """Add idempotency receipts for offline field submissions.
 
 Revision ID: 20261116_offline_sync_receipts
-Revises: f8c2a6d4e9b1
+Revises: c8f6a2d9e410
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = "20261116_offline_sync_receipts"
-down_revision = "f8c2a6d4e9b1"
+down_revision = "c8f6a2d9e410"
 branch_labels = None
 depends_on = None
 
