@@ -59,6 +59,10 @@
     return [form.dataset.offlineDraft, form.dataset.userId].join(":");
   }
 
+  function queueKey(form) {
+    return draftKey(form) + ":pending-sync";
+  }
+
   function collect(form) {
     const values = [];
     for (const element of form.elements) {
@@ -125,6 +129,7 @@
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
       tx.objectStore(STORE).delete(draftKey(form));
+      tx.objectStore(STORE).delete(queueKey(form));
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
