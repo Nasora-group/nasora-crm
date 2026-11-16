@@ -59,8 +59,8 @@
     return [form.dataset.offlineDraft, form.dataset.userId].join(":");
   }
 
-  function queueKey(form) {
-    return draftKey(form) + ":pending-sync";
+  function queuePrefix(form) {
+    return draftKey(form) + ":pending-sync:";
   }
 
   function collect(form) {
@@ -128,8 +128,15 @@
     const db = await openDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).delete(draftKey(form));
-      tx.objectStore(STORE).delete(queueKey(form));
+      const store = tx.objectStore(STORE);
+      store.delete(draftKey(form));
+      const keysRequest = store.getAllKeys();
+      keysRequest.onsuccess = () => {
+        keysRequest.result.forEach(key => {
+          if (typeof key === "string" && key.startsWith(queuePrefix(form))) store.delete(key);
+        });
+      };
+      keysRequest.onerror = () => reject(keysRequest.error);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
