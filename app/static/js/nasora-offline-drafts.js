@@ -134,6 +134,18 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("form[data-offline-draft][data-user-id]").forEach(form => {
+      const notice = document.createElement("div");
+      notice.className = "nasora-offline-draft-notice";
+      notice.setAttribute("role", "status");
+      notice.style.cssText = "margin:10px 0;padding:10px 12px;border:1px solid #d5e5db;border-radius:8px;background:#f4faf6;color:#24543a;font-size:.9rem";
+      notice.textContent = "Brouillon chiffré enregistré sur cet appareil. Les photos ne sont pas sauvegardées et aucun envoi automatique n'est effectué.";
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.textContent = "Effacer le brouillon local";
+      clear.style.cssText = "margin-left:10px;border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;font:inherit";
+      clear.addEventListener("click", () => remove(form).then(() => { notice.textContent = "Brouillon local effacé."; }).catch(() => {}));
+      notice.appendChild(clear);
+      form.parentNode.insertBefore(notice, form);
       let timer;
       const scheduleSave = () => {
         clearTimeout(timer);
