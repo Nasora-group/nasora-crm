@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#176b45">
+<link rel="manifest" href="{{ url_for('pwa_manifest') }}">
 <title>{% block title %}NASORA CRM{% endblock %}</title>
 <meta name="description" content="NASORA CRM : plateforme professionnelle de gestion commerciale, prospections, planning, performances, stocks et activité terrain.">
 <script type="application/ld+json">
@@ -94,6 +96,7 @@
 <script>(function(){try{if(localStorage.getItem('nasora_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}})();</script>
 </head>
 <body>
+<div id="nasora-connectivity" class="nasora-connectivity" role="status" aria-live="polite" hidden></div>
 <a class="skip-link" href="#main-content">Aller au contenu</a>
 <div class="nasora-app-shell">
 <header class="nasora-topbar">
@@ -168,4 +171,5 @@ document.addEventListener('DOMContentLoaded',function(){
   if(toggle&&sidebar){toggle.addEventListener('click',function(){const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',open?'true':'false');toggle.textContent=open?'✕':'☰';});}
 });
 </script><script src="{{ url_for('static', filename='js/nasora-dark-mode.js', v='20261018-2') }}" defer></script>
+<script src="{{ url_for('static', filename='js/nasora-pwa.js', v='20261116-1') }}" defer></script>
 </body></html>
