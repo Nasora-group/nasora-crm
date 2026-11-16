@@ -91,6 +91,15 @@
     });
   }
 
+  async function pendingItems(form) {
+    const items = [];
+    for (const storageKey of await pendingKeys(form)) {
+      const stored = await get(storageKey);
+      if (stored) items.push({ storageKey, pending: await decrypt(stored) });
+    }
+    return items.sort((a, b) => a.pending.queuedAt.localeCompare(b.pending.queuedAt));
+  }
+
   function setNotice(notice, message) {
     if (notice.firstChild && notice.firstChild.nodeType === 3) notice.firstChild.textContent = message;
     else notice.textContent = message;
@@ -258,13 +267,9 @@
         try {
           let lastRedirect = null;
           let allSynced = true;
-          for (const storageKey of await pendingKeys(form)) {
-            const stored = await get(storageKey);
-            if (stored) {
-              const pending = await decrypt(stored);
-              if (await send(form, notice, pending, storageKey)) lastRedirect = pending.redirect;
-              else allSynced = false;
-            }
+          for (const item of await pendingItems(form)) {
+            if (await send(form, notice, item.pending, item.storageKey)) lastRedirect = item.pending.redirect;
+            else allSynced = false;
           }
           if (allSynced && lastRedirect && (await pendingKeys(form)).length === 0) window.location.assign(lastRedirect);
         } catch (_) {
@@ -275,13 +280,9 @@
         if (!navigator.onLine) return;
         let lastRedirect = null;
         let allSynced = true;
-        for (const storageKey of await pendingKeys(form)) {
-          const stored = await get(storageKey);
-          if (stored) {
-            const pending = await decrypt(stored);
-            if (await send(form, notice, pending, storageKey)) lastRedirect = pending.redirect;
-            else allSynced = false;
-          }
+        for (const item of await pendingItems(form)) {
+          if (await send(form, notice, item.pending, item.storageKey)) lastRedirect = item.pending.redirect;
+          else allSynced = false;
         }
         if (allSynced && lastRedirect && (await pendingKeys(form)).length === 0) window.location.assign(lastRedirect);
       })().catch(() => {});
