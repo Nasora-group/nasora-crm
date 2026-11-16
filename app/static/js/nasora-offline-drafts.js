@@ -88,10 +88,10 @@
         if (el) el.checked = true;
       } else {
         const el = matching.find(item => !["file", "submit", "button"].includes(item.type));
-        if (el && !el.value) el.value = value;
+        if (el) el.value = value;
       }
     }
-    form.dispatchEvent(new Event("change", { bubbles: true }));
+    controls.filter(el => el.tagName === "SELECT" && el.multiple).forEach(el => el.dispatchEvent(new Event("change", { bubbles: true })));
   }
 
   async function save(form) {
