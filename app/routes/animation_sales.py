@@ -1,14 +1,16 @@
 from datetime import date, datetime
+import json
+import uuid
 from decimal import Decimal, InvalidOperation
 from io import BytesIO, StringIO
 import csv
 import logging
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file, Response
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file, Response, jsonify
 from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import User, AnimationEvidence, get_active_products_for_division, get_active_product_prices_for_division
+from app.models import User, AnimationEvidence, OfflineSyncReceipt, get_active_products_for_division, get_active_product_prices_for_division
 from app.utils import roles_required
 from app.services.admin_notifications import notify_admins
 from app.permissions import division_matches
@@ -678,3 +680,102 @@ def animateur_history(user_id):
         animateur=animateur,
         current_user_id=current_user.id,
     )
+
+@animation_sales_bp.route("/api/offline-sync", methods=["POST"])
+@login_required
+@roles_required("animateur", "admin")
+def sync_offline_animation_sale():
+    """Synchronize one multi-product animation as an atomic, idempotent batch."""
+    if current_user.role not in {"animateur", "admin"}:
+        abort(403)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Corps JSON invalide."}), 400
+    try:
+        submission_id = str(uuid.UUID(str(payload.get("submission_id", ""))))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({"status": "error", "message": "Identifiant de synchronisation invalide."}), 400
+
+    previous = OfflineSyncReceipt.query.filter_by(user_id=current_user.id, submission_id=submission_id).first()
+    if previous is not None:
+        result = json.loads(previous.response_json)
+        result["duplicate"] = True
+        return jsonify(result), 200
+
+    pharmacy = payload.get("pharmacy_name")
+    pharmacy = pharmacy.strip() if isinstance(pharmacy, str) else ""
+    animation_date = _parse_sale_date(payload.get("animation_date"))
+    if not pharmacy or len(pharmacy) > 200 or animation_date is None:
+        return jsonify({"status": "error", "message": "Pharmacie ou date d'animation invalide."}), 400
+
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list) or not 1 <= len(raw_items) <= 50:
+        return jsonify({"status": "error", "message": "L'animation doit contenir entre 1 et 50 lignes."}), 400
+
+    division = (current_user.project or "").strip().lower()
+    allowed_products = set(get_active_products_for_division(division))
+    validated_items = []
+    seen_products = set()
+    for item in raw_items:
+        if not isinstance(item, dict):
+            return jsonify({"status": "error", "message": "Ligne produit invalide."}), 400
+        product_name = item.get("product_name")
+        if not isinstance(product_name, str) or product_name not in allowed_products or product_name in seen_products:
+            return jsonify({"status": "error", "message": "Produit inconnu, inactif ou répété."}), 400
+        quantity = _parse_positive_quantity(str(item.get("quantity", "")))
+        unit_price = _parse_non_negative_price(str(item.get("unit_price", "")))
+        if quantity is None or quantity > 100000 or unit_price is None or unit_price > Decimal("9999999999.99"):
+            return jsonify({"status": "error", "message": "Quantité ou prix unitaire invalide."}), 400
+        seen_products.add(product_name)
+        validated_items.append((product_name, quantity, unit_price))
+
+    from app.models import AnimationSale
+    try:
+        created = []
+        for product_name, quantity, unit_price in validated_items:
+            sale = AnimationSale(
+                animateur_id=current_user.id,
+                pharmacy_name=pharmacy,
+                animation_date=animation_date,
+                product_name=product_name,
+                quantity=quantity,
+                unit_price=unit_price,
+                project=division,
+                evidence_id=None,
+            )
+            db.session.add(sale)
+            db.session.flush()
+            created.append(sale.id)
+
+        result = {
+            "status": "synced",
+            "entity": "animation",
+            "entity_ids": created,
+            "date": animation_date.isoformat(),
+            "duplicate": False,
+        }
+        db.session.add(OfflineSyncReceipt(
+            user_id=current_user.id,
+            submission_id=submission_id,
+            entity_type="animation",
+            entity_id=created[0],
+            response_json=json.dumps(result, ensure_ascii=False),
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        previous = OfflineSyncReceipt.query.filter_by(user_id=current_user.id, submission_id=submission_id).first()
+        if previous is not None:
+            result = json.loads(previous.response_json)
+            result["duplicate"] = True
+            return jsonify(result), 200
+        logger.exception("Échec de synchronisation hors ligne de l'animation user_id=%s", current_user.id)
+        return jsonify({"status": "error", "message": "Synchronisation impossible. Le brouillon reste à réessayer."}), 503
+
+    try:
+        notify_admins(current_user, "animation_created", "Nouvelle animation", "Une animation hors ligne a été synchronisée.", "animation_sales.my_history")
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("Animation synchronisée, notification indisponible.", exc_info=True)
+    return jsonify(result), 201
