@@ -1,19 +1,21 @@
 import csv
 import logging
+import json
+import uuid
 import re
 import unicodedata
 from io import BytesIO, StringIO
 from collections import Counter
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, Response, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, Response, send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import bindparam, func, text
 import pandas as pd
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES
+from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES, SENEGAL_REGIONS, OfflineSyncReceipt
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
@@ -889,3 +891,133 @@ def direction():
             "specialite": specialite,
         },
     )
+
+@dashboard_bp.route("/api/offline-sync/prospection", methods=["POST"])
+@login_required
+@roles_required("commercial")
+def sync_offline_prospection():
+    """Synchronize one offline prospection with the normal CRM linkage in one transaction."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Corps JSON invalide."}), 400
+    try:
+        submission_id = str(uuid.UUID(str(payload.get("submission_id", ""))))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({"status": "error", "message": "Identifiant de synchronisation invalide."}), 400
+
+    previous = OfflineSyncReceipt.query.filter_by(user_id=current_user.id, submission_id=submission_id).first()
+    if previous is not None:
+        result = json.loads(previous.response_json)
+        result["duplicate"] = True
+        return jsonify(result), 200
+
+    def clean_text(field, maximum, required=False):
+        value = payload.get(field, "")
+        if not isinstance(value, str):
+            return None
+        value = value.strip()
+        if (required and not value) or len(value) > maximum:
+            return None
+        return value
+
+    try:
+        visit_date = date.fromisoformat(str(payload.get("date", "")))
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "Date de prospection invalide."}), 400
+
+    name = clean_text("nom_client", 150, True)
+    specialty = clean_text("specialite", 150, True)
+    structure = clean_text("structure", 150, True)
+    establishment = clean_text("establishment", 200, True)
+    phone = clean_text("telephone", 30, True)
+    address = clean_text("address", 255, True)
+    zone = clean_text("zone", 100, True)
+    region = clean_text("region", 100, True)
+    report = clean_text("profils_prospect", 5000)
+    if None in (name, specialty, structure, establishment, phone, address, zone, region, report):
+        return jsonify({"status": "error", "message": "Un ou plusieurs champs obligatoires sont invalides."}), 400
+
+    allowed_structures = {value for value, _label in STRUCTURES}
+    allowed_regions = {value for value, _label in SENEGAL_REGIONS}
+    if structure not in allowed_structures or region.upper() not in allowed_regions or _invalid_phone(phone):
+        return jsonify({"status": "error", "message": "Structure, région ou téléphone invalide."}), 400
+
+    zone, region = _normalize_prospection_location(zone, region.upper())
+    location_error = _validate_location(zone, region, address, required=True)
+    if location_error:
+        return jsonify({"status": "error", "message": location_error}), 400
+
+    presented = payload.get("produits_presentes", [])
+    prescribed = payload.get("produits_prescrits", [])
+    if not isinstance(presented, list) or not isinstance(prescribed, list):
+        return jsonify({"status": "error", "message": "Les listes de produits sont invalides."}), 400
+    active_products = set(get_active_products_for_division(current_user.project))
+    if any(not isinstance(item, str) or item not in active_products for item in presented + prescribed):
+        return jsonify({"status": "error", "message": "Un produit n'est pas autorisé pour votre division."}), 400
+    if len(presented) > 100 or len(prescribed) > 100:
+        return jsonify({"status": "error", "message": "Trop de produits sélectionnés."}), 400
+
+    hors_planning = payload.get("hors_planning", False) is True
+    planning_context = _planning_context_for_date(visit_date)
+    if planning_context["planning"] is not None and not hors_planning:
+        exact_match = any(
+            _normalize_text(entry["structure"]) == _normalize_text(structure)
+            and _normalize_text(entry["name"]) == _normalize_text(establishment)
+            for entry in planning_context["entries"]
+        )
+        if not exact_match:
+            return jsonify({"status": "error", "message": "Cette structure n'est pas prévue au planning. Activez la prospection hors planning."}), 400
+
+    try:
+        prospect = Prospection(
+            commercial_id=current_user.id,
+            date=visit_date,
+            nom_client=name,
+            specialite=specialty,
+            structure=structure,
+            telephone=phone,
+            zone=zone,
+            region=region,
+            address=address,
+            planning_id=None if hors_planning or planning_context["planning"] is None else planning_context["planning"].id,
+            planning_day=None if hors_planning else planning_context["day"],
+            profils_prospect=report,
+            produits_presentes=", ".join(presented),
+            produits_prescrits=", ".join(prescribed),
+            establishment=establishment,
+        )
+        db.session.add(prospect)
+        db.session.flush()
+        _sync_professional_from_prospection(prospect, establishment=establishment)
+        db.session.flush()
+        linked_visits = ClientVisit.query.filter_by(prospection_id=prospect.id, is_duplicate=False).order_by(ClientVisit.id.asc()).all()
+        for duplicate_visit in linked_visits[1:]:
+            duplicate_visit.prospection_id = None
+            db.session.delete(duplicate_visit)
+
+        result = {"status": "synced", "entity": "prospection", "entity_id": prospect.id, "date": visit_date.isoformat(), "duplicate": False}
+        db.session.add(OfflineSyncReceipt(
+            user_id=current_user.id,
+            submission_id=submission_id,
+            entity_type="prospection",
+            entity_id=prospect.id,
+            response_json=json.dumps(result, ensure_ascii=False),
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        previous = OfflineSyncReceipt.query.filter_by(user_id=current_user.id, submission_id=submission_id).first()
+        if previous is not None:
+            result = json.loads(previous.response_json)
+            result["duplicate"] = True
+            return jsonify(result), 200
+        logger.exception("Échec de synchronisation hors ligne de la prospection user_id=%s", current_user.id)
+        return jsonify({"status": "error", "message": "Synchronisation impossible. Le brouillon reste à réessayer."}), 503
+
+    try:
+        notify_admins(current_user, "prospection_created", "Nouvelle prospection", "Une nouvelle prospection a été synchronisée.", "dashboard.prospections")
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("Prospection synchronisée, notification indisponible.", exc_info=True)
+    return jsonify(result), 201
