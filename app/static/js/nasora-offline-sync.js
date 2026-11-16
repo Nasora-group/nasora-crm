@@ -213,13 +213,14 @@
         await removeKeys([storageKey]);
         if ((await pendingKeys(form)).length === 0) await removeKeys([draftKey(form)]);
         setNotice(notice, "Synchronisation terminée. Vos données sont enregistrées dans NASORA CRM.");
-        window.location.assign(pending.redirect);
-        return;
+        return true;
       }
       if (response.status >= 400 && response.status < 500) await removeKeys([storageKey]);
       setNotice(notice, result.message || "Synchronisation impossible. Votre brouillon reste conservé sur cet appareil.");
+      return false;
     } catch (_) {
       setNotice(notice, "Connexion interrompue. La saisie reste chiffrée sur cet appareil et sera réessayée.");
+      return false;
     }
   }
 
@@ -255,20 +256,34 @@
       });
       window.addEventListener("online", async () => {
         try {
+          let lastRedirect = null;
+          let allSynced = true;
           for (const storageKey of await pendingKeys(form)) {
             const stored = await get(storageKey);
-            if (stored) await send(form, notice, await decrypt(stored), storageKey);
+            if (stored) {
+              const pending = await decrypt(stored);
+              if (await send(form, notice, pending, storageKey)) lastRedirect = pending.redirect;
+              else allSynced = false;
+            }
           }
+          if (allSynced && lastRedirect && (await pendingKeys(form)).length === 0) window.location.assign(lastRedirect);
         } catch (_) {
           setNotice(notice, "La synchronisation sera réessayée. Votre saisie locale est conservée.");
         }
       });
       (async () => {
         if (!navigator.onLine) return;
+        let lastRedirect = null;
+        let allSynced = true;
         for (const storageKey of await pendingKeys(form)) {
           const stored = await get(storageKey);
-          if (stored) await send(form, notice, await decrypt(stored), storageKey);
+          if (stored) {
+            const pending = await decrypt(stored);
+            if (await send(form, notice, pending, storageKey)) lastRedirect = pending.redirect;
+            else allSynced = false;
+          }
         }
+        if (allSynced && lastRedirect && (await pendingKeys(form)).length === 0) window.location.assign(lastRedirect);
       })().catch(() => {});
     });
   });
