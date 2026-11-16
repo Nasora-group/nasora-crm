@@ -15,7 +15,7 @@ import pandas as pd
 
 from app.extensions import db
 from app.forms import ProspectionForm, CSRFOnlyForm
-from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES, SENEGAL_REGIONS, OfflineSyncReceipt
+from app.models import Prospection, Planning, User, get_active_products_for_division, STRUCTURES, SENEGAL_REGIONS, DAKAR_ZONES, OfflineSyncReceipt
 from app.models_clients import Client, ClientVisit
 from app.utils import roles_required
 from app.routes.revenue import _monthly_revenue_for_division, _objectives_kpis
@@ -939,10 +939,15 @@ def sync_offline_prospection():
 
     allowed_structures = {value for value, _label in STRUCTURES}
     allowed_regions = {value for value, _label in SENEGAL_REGIONS}
+    allowed_zones = {value for value, _label in DAKAR_ZONES}
     if structure not in allowed_structures or region.upper() not in allowed_regions or _invalid_phone(phone):
         return jsonify({"status": "error", "message": "Structure, région ou téléphone invalide."}), 400
 
     zone, region = _normalize_prospection_location(zone, region.upper())
+    if region == "DAKAR" and zone not in allowed_zones:
+        return jsonify({"status": "error", "message": "Zone de Dakar invalide."}), 400
+    if region != "DAKAR" and zone != "HORS DAKAR":
+        return jsonify({"status": "error", "message": "La zone doit être HORS DAKAR pour cette région."}), 400
     location_error = _validate_location(zone, region, address, required=True)
     if location_error:
         return jsonify({"status": "error", "message": location_error}), 400
