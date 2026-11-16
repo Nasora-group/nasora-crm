@@ -28,7 +28,7 @@
 
   {% if server_feedback %}<div id="animation-server-feedback" class="ns-server-feedback" role="alert" aria-live="assertive">{{ server_feedback }}</div>{% endif %}
 
-  <form method="post" enctype="multipart/form-data" class="card" style="padding:24px;" id="animation-sale-form" novalidate>
+  <form method="post" enctype="multipart/form-data" class="card" style="padding:24px;" id="animation-sale-form" data-offline-draft="animation-sales" data-user-id="{{ current_user.id }}" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="ns-form-meta" style="display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:26px;">
       <label><strong>Pharmacie</strong><input required name="pharmacy_name" value="{{ form_data.get('pharmacy_name','') }}" placeholder="Ex. Pharmacie du Centre" style="width:100%;margin-top:8px;"></label>
