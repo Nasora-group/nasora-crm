@@ -1,8 +1,9 @@
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from io import BytesIO
+from io import BytesIO, StringIO
+import csv
 import logging
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file, Response
 from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
 
@@ -464,6 +465,77 @@ def my_history():
     pharmacy_query = _animation_sales_query().with_entities(AnimationSale.pharmacy_name).distinct()
     pharmacies = sorted({row[0] for row in pharmacy_query.all() if row[0]})
     return render_template("animation_sales_history.html", days=days, general_total=general_total, general_quantity=general_quantity, selected_month=selected_month, pharmacy_filter=pharmacy_filter, selected_animator=selected_animator, animators=animators, pharmacies=pharmacies, is_admin=current_user.role == "admin", current_user_id=current_user.id)
+
+
+def _build_animation_sales_csv(sales):
+    """Build a spreadsheet-friendly CSV export from already scoped sales."""
+    output = StringIO()
+    output.write(chr(65279))
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow([
+        "Date", "Division", "Animatrice", "Pharmacie", "Produit",
+        "Prix unitaire (FCFA)", "Quantité", "Montant total (FCFA)",
+        "Justificatif disponible",
+    ])
+    for sale in sales:
+        writer.writerow([
+            sale.animation_date.strftime("%d/%m/%Y"),
+            sale.project or "",
+            sale.animateur.username if sale.animateur else "",
+            sale.pharmacy_name,
+            sale.product_name,
+            str(sale.unit_price or Decimal("0.00")),
+            sale.quantity,
+            str(sale.total_amount),
+            "Oui" if sale.evidence_id else "Non",
+        ])
+    return output.getvalue()
+
+
+@animation_sales_bp.route("/export.csv")
+@login_required
+@roles_required("admin", "commercial", "animateur")
+def export_animation_sales():
+    """Export animation sales using the same user scope and filters as history."""
+    from app.models import AnimationSale
+
+    query = _animation_sales_query()
+    selected_month = (request.args.get("month") or "").strip()
+    if selected_month:
+        try:
+            month_date = datetime.strptime(selected_month, "%Y-%m").date()
+        except ValueError:
+            month_date = None
+        if month_date:
+            next_month = (
+                month_date.replace(year=month_date.year + 1, month=1, day=1)
+                if month_date.month == 12
+                else month_date.replace(month=month_date.month + 1, day=1)
+            )
+            query = query.filter(
+                AnimationSale.animation_date >= month_date,
+                AnimationSale.animation_date < next_month,
+            )
+
+    pharmacy_filter = (request.args.get("pharmacy") or "").strip()
+    if pharmacy_filter:
+        query = query.filter(AnimationSale.pharmacy_name.ilike(f"%{pharmacy_filter}%"))
+
+    selected_animator = (request.args.get("animateur_id") or "").strip()
+    if current_user.role == "admin" and selected_animator.isdigit():
+        query = query.filter(AnimationSale.animateur_id == int(selected_animator))
+
+    sales = query.order_by(
+        AnimationSale.animation_date.desc(),
+        AnimationSale.pharmacy_name.asc(),
+        AnimationSale.id.asc(),
+    ).all()
+    response = Response(
+        _build_animation_sales_csv(sales),
+        content_type="text/csv; charset=utf-8",
+    )
+    response.headers["Content-Disposition"] = 'attachment; filename="nasora-ventes-animations.csv"'
+    return response
 
 
 @animation_sales_bp.route("/<int:sale_id>/modifier", methods=["GET", "POST"])
