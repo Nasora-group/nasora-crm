@@ -249,7 +249,7 @@
         setNotice(notice, "Préparation de la synchronisation sécurisée…");
         try {
           const queued = await pendingFor(form, submission(form));
-          await send(form, notice, queued.pending, queued.storageKey);
+          if (await send(form, notice, queued.pending, queued.storageKey)) window.location.assign(queued.pending.redirect);
         } catch (_) {
           setNotice(notice, "Impossible de préparer la synchronisation. Le brouillon local reste disponible.");
         }
