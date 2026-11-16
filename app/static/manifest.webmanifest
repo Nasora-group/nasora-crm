@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "NASORA CRM",
+  "short_name": "NASORA",
+  "description": "Application web de gestion commerciale NASORA",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f9f5",
+  "theme_color": "#176b45",
+  "icons": [
+    {
+      "src": "/static/images/logo.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
