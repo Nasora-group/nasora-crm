@@ -40,7 +40,7 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return response;
-        });
+        }).catch(() => cached || Response.error());
         return cached || network;
       })
     );
