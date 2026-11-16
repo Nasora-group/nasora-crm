@@ -77,8 +77,18 @@
     return form.dataset.offlineDraft + ":" + form.dataset.userId;
   }
 
-  function queueKey(form) {
-    return draftKey(form) + ":pending-sync";
+  function queuePrefix(form) {
+    return draftKey(form) + ":pending-sync:";
+  }
+
+  async function pendingKeys(form) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).getAllKeys();
+      req.onsuccess = () => resolve(req.result.filter(key => typeof key === "string" && key.startsWith(queuePrefix(form))));
+      req.onerror = () => reject(req.error);
+    });
   }
 
   function setNotice(notice, message) {
@@ -161,26 +171,26 @@
   }
 
   async function pendingFor(form, requestData) {
-    const stored = await get(queueKey(form));
-    if (stored) return decrypt(stored);
+    const submissionId = uuid();
     const pending = {
       url: requestData.url,
       redirect: requestData.redirect,
-      payload: Object.assign({}, requestData.payload, { submission_id: uuid() }),
+      payload: Object.assign({}, requestData.payload, { submission_id: submissionId }),
       queuedAt: new Date().toISOString()
     };
     const db = await openDb();
     const encrypted = await encrypt(pending);
+    const storageKey = queuePrefix(form) + submissionId;
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).put(encrypted, queueKey(form));
+      tx.objectStore(STORE).put(encrypted, storageKey);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
-    return pending;
+    return { pending, storageKey };
   }
 
-  async function send(form, notice, pending) {
+  async function send(form, notice, pending, storageKey) {
     if (!navigator.onLine) {
       setNotice(notice, "Saisie enregistrée en attente. Elle sera synchronisée automatiquement au retour du réseau.");
       return;
@@ -200,12 +210,13 @@
       }
       const result = await response.json();
       if (response.ok && result.status === "synced") {
-        await removeKeys([draftKey(form), queueKey(form)]);
+        await removeKeys([storageKey]);
+        if ((await pendingKeys(form)).length === 0) await removeKeys([draftKey(form)]);
         setNotice(notice, "Synchronisation terminée. Vos données sont enregistrées dans NASORA CRM.");
         window.location.assign(pending.redirect);
         return;
       }
-      if (response.status >= 400 && response.status < 500) await removeKeys([queueKey(form)]);
+      if (response.status >= 400 && response.status < 500) await removeKeys([storageKey]);
       setNotice(notice, result.message || "Synchronisation impossible. Votre brouillon reste conservé sur cet appareil.");
     } catch (_) {
       setNotice(notice, "Connexion interrompue. La saisie reste chiffrée sur cet appareil et sera réessayée.");
@@ -236,23 +247,29 @@
         event.preventDefault();
         setNotice(notice, "Préparation de la synchronisation sécurisée…");
         try {
-          const pending = await pendingFor(form, submission(form));
-          await send(form, notice, pending);
+          const queued = await pendingFor(form, submission(form));
+          await send(form, notice, queued.pending, queued.storageKey);
         } catch (_) {
           setNotice(notice, "Impossible de préparer la synchronisation. Le brouillon local reste disponible.");
         }
       });
       window.addEventListener("online", async () => {
         try {
-          const stored = await get(queueKey(form));
-          if (stored) await send(form, notice, await decrypt(stored));
+          for (const storageKey of await pendingKeys(form)) {
+            const stored = await get(storageKey);
+            if (stored) await send(form, notice, await decrypt(stored), storageKey);
+          }
         } catch (_) {
           setNotice(notice, "La synchronisation sera réessayée. Votre saisie locale est conservée.");
         }
       });
-      get(queueKey(form)).then(async stored => {
-        if (stored && navigator.onLine) await send(form, notice, await decrypt(stored));
-      }).catch(() => {});
+      (async () => {
+        if (!navigator.onLine) return;
+        for (const storageKey of await pendingKeys(form)) {
+          const stored = await get(storageKey);
+          if (stored) await send(form, notice, await decrypt(stored), storageKey);
+        }
+      })().catch(() => {});
     });
   });
 })();
