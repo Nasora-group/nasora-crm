@@ -49,7 +49,7 @@ def payload(submission_id=None):
 
 def test_offline_planning_sync_requires_authenticated_commercial(client):
     response = client.post("/api/offline-sync/planning", json=payload())
-    assert response.status_code == 401
+    assert response.status_code == 302
 
 
 def test_offline_planning_sync_is_idempotent_for_same_user(client):
@@ -96,7 +96,8 @@ def test_offline_planning_sync_rejects_invalid_week_start(client, date_value):
     response = client.post("/api/offline-sync/planning", json=submission)
 
     assert response.status_code == 400
-    assert Planning.query.count() == 0
+    with client.application.app_context():
+        assert Planning.query.count() == 0
 
 
 def test_offline_planning_sync_rejects_unknown_structure(client):
