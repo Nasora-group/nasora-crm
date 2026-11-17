@@ -41,6 +41,17 @@
     });
   }
 
+  async function savePending(storageKey, pending) {
+    const db = await openDb();
+    const encrypted = await encrypt(pending);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(encrypted, storageKey);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
   async function deviceKey() {
     let key = await get(KEY_ID);
     if (key) return key;
@@ -95,7 +106,10 @@
     const items = [];
     for (const storageKey of await pendingKeys(form)) {
       const stored = await get(storageKey);
-      if (stored) items.push({ storageKey, pending: await decrypt(stored) });
+      if (stored) {
+        const pending = await decrypt(stored);
+        if (!pending.blocked) items.push({ storageKey, pending });
+      }
     }
     return items.sort((a, b) => a.pending.queuedAt.localeCompare(b.pending.queuedAt));
   }
@@ -224,7 +238,16 @@
         setNotice(notice, "Synchronisation terminée. Vos données sont enregistrées dans NASORA CRM.");
         return true;
       }
-      if (response.status >= 400 && response.status < 500) await removeKeys([storageKey]);
+      if (response.status >= 400 && response.status < 500) {
+        // A validation/permission error is not transient: keep the encrypted
+        // submission on-device, mark it blocked, and stop automatic retries.
+        pending.blocked = true;
+        pending.blockedAt = new Date().toISOString();
+        pending.blockedMessage = result.message || "Données refusées par le serveur.";
+        await savePending(storageKey, pending);
+        setNotice(notice, "Saisie refusée : " + pending.blockedMessage + " Elle reste conservée sur cet appareil. Corrigez les informations, puis utilisez « Effacer le brouillon local » avant une nouvelle saisie.");
+        return false;
+      }
       setNotice(notice, result.message || "Synchronisation impossible. Votre brouillon reste conservé sur cet appareil.");
       return false;
     } catch (_) {
